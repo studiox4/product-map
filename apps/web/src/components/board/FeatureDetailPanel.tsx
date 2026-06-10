@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { FEATURE_STATUSES, type FeatureWithDocs } from '@productmap/shared';
 import { useDeleteFeature, useFeature, useUpdateFeature } from '@/lib/api';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   Dialog,
   DialogContent,
@@ -42,6 +42,8 @@ export function FeatureDetailPanel({ featureId, onClose }: FeatureDetailPanelPro
   return (
     <Sheet open={!!featureId} onOpenChange={(open) => !open && onClose()}>
       <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md">
+        <SheetTitle className="sr-only">Feature details</SheetTitle>
+        <SheetDescription className="sr-only">View and edit this feature.</SheetDescription>
         {featureId ? <PanelBody key={featureId} featureId={featureId} onClose={onClose} /> : null}
       </SheetContent>
     </Sheet>
@@ -98,7 +100,6 @@ function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: 
   return (
     <div className="space-y-6 pt-6">
       <SheetHeader className="space-y-2 text-left">
-        <SheetTitle className="sr-only">{feature.title}</SheetTitle>
         <Label htmlFor="feature-title" className="text-xs text-muted-foreground">
           Title
         </Label>
