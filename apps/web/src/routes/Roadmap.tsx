@@ -66,7 +66,7 @@ export default function RoadmapPage() {
     // AppShell's <main> already provides the centered max-width container and page padding.
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Roadmap</h1>
+        <h1 className="font-display text-2xl font-bold tracking-tight">Roadmap</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Drag a bar to move its dates, drag its right edge to resize, or click it for details.
         </p>
@@ -74,15 +74,15 @@ export default function RoadmapPage() {
 
       {isLoading && (
         <div className="space-y-6" data-testid="roadmap-skeleton">
-          <div className="rounded-lg border bg-card p-6 shadow-sm">
+          <div className="rounded-2xl border border-transparent bg-card p-6 shadow-card">
             <Skeleton className="mb-6 h-4 w-1/3" />
             <div className="space-y-4">
               {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-6 w-full" />
+                <Skeleton key={i} className="h-6 w-full rounded-full" />
               ))}
             </div>
           </div>
-          <div className="rounded-lg border bg-card p-4 shadow-sm">
+          <div className="rounded-2xl border-2 border-dashed border-[#d4dce6] bg-white/55 p-5">
             <Skeleton className="mb-3 h-4 w-1/4" />
             <div className="flex gap-2">
               <Skeleton className="h-8 w-32 rounded-full" />
@@ -93,7 +93,7 @@ export default function RoadmapPage() {
       )}
 
       {isError && (
-        <div className="rounded-lg border bg-card p-12 text-center shadow-sm">
+        <div className="rounded-2xl border border-transparent bg-card p-12 text-center shadow-card">
           <p className="text-sm text-muted-foreground">Couldn't load the roadmap.</p>
           <Button className="mt-4" variant="outline" onClick={() => refetch()}>
             Try again

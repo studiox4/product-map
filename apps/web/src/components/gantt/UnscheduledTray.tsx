@@ -15,8 +15,8 @@ const DEFAULT_SPAN_DAYS = 14;
 
 export function UnscheduledTray({ features, onSchedule, onDragChange }: UnscheduledTrayProps) {
   return (
-    <div className="rounded-lg border bg-card p-4 shadow-sm">
-      <h2 className="text-sm font-medium text-foreground">Unscheduled</h2>
+    <div className="rounded-2xl border-2 border-dashed border-[#d4dce6] bg-white/55 p-5">
+      <h2 className="font-display text-sm font-semibold text-ink">Unscheduled</h2>
       <p className="mt-1 text-xs text-muted-foreground">
         Drag a feature onto the timeline to schedule it.
       </p>
@@ -89,7 +89,7 @@ function TrayChip({
     <button
       type="button"
       data-testid={`gantt-tray-chip-${feature.id}`}
-      className={`inline-flex touch-none select-none items-center gap-2 rounded-full border bg-card px-3 py-1 text-sm transition-colors duration-150 ease-out hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 ${
+      className={`inline-flex touch-none select-none items-center gap-2 rounded-full border border-transparent bg-white px-3.5 py-1.5 text-sm text-body-ink shadow-[0_2px_8px_rgba(60,75,95,.10)] transition-all duration-150 ease-out hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(60,75,95,.16)] focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 ${
         drag ? 'cursor-grabbing opacity-50' : 'cursor-grab'
       }`}
       style={drag ? { transform: `translate(${drag.dx}px, ${drag.dy}px)`, zIndex: 50, position: 'relative' } : undefined}

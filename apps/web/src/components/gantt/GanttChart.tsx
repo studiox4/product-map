@@ -65,7 +65,7 @@ export function GanttChart({
 
   if (dated.length === 0) {
     return (
-      <div className="rounded-lg border bg-card p-12 text-center shadow-sm">
+      <div className="rounded-2xl border border-transparent bg-card p-12 text-center shadow-card">
         <p className="text-sm text-muted-foreground">
           No scheduled features yet — drag a feature from the unscheduled tray below onto the
           timeline to give it dates.
@@ -77,8 +77,8 @@ export function GanttChart({
   return (
     <div
       ref={containerRef}
-      className={`overflow-x-auto rounded-lg border bg-card shadow-sm transition-colors duration-150 ease-out ${
-        trayDropActive ? 'ring-2 ring-primary' : ''
+      className={`overflow-x-auto rounded-2xl border border-transparent bg-card shadow-card transition-shadow duration-150 ease-out ${
+        trayDropActive ? 'ring-2 ring-action/60' : ''
       }`}
     >
       <svg
@@ -101,23 +101,32 @@ export function GanttChart({
                   y={y}
                   width={GUTTER_WIDTH + plotWidth}
                   height={ROW_HEIGHT}
-                  fill="#fef3c7"
+                  fill="#dcebff"
                   className="animate-pulse"
                 />
               )}
+              {/* Full-row hover wash */}
+              <rect
+                x={0}
+                y={y}
+                width={GUTTER_WIDTH + plotWidth}
+                height={ROW_HEIGHT}
+                className="fill-transparent transition-[fill] duration-150 ease-out hover:fill-[#f3f6fa]"
+              />
               <line
                 x1={0}
                 y1={y + ROW_HEIGHT}
                 x2={GUTTER_WIDTH + plotWidth}
                 y2={y + ROW_HEIGHT}
-                stroke="#f1f5f9"
+                stroke="#eef1f5"
               />
               <text
-                x={12}
+                x={16}
                 y={y + ROW_HEIGHT / 2 + 4}
                 fontSize={12}
-                fill="#0f172a"
-                className="select-none"
+                fontWeight={500}
+                fill="#22303f"
+                className="pointer-events-none select-none"
               >
                 {f.title.length > 26 ? `${f.title.slice(0, 25)}…` : f.title}
                 <title>{f.title}</title>
@@ -134,19 +143,30 @@ export function GanttChart({
             pxPerDay={PX_PER_DAY}
             chartHeight={chartHeight}
           />
-          {/* Today line */}
+          {/* Today line — soft blue with a pill label */}
           <line
             data-testid="gantt-today-line"
             x1={todayX}
             y1={16}
             x2={todayX}
             y2={chartHeight}
-            stroke="#dc2626"
+            stroke="#2b557e"
+            strokeOpacity={0.45}
             strokeWidth={1.5}
           />
-          <text x={todayX + 4} y={12} fontSize={10} fill="#dc2626">
-            Today
-          </text>
+          <g pointerEvents="none">
+            <rect x={todayX - 23} y={1} width={46} height={16} rx={8} fill="#dcebff" />
+            <text
+              x={todayX}
+              y={12}
+              fontSize={10}
+              fontWeight={600}
+              fill="#2b557e"
+              textAnchor="middle"
+            >
+              Today
+            </text>
+          </g>
           {dated.map((f, i) => {
             const rect = barRect(f, viewStart, PX_PER_DAY, i);
             if (!rect) return null;
@@ -163,7 +183,7 @@ export function GanttChart({
             );
           })}
         </g>
-        <line x1={GUTTER_WIDTH} y1={0} x2={GUTTER_WIDTH} y2={chartHeight} stroke="#e2e8f0" />
+        <line x1={GUTTER_WIDTH} y1={0} x2={GUTTER_WIDTH} y2={chartHeight} stroke="#eef1f5" />
       </svg>
     </div>
   );

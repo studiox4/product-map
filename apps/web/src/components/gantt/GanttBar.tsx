@@ -91,6 +91,7 @@ export function GanttBar({ feature, rect, pxPerDay, onCommit, onClick, highlight
 
   return (
     <g
+      className="group"
       onPointerMove={handleMove}
       onPointerUp={handleUp}
       onPointerCancel={() => setDrag(null)}
@@ -102,11 +103,12 @@ export function GanttBar({ feature, rect, pxPerDay, onCommit, onClick, highlight
         y={rect.y}
         width={width}
         height={rect.height}
-        rx={4}
+        rx={rect.height / 2}
         fill={color}
         fillOpacity={drag ? 0.6 : 1}
-        stroke={highlighted ? '#0f172a' : 'none'}
+        stroke={highlighted ? '#2b557e' : 'none'}
         strokeWidth={highlighted ? 2 : 0}
+        style={{ filter: 'drop-shadow(0 2px 4px rgba(60,75,95,0.28))' }}
         className={`cursor-grab transition-opacity duration-150 ease-out hover:opacity-90 focus-visible:outline-none ${
           drag?.mode === 'move' ? 'cursor-grabbing' : ''
         } ${highlighted ? 'animate-pulse' : ''}`}
@@ -122,9 +124,10 @@ export function GanttBar({ feature, rect, pxPerDay, onCommit, onClick, highlight
       </rect>
       {width > 56 && (
         <text
-          x={x + 8}
+          x={x + 11}
           y={rect.y + rect.height / 2 + 4}
           fontSize={11}
+          fontWeight={500}
           fill="#ffffff"
           pointerEvents="none"
         >
@@ -133,6 +136,18 @@ export function GanttBar({ feature, rect, pxPerDay, onCommit, onClick, highlight
             : feature.title}
         </text>
       )}
+      {/* Resize grip — visible only while hovering the bar */}
+      <rect
+        x={x + width - 9}
+        y={rect.y + 4}
+        width={3}
+        height={rect.height - 8}
+        rx={1.5}
+        fill="#ffffff"
+        fillOpacity={0.85}
+        pointerEvents="none"
+        className="opacity-0 transition-opacity duration-150 ease-out group-hover:opacity-100"
+      />
       <rect
         data-testid={`gantt-resize-${feature.id}`}
         x={x + width - 8}
