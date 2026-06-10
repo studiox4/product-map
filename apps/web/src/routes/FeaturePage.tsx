@@ -31,6 +31,7 @@ import { STATUS_LABELS } from '@/components/StatusBadge';
 import { DescriptionBlock } from '@/components/feature/DescriptionBlock';
 import { DocsGrid } from '@/components/feature/DocsGrid';
 import { ActivityFeed } from '@/components/feature/ActivityFeed';
+import { CommentsSection } from '@/components/comments/CommentsSection';
 import { PeopleRail } from '@/components/feature/PeopleRail';
 import { VoteWidget } from '@/components/VoteWidget';
 
@@ -163,6 +164,7 @@ function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
         <div className="min-w-0 space-y-8">
           <DescriptionBlock feature={feature} />
           <DocsGrid feature={feature} />
+          <CommentsSection target={{ featureId: feature.id }} />
           <ActivityFeed featureId={feature.id} />
         </div>
 

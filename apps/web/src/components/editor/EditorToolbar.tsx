@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Check, Download, Loader2, TriangleAlert } from 'lucide-react';
+import { ArrowLeft, Check, Download, Loader2, MessageCircle, TriangleAlert } from 'lucide-react';
 import { DOC_STATUSES, type DocStatus } from '@productmap/shared';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,6 +30,9 @@ export interface EditorToolbarProps {
   onStatusChange: (status: DocStatus) => void;
   saveState: AutosaveState;
   exportHref: string;
+  /** Unresolved comment thread count for the badge (comments pill renders when onToggleComments is set). */
+  commentCount?: number;
+  onToggleComments?: () => void;
 }
 
 function SaveIndicator({ state }: { state: AutosaveState }) {
@@ -62,6 +65,8 @@ export function EditorToolbar({
   onStatusChange,
   saveState,
   exportHref,
+  commentCount = 0,
+  onToggleComments,
 }: EditorToolbarProps) {
   const [draftTitle, setDraftTitle] = useState(title);
   useEffect(() => setDraftTitle(title), [title]);
@@ -110,6 +115,24 @@ export function EditorToolbar({
           </SelectContent>
         </Select>
         <SaveIndicator state={saveState} />
+        {onToggleComments ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label={
+              commentCount > 0 ? `Comments (${commentCount} unresolved)` : 'Comments'
+            }
+            className="shrink-0 rounded-full text-body-ink"
+            onClick={onToggleComments}
+          >
+            <MessageCircle className="h-4 w-4" aria-hidden />
+            {commentCount > 0 ? (
+              <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-warm-soft px-1 text-[10px] font-semibold leading-none text-warm">
+                {commentCount}
+              </span>
+            ) : null}
+          </Button>
+        ) : null}
         <Button asChild variant="ghost" size="sm" className="shrink-0 text-body-ink">
           <a href={exportHref} download>
             <Download className="mr-1 h-4 w-4" aria-hidden />

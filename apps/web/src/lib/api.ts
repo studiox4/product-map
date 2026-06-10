@@ -7,6 +7,8 @@ import {
 } from '@tanstack/react-query';
 import type {
   ActivityItem,
+  Comment,
+  CommentThread,
   DocStatus,
   DocType,
   DocumentFull,
@@ -482,5 +484,162 @@ export function useVote(featureId: string) {
       qc.invalidateQueries({ queryKey: queryKeys.feature(featureId) });
       qc.invalidateQueries({ queryKey: queryKeys.overview });
     },
+  });
+}
+
+// ---- comments (see comments-voting design addendum) ----
+
+/** Exactly one of featureId / documentId identifies a comment surface. */
+export interface CommentTarget {
+  featureId?: string;
+  documentId?: string;
+}
+
+function commentsKey(target: CommentTarget) {
+  return ['comments', target.featureId ?? null, target.documentId ?? null] as const;
+}
+
+function commentsSearch(target: CommentTarget): string {
+  return target.featureId
+    ? `featureId=${target.featureId}`
+    : `documentId=${target.documentId ?? ''}`;
+}
+
+/** Threads for a feature or a doc — unresolved first, newest roots first. */
+export function useComments(target: CommentTarget) {
+  return useQuery({
+    queryKey: commentsKey(target),
+    queryFn: () => fetchJson<CommentThread[]>(`/api/comments?${commentsSearch(target)}`),
+    enabled: Boolean(target.featureId || target.documentId),
+  });
+}
+
+/** Invalidate everything a comment write can change: the thread list, attention counts, and the feature activity feed. */
+function invalidateComments(qc: QueryClient, target: CommentTarget) {
+  qc.invalidateQueries({ queryKey: commentsKey(target) });
+  qc.invalidateQueries({ queryKey: queryKeys.overview });
+  if (target.featureId) {
+    qc.invalidateQueries({ queryKey: queryKeys.activity(target.featureId) });
+  }
+}
+
+export interface AddCommentVars {
+  target: CommentTarget;
+  body: string;
+  /** Thread root id when replying (one level deep). */
+  parentId?: string;
+}
+
+export function useAddComment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ target, body, parentId }: AddCommentVars) =>
+      fetchJson<Comment>('/api/comments', {
+        method: 'POST',
+        body: JSON.stringify({ ...target, body, ...(parentId ? { parentId } : {}) }),
+      }),
+    onSettled: (_data, _err, { target }) => invalidateComments(qc, target),
+  });
+}
+
+type CommentsSnapshot = CommentThread[] | undefined;
+
+async function snapshotComments(
+  qc: QueryClient,
+  target: CommentTarget,
+): Promise<CommentsSnapshot> {
+  await qc.cancelQueries({ queryKey: commentsKey(target) });
+  return qc.getQueryData<CommentThread[]>(commentsKey(target));
+}
+
+export interface EditCommentVars {
+  target: CommentTarget;
+  id: string;
+  body: string;
+}
+
+/** Optimistic body edit (root or reply). */
+export function useEditComment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: EditCommentVars) =>
+      fetchJson<Comment>(`/api/comments/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ body }),
+      }),
+    onMutate: async ({ target, id, body }) => {
+      const snapshot = await snapshotComments(qc, target);
+      qc.setQueryData<CommentThread[]>(commentsKey(target), (old) =>
+        old?.map((t) =>
+          t.id === id
+            ? { ...t, body }
+            : { ...t, replies: t.replies.map((r) => (r.id === id ? { ...r, body } : r)) },
+        ),
+      );
+      return snapshot;
+    },
+    onError: (_err, { target }, snapshot) => {
+      qc.setQueryData(commentsKey(target), snapshot);
+    },
+    onSettled: (_data, _err, { target }) => invalidateComments(qc, target),
+  });
+}
+
+export interface ResolveCommentVars {
+  target: CommentTarget;
+  id: string;
+  resolved: boolean;
+}
+
+/** Optimistic resolve / reopen on a thread root; refreshes attention counts on settle. */
+export function useResolveComment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, resolved }: ResolveCommentVars) =>
+      fetchJson<Comment>(`/api/comments/${id}/resolve`, {
+        method: 'PATCH',
+        body: JSON.stringify({ resolved }),
+      }),
+    onMutate: async ({ target, id, resolved }) => {
+      const snapshot = await snapshotComments(qc, target);
+      const resolvedAt = resolved ? new Date().toISOString() : null;
+      qc.setQueryData<CommentThread[]>(commentsKey(target), (old) =>
+        old?.map((t) =>
+          t.id === id ? { ...t, resolvedAt, resolvedBy: resolved ? getStoredUserId() : null } : t,
+        ),
+      );
+      return snapshot;
+    },
+    onError: (_err, { target }, snapshot) => {
+      qc.setQueryData(commentsKey(target), snapshot);
+    },
+    onSettled: (_data, _err, { target }) => invalidateComments(qc, target),
+  });
+}
+
+export interface DeleteCommentVars {
+  target: CommentTarget;
+  id: string;
+}
+
+/** Optimistic delete (removes the whole thread for roots, the single reply otherwise). */
+export function useDeleteComment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id }: DeleteCommentVars) =>
+      fetchJson<void>(`/api/comments/${id}`, { method: 'DELETE' }),
+    onMutate: async ({ target, id }) => {
+      const snapshot = await snapshotComments(qc, target);
+      qc.setQueryData<CommentThread[]>(commentsKey(target), (old) =>
+        old
+          ?.filter((t) => t.id !== id)
+          .map((t) => ({ ...t, replies: t.replies.filter((r) => r.id !== id) })),
+      );
+      return snapshot;
+    },
+    onError: (_err, { target }, snapshot) => {
+      qc.setQueryData(commentsKey(target), snapshot);
+    },
+    onSettled: (_data, _err, { target }) => invalidateComments(qc, target),
   });
 }

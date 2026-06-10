@@ -95,6 +95,7 @@ const server = setupServer(
   http.get('/api/features/f1/activity', () => HttpResponse.json(activity)),
   http.get('/api/features/f1/collaborators', () => HttpResponse.json([corban, ada])),
   http.get('/api/documents', () => HttpResponse.json(allDocs)),
+  http.get('/api/comments', () => HttpResponse.json([])),
   http.patch('/api/features/f1', async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
     return HttpResponse.json({ ...feature, ...body, documents: undefined });

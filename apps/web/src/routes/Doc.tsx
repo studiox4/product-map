@@ -1,11 +1,25 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { DocStatus } from '@productmap/shared';
-import { useAiStatus, useDocument, useFeature, useUpdateDocument } from '@/lib/api';
+import {
+  useAiStatus,
+  useComments,
+  useDocument,
+  useFeature,
+  useUpdateDocument,
+} from '@/lib/api';
 import { DocTypeChip } from '@/components/DocTypeChip';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { CommentsSection } from '@/components/comments/CommentsSection';
 import { Editor } from '@/components/editor/Editor';
 import { EditorToolbar } from '@/components/editor/EditorToolbar';
 import { useAutosave } from '@/components/editor/useAutosave';
@@ -38,6 +52,11 @@ export default function DocPage() {
   const updateDocument = useUpdateDocument();
   const { mutateAsync: patchDocument, mutate: patchDocumentFireAndForget } =
     updateDocument;
+
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const commentsQuery = useComments({ documentId: id });
+  const unresolvedCount =
+    commentsQuery.data?.filter((t) => t.resolvedAt === null).length ?? 0;
 
   const saveContent = useCallback(
     async (contentJson: Record<string, unknown>) => {
@@ -134,6 +153,8 @@ export default function DocPage() {
         onStatusChange={handleStatusChange}
         saveState={autosave.state}
         exportHref={`/api/documents/${doc.id}/export.md`}
+        commentCount={unresolvedCount}
+        onToggleComments={() => setCommentsOpen((open) => !open)}
       />
       <Editor
         key={doc.id}
@@ -144,6 +165,26 @@ export default function DocPage() {
         aiConfig={aiConfig}
         onAiDone={handleAiDone}
       />
+
+      {/* Non-modal right sheet — the editor stays usable underneath. */}
+      <Sheet open={commentsOpen} onOpenChange={setCommentsOpen} modal={false}>
+        <SheetContent
+          side="right"
+          className="w-full overflow-y-auto bg-[#f4f6f9] sm:w-[480px] sm:max-w-[480px]"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          <SheetHeader>
+            <SheetTitle className="font-display text-ink">Comments</SheetTitle>
+            <SheetDescription className="sr-only">
+              Discussion threads for this document
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-4">
+            <CommentsSection target={{ documentId: id }} showHeader={false} />
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

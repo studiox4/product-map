@@ -6,7 +6,7 @@ const KIND_META: Record<
   AttentionItem['kind'],
   { icon: LucideIcon; label: string; chip: string }
 > = {
-  open_comments: { icon: MessageCircle, label: 'Open comments', chip: 'bg-[#e4f0e4] text-[#3c6b46]' },
+  open_comments: { icon: MessageCircle, label: 'Open comments', chip: 'bg-warm-soft text-warm' },
   draft_doc: { icon: FileText, label: 'Draft doc', chip: 'bg-[#fdf0e3] text-[#9a6428]' },
   in_review_doc: { icon: Eye, label: 'In review', chip: 'bg-[#fbeedd] text-[#8a5a22]' },
   missing_dates: { icon: CalendarX, label: 'No dates', chip: 'bg-[#fcebe3] text-[#9a5a3c]' },
@@ -41,6 +41,10 @@ export function AttentionPanel({ items }: { items: AttentionItem[] }) {
         {items.map((item, i) => {
           const meta = KIND_META[item.kind];
           const Icon = meta.icon;
+          const label =
+            item.kind === 'open_comments'
+              ? `${item.count} open comment${item.count === 1 ? '' : 's'}`
+              : meta.label;
           return (
             <button
               key={`${item.kind}-${i}`}
@@ -58,7 +62,7 @@ export function AttentionPanel({ items }: { items: AttentionItem[] }) {
               <span
                 className={`ml-auto inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${meta.chip}`}
               >
-                {meta.label}
+                {label}
               </span>
             </button>
           );
