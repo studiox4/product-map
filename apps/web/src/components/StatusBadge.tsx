@@ -5,14 +5,14 @@ type AnyStatus = FeatureStatus | DocStatus;
 
 const STATUS_STYLES: Record<AnyStatus, string> = {
   // feature statuses
-  idea: 'bg-slate-100 text-slate-700',
-  planned: 'bg-blue-100 text-blue-800',
-  in_progress: 'bg-amber-100 text-amber-800',
-  shipped: 'bg-green-100 text-green-800',
+  idea: 'bg-[#edf1f7] text-[#46556a]',
+  planned: 'bg-[#dcebff] text-[#2b557e]',
+  in_progress: 'bg-[#fdf0e3] text-[#9a6428]',
+  shipped: 'bg-[#e4f0e4] text-[#3c6b46]',
   // doc statuses
-  draft: 'border border-slate-300 text-slate-600',
-  in_review: 'bg-amber-100 text-amber-800',
-  final: 'bg-green-100 text-green-800',
+  draft: 'bg-[#f0f3f7] text-[#7c8794]',
+  in_review: 'bg-[#fdf0e3] text-[#9a6428]',
+  final: 'bg-[#e4f0e4] text-[#3c6b46]',
 };
 
 const STATUS_LABELS: Record<AnyStatus, string> = {

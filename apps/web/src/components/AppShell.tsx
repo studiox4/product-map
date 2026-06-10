@@ -11,17 +11,17 @@ const NAV_LINKS = [
 
 export function AppShell() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b bg-card">
-        <nav className="mx-auto flex h-14 max-w-screen-xl items-center gap-6 px-6">
+    <div className="min-h-screen text-foreground">
+      <header className="bg-transparent">
+        <nav className="mx-auto flex h-16 max-w-screen-xl items-center gap-6 px-6">
           <Link
             to="/"
-            className="flex items-center gap-2 rounded-md text-base font-semibold tracking-tight outline-none transition-colors hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex items-center gap-2 rounded-full font-display text-lg font-bold tracking-tight text-ink outline-none transition-opacity duration-150 ease-out hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <Map className="h-4 w-4 text-green-600" aria-hidden />
+            <Map className="h-4 w-4 text-action" aria-hidden />
             ProductMap
           </Link>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             {NAV_LINKS.map((link) => (
               <NavLink
                 key={link.to}
@@ -29,8 +29,10 @@ export function AppShell() {
                 end={link.end}
                 className={({ isActive }) =>
                   cn(
-                    'rounded-md px-3 py-1 text-sm font-medium outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring',
-                    isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground',
+                    'rounded-full px-4 py-1.5 text-sm font-medium outline-none transition-all duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring',
+                    isActive
+                      ? 'bg-white text-ink shadow-card'
+                      : 'text-body-ink hover:bg-white/60 hover:text-ink',
                   )
                 }
               >

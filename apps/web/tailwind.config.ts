@@ -3,15 +3,38 @@ import animate from 'tailwindcss-animate';
 
 export default {
   darkMode: ['class'],
-  content: ['./index.html', './src/**/*.{ts,tsx}'],
+  content: ['./index.html', './src/**/*.{ts,tsx}', '../../packages/shared/src/**/*.ts'],
   theme: {
     extend: {
+      fontFamily: {
+        display: ['"Bricolage Grotesque"', '"Schibsted Grotesk"', 'sans-serif'],
+        sans: ['"Schibsted Grotesk"', 'sans-serif'],
+      },
+      boxShadow: {
+        card: '0 10px 28px rgba(60,75,95,.12)',
+        'card-hover': '0 14px 34px rgba(60,75,95,.18)',
+      },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
       colors: {
+        ink: 'var(--pm-ink)',
+        'body-ink': 'var(--pm-body)',
+        'muted-ink': 'var(--pm-muted)',
+        action: {
+          DEFAULT: 'var(--pm-action)',
+          soft: 'var(--pm-action-soft)',
+        },
+        sage: {
+          DEFAULT: 'var(--pm-sage)',
+          soft: 'var(--pm-sage-soft)',
+        },
+        warm: {
+          DEFAULT: 'var(--pm-warm)',
+          soft: 'var(--pm-warm-soft)',
+        },
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         card: {

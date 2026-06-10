@@ -5,7 +5,7 @@ export function DocTypeChip({ type, className }: { type: DocType; className?: st
   return (
     <span
       className={cn(
-        'inline-flex items-center whitespace-nowrap rounded border border-slate-200 bg-slate-50 px-1 py-0.5 text-xs font-medium text-slate-600',
+        'inline-flex items-center whitespace-nowrap rounded-full bg-[#edf1f7] px-2 py-0.5 text-xs font-medium text-[#46556a]',
         className,
       )}
     >
