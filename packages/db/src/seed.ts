@@ -81,9 +81,26 @@ try {
         endDate: nextMonth(28),
         sortOrder: 1,
       },
-      // Later (idea, no dates → unscheduled tray + attention)
-      { productId: product.id, title: 'Comments & review', horizon: 'later', status: 'idea', sortOrder: 0 },
-      { productId: product.id, title: 'Up/down voting', horizon: 'later', status: 'idea', sortOrder: 1 },
+      // Later — two dated (so the landing hero shows ≥6 bars per AC2), two dateless
+      // (→ unscheduled tray + attention).
+      {
+        productId: product.id,
+        title: 'Comments & review',
+        horizon: 'later',
+        status: 'idea',
+        startDate: nextMonth(20),
+        endDate: nextMonth(38), // Date.UTC rolls over into the following month
+        sortOrder: 0,
+      },
+      {
+        productId: product.id,
+        title: 'Up/down voting',
+        horizon: 'later',
+        status: 'idea',
+        startDate: nextMonth(32),
+        endDate: nextMonth(46),
+        sortOrder: 1,
+      },
       { productId: product.id, title: 'Realtime collaboration (Yjs)', horizon: 'later', status: 'idea', sortOrder: 2 },
       { productId: product.id, title: 'ECS deployment', horizon: 'later', status: 'idea', sortOrder: 3 },
     ])

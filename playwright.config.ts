@@ -2,8 +2,13 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: 'e2e',
+  // Specs share one seeded Postgres database — run them serially.
+  fullyParallel: false,
+  workers: 1,
+  globalSetup: './e2e/helpers.ts',
   use: {
     baseURL: 'http://localhost:5173',
+    trace: 'retain-on-failure',
   },
   projects: [
     {
