@@ -4,6 +4,7 @@ import type { FeatureWithDocs } from '@productmap/shared';
 import { cn } from '@/lib/utils';
 import { StatusBadge } from '@/components/StatusBadge';
 import { DocTypeChip } from '@/components/DocTypeChip';
+import { VoteWidget } from '@/components/VoteWidget';
 
 interface FeatureCardProps {
   feature: FeatureWithDocs;
@@ -51,6 +52,9 @@ export function FeatureCard({ feature, onOpen }: FeatureCardProps) {
         {feature.documents.map((doc) => (
           <DocTypeChip key={doc.id} type={doc.type} />
         ))}
+      </div>
+      <div className="mt-2">
+        <VoteWidget featureId={feature.id} summary={feature} size="compact" />
       </div>
     </div>
   );

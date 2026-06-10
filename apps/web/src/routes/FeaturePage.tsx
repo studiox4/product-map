@@ -32,6 +32,7 @@ import { DescriptionBlock } from '@/components/feature/DescriptionBlock';
 import { DocsGrid } from '@/components/feature/DocsGrid';
 import { ActivityFeed } from '@/components/feature/ActivityFeed';
 import { PeopleRail } from '@/components/feature/PeopleRail';
+import { VoteWidget } from '@/components/VoteWidget';
 
 function FeatureSkeleton() {
   return (
@@ -154,6 +155,7 @@ function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
               ))}
             </SelectContent>
           </Select>
+          <VoteWidget featureId={feature.id} summary={feature} />
         </div>
       </header>
 

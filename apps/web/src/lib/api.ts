@@ -408,3 +408,79 @@ export function useUpdateProduct() {
     },
   });
 }
+
+// ---- voting (see comments-voting design addendum) ----
+
+export type VoteInput = 1 | -1 | 0;
+
+interface VoteCounts {
+  score: number;
+  boosts: number;
+  cools: number;
+  myVote: VoteInput;
+}
+
+/** Derive the optimistic vote summary for a feature given the next vote value. */
+function applyVote<T extends VoteCounts>(f: T, value: VoteInput): T {
+  const boosts = f.boosts - (f.myVote === 1 ? 1 : 0) + (value === 1 ? 1 : 0);
+  const cools = f.cools - (f.myVote === -1 ? 1 : 0) + (value === -1 ? 1 : 0);
+  return { ...f, boosts, cools, score: boosts - cools, myVote: value };
+}
+
+function applyVoteInCaches(qc: QueryClient, featureId: string, value: VoteInput) {
+  qc.setQueryData<FeatureWithDocs[]>(queryKeys.features, (old) =>
+    old?.map((f) => (f.id === featureId ? applyVote(f, value) : f)),
+  );
+  qc.setQueryData<FeatureWithDocs>(queryKeys.feature(featureId), (old) =>
+    old ? applyVote(old, value) : old,
+  );
+  qc.setQueryData<OverviewResponse>(queryKeys.overview, (old) =>
+    old
+      ? {
+          ...old,
+          features: old.features.map((f) => (f.id === featureId ? applyVote(f, value) : f)),
+        }
+      : old,
+  );
+}
+
+/**
+ * Optimistic vote PUT for a feature: 1 = boost, -1 = cool, 0 = clear.
+ * Snapshots feature caches, applies the derived summary immediately,
+ * rolls back on error, reconciles with the server summary on settle.
+ */
+export function useVote(featureId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (value: VoteInput) =>
+      fetchJson<VoteCounts>(`/api/features/${featureId}/vote`, {
+        method: 'PUT',
+        body: JSON.stringify({ value }),
+      }),
+    onMutate: async (value) => {
+      await Promise.all([
+        qc.cancelQueries({ queryKey: queryKeys.features }),
+        qc.cancelQueries({ queryKey: queryKeys.overview }),
+        qc.cancelQueries({ queryKey: queryKeys.feature(featureId) }),
+      ]);
+      const snapshot = {
+        features: qc.getQueryData<FeatureWithDocs[]>(queryKeys.features),
+        feature: qc.getQueryData<FeatureWithDocs>(queryKeys.feature(featureId)),
+        overview: qc.getQueryData<OverviewResponse>(queryKeys.overview),
+      };
+      applyVoteInCaches(qc, featureId, value);
+      return snapshot;
+    },
+    onError: (_err, _value, snapshot) => {
+      if (!snapshot) return;
+      qc.setQueryData(queryKeys.features, snapshot.features);
+      qc.setQueryData(queryKeys.feature(featureId), snapshot.feature);
+      qc.setQueryData(queryKeys.overview, snapshot.overview);
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.features });
+      qc.invalidateQueries({ queryKey: queryKeys.feature(featureId) });
+      qc.invalidateQueries({ queryKey: queryKeys.overview });
+    },
+  });
+}

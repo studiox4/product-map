@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   DndContext,
@@ -14,12 +14,42 @@ import { BoardColumn } from '@/components/board/BoardColumn';
 import { FeatureDetailPanel } from '@/components/board/FeatureDetailPanel';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+
+export const BOARD_SORT_KEY = 'pmBoardSort';
+type BoardSort = 'manual' | 'score';
+
+function getStoredSort(): BoardSort {
+  try {
+    return localStorage.getItem(BOARD_SORT_KEY) === 'score' ? 'score' : 'manual';
+  } catch {
+    return 'manual';
+  }
+}
 
 export default function Board() {
   const { data: features, isLoading, isError, refetch } = useFeatures();
   const updateFeature = useUpdateFeature();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedId = searchParams.get('feature');
+  const [sort, setSort] = useState<BoardSort>(getStoredSort);
+
+  const changeSort = (next: BoardSort) => {
+    setSort(next);
+    try {
+      localStorage.setItem(BOARD_SORT_KEY, next);
+    } catch {
+      // private mode etc. — sort still applies for this session
+    }
+  };
+
+  const columnFeatures = (horizon: Horizon) => {
+    const list = (features ?? []).filter((f) => f.horizon === horizon);
+    if (sort === 'score') {
+      return [...list].sort((a, b) => b.score - a.score || a.sortOrder - b.sortOrder);
+    }
+    return list;
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -99,13 +129,40 @@ export default function Board() {
 
   return (
     <div className="mx-auto max-w-[1280px] px-6 py-8">
+      <div className="mb-4 flex justify-end">
+        <div
+          role="group"
+          aria-label="Board order"
+          className="flex items-center gap-1 rounded-full bg-white p-1 shadow-card"
+        >
+          <span className="pl-3 pr-1 text-xs font-medium text-muted-ink">Order ▾</span>
+          {(['manual', 'score'] as const).map((option) => (
+            <button
+              key={option}
+              type="button"
+              aria-pressed={sort === option}
+              onClick={() => changeSort(option)}
+              className={cn(
+                'rounded-full px-3 py-1 text-xs font-medium capitalize',
+                'transition-colors duration-150 ease-out',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                sort === option
+                  ? 'bg-[#dcebff] text-[#2b557e]'
+                  : 'text-muted-ink hover:bg-[#edf1f7]',
+              )}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      </div>
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {HORIZONS.map((horizon) => (
             <BoardColumn
               key={horizon}
               horizon={horizon}
-              features={(features ?? []).filter((f) => f.horizon === horizon)}
+              features={columnFeatures(horizon)}
               onOpenFeature={openFeature}
             />
           ))}
