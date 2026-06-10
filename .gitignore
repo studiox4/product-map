@@ -9,3 +9,4 @@ playwright-report/
 .vite/
 .pnpm-store/
 .playwright-mcp/
+.playwright-mcp/
