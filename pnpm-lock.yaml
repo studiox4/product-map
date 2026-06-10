@@ -144,9 +144,15 @@ importers:
       '@dnd-kit/sortable':
         specifier: ^10.0.0
         version: 10.0.0(@dnd-kit/core@6.3.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
+      '@dnd-kit/utilities':
+        specifier: 3.2.2
+        version: 3.2.2(react@18.3.1)
       '@productmap/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@productmap/templates':
+        specifier: workspace:*
+        version: link:../../packages/templates
       '@radix-ui/react-dialog':
         specifier: 1.1.16
         version: 1.1.16(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
