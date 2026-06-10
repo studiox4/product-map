@@ -1,11 +1,68 @@
-// Placeholder app shell — replaced by router setup in Task 3A.
-export default function App() {
+import { Suspense, lazy } from 'react';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import AppShell from '@/components/AppShell';
+import Landing from '@/routes/Landing';
+import { Skeleton } from '@/components/ui/skeleton';
+
+// Lazy routes owned by parallel tasks (3B-D); stubs render "coming soon" until they land.
+const BoardPage = lazy(() => import('@/routes/Board'));
+const RoadmapPage = lazy(() => import('@/routes/Roadmap'));
+const DocPage = lazy(() => import('@/routes/Doc'));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: 1, refetchOnWindowFocus: false, staleTime: 5_000 },
+  },
+});
+
+function RouteFallback() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
-      <div className="text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">ProductMap</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Scaffold ready.</p>
+    <div className="space-y-6">
+      <Skeleton className="h-8 w-64" />
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <Skeleton className="h-64 rounded-lg" />
+        <Skeleton className="h-64 rounded-lg" />
+        <Skeleton className="h-64 rounded-lg" />
       </div>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Routes>
+          <Route element={<AppShell />}>
+            <Route path="/" element={<Landing />} />
+            <Route
+              path="/board"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <BoardPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/roadmap"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <RoadmapPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/docs/:id"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <DocPage />
+                </Suspense>
+              }
+            />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }
