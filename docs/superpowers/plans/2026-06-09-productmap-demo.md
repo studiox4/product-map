@@ -420,13 +420,13 @@ Shared foundations live in Task 3A and are interface-stable for 3B-D (they may b
 
 **Files:** Create `src/routes/Doc.tsx`, `src/components/editor/{Editor,EditorToolbar,SlashMenu,slash-items.ts,AiDraftCard,useAutosave.ts}`.
 
-- [ ] Tiptap setup: StarterKit, Table(+Row/Cell/Header, resizable), TaskList/TaskItem(nested), Image, Link(openOnClick false), Placeholder("Type '/' for commands…"). Content from `useDocument(id)` contentJson; `onUpdate` → `useAutosave` (debounce 800ms → PATCH contentJson; exposes state `idle|saving|saved|error`).
-- [ ] SlashMenu via `@tiptap/suggestion` on `/`: items in `slash-items.ts`: Heading 1/2/3, Bullet list, Numbered list, Task list, Table 3×3, Code block, Quote, Image (opens file picker → POST /api/uploads → insert node with returned url), Divider. Filter on query, arrows+Enter+Esc per UX guidelines.
-- [ ] Toolbar: back link (← feature title), editable doc title (PATCH on blur), DocTypeChip, status Select (PATCH), autosave indicator ("Saving…"/"Saved"/amber banner on error per UX guidelines), "Export .md" button → opens `/api/documents/:id/export.md`.
-- [ ] Paste/drop image: upload via same endpoint, insert inline.
-- [ ] AiDraftCard: rendered inside editor area only when (doc is empty: contentJson has no text content) AND `useAiStatus().enabled`. Textarea "Describe the feature in a sentence or two" + "Draft with AI" button → POST generate-doc, read SSE via fetch ReadableStream; accumulate markdown; every chunk: replace editor content with `markdownToTiptap`-equivalent — client-side: insert as markdown via `marked` → HTML → `editor.commands.setContent(html)` (Tiptap parses HTML natively; identical extension set). On `done`: trigger autosave. Abort button while streaming; partial kept on abort/timeout(30s) + retry toast.
-- [ ] Component tests (msw): autosave fires once per burst (fake timers); save error shows banner; slash menu filters; AI card hidden when status disabled; SSE mock streams → editor content grows.
-- [ ] Commit: `feat(web): tiptap editor with slash menu, autosave, uploads, AI drafting`.
+- [x] Tiptap setup: StarterKit, Table(+Row/Cell/Header, resizable), TaskList/TaskItem(nested), Image, Link(openOnClick false), Placeholder("Type '/' for commands…"). Content from `useDocument(id)` contentJson; `onUpdate` → `useAutosave` (debounce 800ms → PATCH contentJson; exposes state `idle|saving|saved|error`).
+- [x] SlashMenu via `@tiptap/suggestion` on `/`: items in `slash-items.ts`: Heading 1/2/3, Bullet list, Numbered list, Task list, Table 3×3, Code block, Quote, Image (opens file picker → POST /api/uploads → insert node with returned url), Divider. Filter on query, arrows+Enter+Esc per UX guidelines.
+- [x] Toolbar: back link (← feature title), editable doc title (PATCH on blur), DocTypeChip, status Select (PATCH), autosave indicator ("Saving…"/"Saved"/amber banner on error per UX guidelines), "Export .md" button → opens `/api/documents/:id/export.md`.
+- [x] Paste/drop image: upload via same endpoint, insert inline.
+- [x] AiDraftCard: rendered inside editor area only when (doc is empty: contentJson has no text content) AND `useAiStatus().enabled`. Textarea "Describe the feature in a sentence or two" + "Draft with AI" button → POST generate-doc, read SSE via fetch ReadableStream; accumulate markdown; every chunk: replace editor content with `markdownToTiptap`-equivalent — client-side: insert as markdown via `marked` → HTML → `editor.commands.setContent(html)` (Tiptap parses HTML natively; identical extension set). On `done`: trigger autosave. Abort button while streaming; partial kept on abort/timeout(30s) + retry toast.
+- [x] Component tests (msw): autosave fires once per burst (fake timers); save error shows banner; slash menu filters; AI card hidden when status disabled; SSE mock streams → editor content grows.
+- [x] Commit: `feat(web): tiptap editor with slash menu, autosave, uploads, AI drafting`.
 
 ---
 
