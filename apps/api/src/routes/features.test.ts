@@ -326,3 +326,31 @@ describe('PUT /api/features/:id/collaborators', () => {
     expect(missing.status).toBe(404);
   });
 });
+
+describe('GET /api/features/:id/collaborators', () => {
+  it('returns the collaborator users for a feature', async () => {
+    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const [other] = await db.insert(users).values({ name: 'Ada', color: '#3c6b46' }).returning();
+    await db.insert(featureCollaborators).values([
+      { featureId: f.id, userId },
+      { featureId: f.id, userId: other.id },
+    ]);
+
+    const res = await app.request(`/api/features/${f.id}/collaborators`);
+    expect(res.status).toBe(200);
+    const list = await res.json();
+    expect(list).toHaveLength(2);
+    expect(list.map((u: { name: string }) => u.name).sort()).toEqual(['Ada', 'Corban']);
+    expect(list[0]).toMatchObject({ color: expect.stringMatching(/^#/) });
+  });
+
+  it('returns [] when there are none and 404 on unknown feature', async () => {
+    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const empty = await app.request(`/api/features/${f.id}/collaborators`);
+    expect(empty.status).toBe(200);
+    expect(await empty.json()).toEqual([]);
+
+    const missing = await app.request('/api/features/00000000-0000-4000-8000-000000000000/collaborators');
+    expect(missing.status).toBe(404);
+  });
+});

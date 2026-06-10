@@ -10,6 +10,7 @@ const BoardPage = lazy(() => import('@/routes/Board'));
 const RoadmapPage = lazy(() => import('@/routes/Roadmap'));
 const DocPage = lazy(() => import('@/routes/Doc'));
 const DocsPage = lazy(() => import('@/routes/DocsPage'));
+const FeaturePage = lazy(() => import('@/routes/FeaturePage'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -50,6 +51,14 @@ export default function App() {
               element={
                 <Suspense fallback={<RouteFallback />}>
                   <RoadmapPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/features/:id"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <FeaturePage />
                 </Suspense>
               }
             />

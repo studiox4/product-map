@@ -142,6 +142,23 @@ export const featuresRoutes = new Hono<CurrentUserEnv>()
       .limit(50);
     return c.json(rows);
   })
+  .get('/:id/collaborators', async (c) => {
+    const id = c.req.param('id');
+    const [feature] = await db.select({ id: features.id }).from(features).where(eq(features.id, id));
+    if (!feature) return c.json({ error: 'not_found' }, 404);
+    const rows = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        color: users.color,
+        createdAt: users.createdAt,
+      })
+      .from(featureCollaborators)
+      .innerJoin(users, eq(featureCollaborators.userId, users.id))
+      .where(eq(featureCollaborators.featureId, id))
+      .orderBy(asc(users.createdAt));
+    return c.json(rows);
+  })
   .put(
     '/:id/collaborators',
     zValidator('json', collaboratorsPut, (result, c) => {

@@ -64,6 +64,7 @@ const fixture: FeatureWithDocs[] = [
 ];
 
 const server = setupServer(
+  http.get('/api/users', () => HttpResponse.json([])),
   http.get('/api/features', () => HttpResponse.json(fixture)),
   http.get('/api/features/:id', ({ params }) => {
     const f = fixture.find((x) => x.id === params.id);

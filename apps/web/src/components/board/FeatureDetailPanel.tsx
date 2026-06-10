@@ -1,17 +1,14 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
-import { FEATURE_STATUSES, type FeatureWithDocs } from '@productmap/shared';
-import { useDeleteFeature, useFeature, useUpdateFeature } from '@/lib/api';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  FEATURE_STATUSES,
+  HORIZONS,
+  type FeatureWithDocs,
+} from '@productmap/shared';
+import { useFeature, useUpdateFeature, useUsers } from '@/lib/api';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   Select,
   SelectContent,
@@ -24,20 +21,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DocTypeChip } from '@/components/DocTypeChip';
+import { HORIZON_LABELS } from '@/components/HorizonBadge';
+import { STATUS_LABELS } from '@/components/StatusBadge';
 import { NewDocDialog } from '@/components/board/NewDocDialog';
-
-const STATUS_LABELS: Record<(typeof FEATURE_STATUSES)[number], string> = {
-  idea: 'Idea',
-  planned: 'Planned',
-  in_progress: 'In progress',
-  shipped: 'Shipped',
-};
 
 interface FeatureDetailPanelProps {
   featureId: string | null;
   onClose: () => void;
 }
 
+/** Slim "peek" sheet: quick edits + jump-off to the full feature page. */
 export function FeatureDetailPanel({ featureId, onClose }: FeatureDetailPanelProps) {
   return (
     <Sheet open={!!featureId} onOpenChange={(open) => !open && onClose()}>
@@ -65,18 +58,23 @@ function PanelBody({ featureId, onClose }: { featureId: string; onClose: () => v
   return <PanelFields feature={feature} onClose={onClose} />;
 }
 
+const pillTriggerClass =
+  'rounded-full border-transparent bg-[#f0f3f7] px-4 transition-colors duration-150 ease-out hover:bg-[#edf1f7]';
+
 function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: () => void }) {
   const navigate = useNavigate();
   const updateFeature = useUpdateFeature();
-  const deleteFeature = useDeleteFeature();
+  const { data: users } = useUsers();
 
   const [startDate, setStartDate] = useState(feature.startDate ?? '');
   const [endDate, setEndDate] = useState(feature.endDate ?? '');
   const [newDocOpen, setNewDocOpen] = useState(false);
   const newDocTriggerRef = useRef<HTMLButtonElement>(null);
-  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const datesInverted = Boolean(startDate && endDate && startDate > endDate);
+
+  const creator = users?.find((u) => u.id === feature.createdBy);
+  const createdOn = format(parseISO(feature.createdAt), 'MMM d');
 
   const saveDates = (nextStart: string, nextEnd: string) => {
     if (nextStart && nextEnd && nextStart > nextEnd) return; // inline error shown, no save
@@ -84,17 +82,6 @@ function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: 
       { id: feature.id, startDate: nextStart || null, endDate: nextEnd || null },
       { onError: () => toast.error(`Couldn't update dates for '${feature.title}' — restored`) },
     );
-  };
-
-  const confirmDelete = () => {
-    deleteFeature.mutate(feature.id, {
-      onSuccess: () => {
-        toast.success(`Deleted '${feature.title}'`);
-        setConfirmDeleteOpen(false);
-        onClose();
-      },
-      onError: () => toast.error(`Couldn't delete '${feature.title}'`),
-    });
   };
 
   return (
@@ -119,31 +106,53 @@ function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: 
         />
       </SheetHeader>
 
-      <div className="space-y-2">
-        <Label className="text-xs font-medium text-muted-ink">Status</Label>
-        <Select
-          value={feature.status}
-          onValueChange={(status) =>
-            updateFeature.mutate(
-              { id: feature.id, status: status as FeatureWithDocs['status'] },
-              { onError: () => toast.error(`Couldn't update '${feature.title}' — restored`) },
-            )
-          }
-        >
-          <SelectTrigger
-            aria-label="Status"
-            className="rounded-full border-transparent bg-[#f0f3f7] px-4 transition-colors duration-150 ease-out hover:bg-[#edf1f7]"
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <Label className="text-xs font-medium text-muted-ink">Horizon</Label>
+          <Select
+            value={feature.horizon}
+            onValueChange={(horizon) =>
+              updateFeature.mutate(
+                { id: feature.id, horizon: horizon as FeatureWithDocs['horizon'] },
+                { onError: () => toast.error(`Couldn't move '${feature.title}' — restored`) },
+              )
+            }
           >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {FEATURE_STATUSES.map((s) => (
-              <SelectItem key={s} value={s}>
-                {STATUS_LABELS[s]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            <SelectTrigger aria-label="Horizon" className={pillTriggerClass}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {HORIZONS.map((h) => (
+                <SelectItem key={h} value={h}>
+                  {HORIZON_LABELS[h]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs font-medium text-muted-ink">Status</Label>
+          <Select
+            value={feature.status}
+            onValueChange={(status) =>
+              updateFeature.mutate(
+                { id: feature.id, status: status as FeatureWithDocs['status'] },
+                { onError: () => toast.error(`Couldn't update '${feature.title}' — restored`) },
+              )
+            }
+          >
+            <SelectTrigger aria-label="Status" className={pillTriggerClass}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {FEATURE_STATUSES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {STATUS_LABELS[s]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -221,14 +230,18 @@ function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: 
         )}
       </div>
 
-      <div className="border-t border-[#eef1f5] pt-5">
+      <div className="space-y-4 border-t border-[#eef1f5] pt-5">
+        <p className="text-xs text-muted-ink">
+          {creator ? `Added by ${creator.name} · ${createdOn}` : `Added ${createdOn}`}
+        </p>
         <Button
-          variant="destructive"
-          size="sm"
-          className="rounded-full"
-          onClick={() => setConfirmDeleteOpen(true)}
+          className="w-full rounded-full"
+          onClick={() => {
+            onClose();
+            navigate(`/features/${feature.id}`);
+          }}
         >
-          Delete feature
+          Open feature ↗
         </Button>
       </div>
 
@@ -238,33 +251,6 @@ function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: 
         onOpenChange={setNewDocOpen}
         returnFocusRef={newDocTriggerRef}
       />
-
-      <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete feature?</DialogTitle>
-            <DialogDescription>
-              This will permanently delete '{feature.title}'
-              {feature.documents.length > 0
-                ? ` and its ${feature.documents.length} doc${feature.documents.length === 1 ? '' : 's'}`
-                : ''}
-              .
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDeleteOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={deleteFeature.isPending}
-              onClick={confirmDelete}
-            >
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
