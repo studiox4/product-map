@@ -31,7 +31,7 @@ export function AttentionPanel({ items }: { items: AttentionItem[] }) {
           {items.length}
         </span>
       </div>
-      <div className="flex flex-1 flex-col gap-1 px-2 pb-3">
+      <div className="flex max-h-72 flex-1 flex-col gap-1 overflow-y-auto px-2 pb-3">
         {items.length === 0 && (
           <p className="px-2 py-2 text-sm text-muted-foreground">All caught up</p>
         )}

@@ -71,14 +71,16 @@ export function EditorToolbar({
       <div className="flex flex-wrap items-center gap-2 rounded-full border border-transparent bg-white px-3 py-2 shadow-card">
         <Link
           to={backHref}
-          className="flex max-w-[180px] shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm text-muted-ink transition-colors duration-150 ease-out hover:bg-secondary hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          title={backLabel}
+          className="flex max-w-[220px] shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm text-muted-ink transition-colors duration-150 ease-out hover:bg-secondary hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
           <span className="truncate">{backLabel}</span>
         </Link>
         <input
           aria-label="Document title"
-          className="min-w-0 flex-1 rounded-full border-0 bg-transparent px-3 py-1 font-display text-[28px] font-semibold leading-tight text-ink outline-none transition-colors duration-150 ease-out hover:bg-secondary/60 focus-visible:ring-2 focus-visible:ring-ring"
+          title={draftTitle}
+          className="min-w-[240px] flex-1 rounded-full border-0 bg-transparent px-3 py-1 font-display text-2xl font-semibold leading-tight text-ink outline-none transition-colors duration-150 ease-out hover:bg-secondary/60 focus-visible:ring-2 focus-visible:ring-ring"
           value={draftTitle}
           onChange={(e) => setDraftTitle(e.target.value)}
           onBlur={() => {
