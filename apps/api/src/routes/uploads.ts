@@ -12,7 +12,8 @@ const ALLOWED_MIME: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/gif': 'gif',
   'image/webp': 'webp',
-  'image/svg+xml': 'svg',
+  // image/svg+xml deliberately excluded: SVG can embed scripts and is served
+  // same-origin from /uploads/* — stored XSS vector.
 };
 const MAX_BYTES = 10 * 1024 * 1024; // 10MB
 
