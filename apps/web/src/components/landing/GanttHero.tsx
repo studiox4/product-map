@@ -7,6 +7,7 @@ const GUTTER = 220;
 const ROW_H = 28;
 const BAR_H = 14;
 const PAD_Y = 8;
+const LABEL_H = 22; // headroom for the "today" pill
 
 /** Read-only compact Gantt: one row per dated feature, bars colored by horizon, today line. */
 export function GanttHero({ features }: { features: FeatureWithDocs[] }) {
@@ -15,7 +16,7 @@ export function GanttHero({ features }: { features: FeatureWithDocs[] }) {
 
   if (dated.length === 0) {
     return (
-      <div className="rounded-lg border bg-card p-6 text-sm text-muted-foreground shadow-sm">
+      <div className="rounded-2xl border border-transparent bg-white p-6 text-sm text-muted-foreground shadow-card">
         No scheduled features yet — add dates on the board to see them here.
       </div>
     );
@@ -30,13 +31,15 @@ export function GanttHero({ features }: { features: FeatureWithDocs[] }) {
   const x = (date: Date) =>
     GUTTER + (differenceInCalendarDays(date, viewStart) / totalDays) * plotWidth;
 
-  const height = dated.length * ROW_H + PAD_Y * 2;
+  const height = LABEL_H + dated.length * ROW_H + PAD_Y * 2;
   const today = startOfDay(new Date());
   const todayX = x(today);
   const todayVisible = todayX >= GUTTER && todayX <= WIDTH;
+  const pillW = 44;
+  const pillX = Math.min(Math.max(todayX - pillW / 2, GUTTER), WIDTH - pillW);
 
   return (
-    <div className="rounded-lg border bg-card p-4 shadow-sm">
+    <div className="rounded-2xl border border-transparent bg-white p-5 shadow-card transition-all duration-150 ease-out hover:-translate-y-px hover:shadow-card-hover">
       <svg
         viewBox={`0 0 ${WIDTH} ${height}`}
         className="w-full"
@@ -44,16 +47,16 @@ export function GanttHero({ features }: { features: FeatureWithDocs[] }) {
         aria-label="Roadmap timeline"
       >
         {dated.map((f, i) => {
-          const y = PAD_Y + i * ROW_H;
+          const y = LABEL_H + PAD_Y + i * ROW_H;
           const barX = x(parseISO(f.startDate!));
-          const barW = Math.max(4, x(parseISO(f.endDate!)) - barX);
+          const barW = Math.max(BAR_H, x(parseISO(f.endDate!)) - barX);
           return (
             <g key={f.id}>
               <text
                 x={0}
                 y={y + ROW_H / 2}
                 dominantBaseline="middle"
-                className="fill-slate-600 text-[12px]"
+                className="fill-[#46556a] text-[12px]"
               >
                 {f.title.length > 32 ? `${f.title.slice(0, 31)}…` : f.title}
               </text>
@@ -63,9 +66,10 @@ export function GanttHero({ features }: { features: FeatureWithDocs[] }) {
                 y={y + (ROW_H - BAR_H) / 2}
                 width={barW}
                 height={BAR_H}
-                rx={4}
+                rx={BAR_H / 2}
                 fill={HORIZON_COLORS[f.horizon].bar}
-                className="cursor-pointer transition-opacity hover:opacity-80"
+                style={{ filter: 'drop-shadow(0 2px 3px rgba(60,75,95,.22))' }}
+                className="cursor-pointer transition-opacity duration-150 ease-out hover:opacity-80"
                 onClick={() => navigate(`/roadmap?feature=${f.id}`)}
               >
                 <title>{`${f.title} (${f.startDate} → ${f.endDate})`}</title>
@@ -74,15 +78,35 @@ export function GanttHero({ features }: { features: FeatureWithDocs[] }) {
           );
         })}
         {todayVisible && (
-          <line
-            data-testid="gantt-hero-today"
-            x1={todayX}
-            y1={0}
-            x2={todayX}
-            y2={height}
-            stroke="#dc2626"
-            strokeWidth={1.5}
-          />
+          <g>
+            <line
+              data-testid="gantt-hero-today"
+              x1={todayX}
+              y1={LABEL_H - 4}
+              x2={todayX}
+              y2={height}
+              stroke="#2b557e"
+              strokeOpacity={0.4}
+              strokeWidth={1.5}
+            />
+            <rect
+              x={pillX}
+              y={1}
+              width={pillW}
+              height={16}
+              rx={8}
+              fill="#dcebff"
+            />
+            <text
+              x={pillX + pillW / 2}
+              y={9.5}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              className="fill-[#2b557e] text-[10px] font-medium"
+            >
+              today
+            </text>
+          </g>
         )}
       </svg>
     </div>

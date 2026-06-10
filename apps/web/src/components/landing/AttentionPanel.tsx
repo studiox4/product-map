@@ -2,11 +2,14 @@ import { useNavigate } from 'react-router-dom';
 import { CalendarX, Eye, FileQuestion, FileText, type LucideIcon } from 'lucide-react';
 import type { AttentionItem } from '@productmap/shared';
 
-const KIND_META: Record<AttentionItem['kind'], { icon: LucideIcon; label: string }> = {
-  draft_doc: { icon: FileText, label: 'Draft doc' },
-  in_review_doc: { icon: Eye, label: 'In review' },
-  missing_dates: { icon: CalendarX, label: 'No dates' },
-  no_docs: { icon: FileQuestion, label: 'No docs' },
+const KIND_META: Record<
+  AttentionItem['kind'],
+  { icon: LucideIcon; label: string; chip: string }
+> = {
+  draft_doc: { icon: FileText, label: 'Draft doc', chip: 'bg-[#fdf0e3] text-[#9a6428]' },
+  in_review_doc: { icon: Eye, label: 'In review', chip: 'bg-[#fbeedd] text-[#8a5a22]' },
+  missing_dates: { icon: CalendarX, label: 'No dates', chip: 'bg-[#fcebe3] text-[#9a5a3c]' },
+  no_docs: { icon: FileQuestion, label: 'No docs', chip: 'bg-[#f7efe2] text-[#86683a]' },
 };
 
 export function AttentionPanel({ items }: { items: AttentionItem[] }) {
@@ -21,10 +24,12 @@ export function AttentionPanel({ items }: { items: AttentionItem[] }) {
   }
 
   return (
-    <section className="flex flex-col rounded-lg border border-t-2 border-t-slate-300 bg-card shadow-sm">
-      <div className="flex items-center justify-between px-4 pb-2 pt-3">
-        <h2 className="text-sm font-semibold">Needs attention</h2>
-        <span className="text-xs text-muted-foreground">{items.length}</span>
+    <section className="flex flex-col rounded-2xl border border-transparent bg-white shadow-card transition-all duration-150 ease-out hover:-translate-y-px hover:shadow-card-hover">
+      <div className="flex items-center justify-between px-4 pb-2 pt-4">
+        <h2 className="font-display text-sm font-semibold text-ink">Needs attention</h2>
+        <span className="inline-flex items-center rounded-full bg-[#fdf0e3] px-2 py-0.5 text-xs font-medium text-[#9a6428]">
+          {items.length}
+        </span>
       </div>
       <div className="flex flex-1 flex-col gap-1 px-2 pb-3">
         {items.length === 0 && (
@@ -38,11 +43,20 @@ export function AttentionPanel({ items }: { items: AttentionItem[] }) {
               key={`${item.kind}-${i}`}
               type="button"
               onClick={() => open(item)}
-              className="flex items-center gap-2 rounded-md px-2 py-1 text-left text-sm outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-left text-sm text-body-ink outline-none transition-colors duration-150 ease-out hover:bg-[#edf1f7] focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+              <span
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${meta.chip}`}
+                aria-hidden
+              >
+                <Icon className="h-3.5 w-3.5" />
+              </span>
               <span className="truncate">{item.title}</span>
-              <span className="ml-auto shrink-0 text-xs text-muted-foreground">{meta.label}</span>
+              <span
+                className={`ml-auto inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${meta.chip}`}
+              >
+                {meta.label}
+              </span>
             </button>
           );
         })}

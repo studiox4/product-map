@@ -2,7 +2,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { HORIZON_COLORS, type FeatureWithDocs, type Horizon } from '@productmap/shared';
 import { HORIZON_LABELS } from '@/components/HorizonBadge';
 import StatusBadge from '@/components/StatusBadge';
-import { cn } from '@/lib/utils';
 
 const TOP_N = 3;
 
@@ -19,15 +18,19 @@ export function HorizonPanel({
   const moreCount = sorted.length - top.length;
 
   return (
-    <section
-      className={cn(
-        'flex flex-col rounded-lg border border-t-2 bg-card shadow-sm',
-        HORIZON_COLORS[horizon].header,
-      )}
-    >
-      <div className="flex items-center justify-between px-4 pb-2 pt-3">
-        <h2 className="text-sm font-semibold">{HORIZON_LABELS[horizon]}</h2>
-        <span className="text-xs text-muted-foreground">{sorted.length}</span>
+    <section className="flex flex-col rounded-2xl border border-transparent bg-white shadow-card transition-all duration-150 ease-out hover:-translate-y-px hover:shadow-card-hover">
+      <div className="flex items-center justify-between px-4 pb-2 pt-4">
+        <h2 className="flex items-center gap-2 font-display text-sm font-semibold text-ink">
+          <span
+            className="h-2 w-2 rounded-full"
+            style={{ backgroundColor: HORIZON_COLORS[horizon].bar }}
+            aria-hidden
+          />
+          {HORIZON_LABELS[horizon]}
+        </h2>
+        <span className="inline-flex items-center rounded-full bg-[#edf1f7] px-2 py-0.5 text-xs font-medium text-muted-ink">
+          {sorted.length}
+        </span>
       </div>
       <div className="flex flex-1 flex-col gap-1 px-2 pb-3">
         {top.length === 0 && (
@@ -38,7 +41,7 @@ export function HorizonPanel({
             key={f.id}
             type="button"
             onClick={() => navigate(`/board?feature=${f.id}`)}
-            className="flex items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-sm outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex items-center justify-between gap-2 rounded-xl px-2 py-1.5 text-left text-sm text-body-ink outline-none transition-colors duration-150 ease-out hover:bg-[#edf1f7] focus-visible:ring-2 focus-visible:ring-ring"
           >
             <span className="truncate">{f.title}</span>
             <StatusBadge status={f.status} />
@@ -47,7 +50,7 @@ export function HorizonPanel({
         {moreCount > 0 && (
           <Link
             to="/board"
-            className="rounded-md px-2 py-1 text-sm text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="rounded-xl px-2 py-1.5 text-sm text-muted-foreground outline-none transition-colors duration-150 ease-out hover:bg-[#edf1f7] hover:text-body-ink focus-visible:ring-2 focus-visible:ring-ring"
           >
             +{moreCount} more
           </Link>

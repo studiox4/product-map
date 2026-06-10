@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { Pencil } from 'lucide-react';
 import type { Product } from '@productmap/shared';
 import { useUpdateProduct } from '@/lib/api';
 import { Input } from '@/components/ui/input';
@@ -29,7 +30,7 @@ export function VisionHeader({ product }: { product: Product }) {
 
   return (
     <header>
-      <h1 className="text-3xl font-semibold tracking-tight">{product.name}</h1>
+      <h1 className="font-display text-4xl font-bold tracking-tight text-ink">{product.name}</h1>
       {editing ? (
         <Input
           aria-label="Product vision"
@@ -41,16 +42,20 @@ export function VisionHeader({ product }: { product: Product }) {
             if (e.key === 'Enter') save();
             if (e.key === 'Escape') setEditing(false);
           }}
-          className="mt-2 max-w-2xl text-base"
+          className="mt-2 max-w-2xl rounded-xl text-base"
         />
       ) : (
         <button
           type="button"
           onClick={startEditing}
-          className="mt-2 block max-w-2xl rounded-md text-left text-base text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          className="group mt-2 -ml-2 flex max-w-2xl items-center gap-2 rounded-full px-2 py-0.5 text-left text-base text-muted-ink outline-none transition-colors duration-150 ease-out hover:bg-[#edf1f7] hover:text-body-ink focus-visible:ring-2 focus-visible:ring-ring"
           title="Click to edit the vision"
         >
-          {product.vision || 'Add a product vision…'}
+          <span>{product.vision || 'Add a product vision…'}</span>
+          <Pencil
+            className="h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity duration-150 ease-out group-hover:opacity-60 group-focus-visible:opacity-60"
+            aria-hidden
+          />
         </button>
       )}
     </header>
