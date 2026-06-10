@@ -1,6 +1,6 @@
 import pg from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import * as schema from '@productmap/db';
+import { schema } from '@productmap/db';
 
 const connectionString =
   process.env.DATABASE_URL ?? 'postgres://localhost:5432/productmap';
