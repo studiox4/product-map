@@ -29,16 +29,22 @@ export function BoardColumn({ horizon, features, onOpenFeature }: BoardColumnPro
       ref={setNodeRef}
       data-testid={`column-${horizon}`}
       className={cn(
-        'flex flex-col rounded-lg border border-t-4 bg-card shadow-sm transition-colors',
-        HORIZON_COLORS[horizon].header,
-        isOver && 'ring-2 ring-ring',
+        'flex flex-col rounded-2xl bg-white/50 transition-shadow duration-150 ease-out',
+        isOver && 'ring-2 ring-inset ring-[#dcebff]',
       )}
     >
       <header className="flex items-center justify-between px-4 py-3">
-        <h2 className="text-sm font-semibold">{HORIZON_LABELS[horizon]}</h2>
+        <h2 className="flex items-center gap-2 font-display text-sm font-semibold text-ink">
+          <span
+            aria-hidden="true"
+            className="h-2 w-2 rounded-full"
+            style={{ backgroundColor: HORIZON_COLORS[horizon].bar }}
+          />
+          {HORIZON_LABELS[horizon]}
+        </h2>
         <span
           data-testid={`column-${horizon}-count`}
-          className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+          className="rounded-full bg-[#edf1f7] px-2 py-0.5 text-xs font-medium text-muted-ink"
         >
           {features.length}
         </span>
@@ -46,7 +52,7 @@ export function BoardColumn({ horizon, features, onOpenFeature }: BoardColumnPro
       <div className="flex flex-1 flex-col gap-3 px-3 pb-3">
         <SortableContext items={features.map((f) => f.id)} strategy={verticalListSortingStrategy}>
           {features.length === 0 ? (
-            <p className="rounded-lg border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
+            <p className="rounded-xl border border-dashed border-[#c9d3df] px-3 py-6 text-center text-sm text-muted-ink">
               Nothing here yet
             </p>
           ) : (
@@ -57,7 +63,7 @@ export function BoardColumn({ horizon, features, onOpenFeature }: BoardColumnPro
         </SortableContext>
         <Button
           variant="ghost"
-          className="justify-start text-muted-foreground"
+          className="justify-start rounded-full text-muted-ink hover:bg-[#edf1f7]"
           onClick={() => setDialogOpen(true)}
         >
           <Plus className="mr-1 h-4 w-4" />

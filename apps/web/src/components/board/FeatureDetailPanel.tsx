@@ -41,7 +41,7 @@ interface FeatureDetailPanelProps {
 export function FeatureDetailPanel({ featureId, onClose }: FeatureDetailPanelProps) {
   return (
     <Sheet open={!!featureId} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md">
+      <SheetContent side="right" className="w-full overflow-y-auto rounded-l-2xl sm:max-w-md">
         <SheetTitle className="sr-only">Feature details</SheetTitle>
         <SheetDescription className="sr-only">View and edit this feature.</SheetDescription>
         {featureId ? <PanelBody key={featureId} featureId={featureId} onClose={onClose} /> : null}
@@ -98,9 +98,9 @@ function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: 
   };
 
   return (
-    <div className="space-y-6 pt-6">
+    <div className="space-y-8 pt-6">
       <SheetHeader className="space-y-2 text-left">
-        <Label htmlFor="feature-title" className="text-xs text-muted-foreground">
+        <Label htmlFor="feature-title" className="text-xs font-medium text-muted-ink">
           Title
         </Label>
         <Input
@@ -115,12 +115,12 @@ function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: 
               );
             }
           }}
-          className="text-base font-semibold"
+          className="rounded-xl border-transparent bg-[#f0f3f7] font-display text-base font-semibold text-ink transition-colors duration-150 ease-out focus-visible:bg-white"
         />
       </SheetHeader>
 
       <div className="space-y-2">
-        <Label className="text-xs text-muted-foreground">Status</Label>
+        <Label className="text-xs font-medium text-muted-ink">Status</Label>
         <Select
           value={feature.status}
           onValueChange={(status) =>
@@ -130,7 +130,10 @@ function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: 
             )
           }
         >
-          <SelectTrigger aria-label="Status">
+          <SelectTrigger
+            aria-label="Status"
+            className="rounded-full border-transparent bg-[#f0f3f7] px-4 transition-colors duration-150 ease-out hover:bg-[#edf1f7]"
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -146,7 +149,7 @@ function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: 
       <div className="space-y-2">
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
-            <Label htmlFor="feature-start-date" className="text-xs text-muted-foreground">
+            <Label htmlFor="feature-start-date" className="text-xs font-medium text-muted-ink">
               Start date
             </Label>
             <Input
@@ -157,10 +160,11 @@ function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: 
                 setStartDate(e.target.value);
                 saveDates(e.target.value, endDate);
               }}
+              className="rounded-full border-transparent bg-[#f0f3f7] px-4 transition-colors duration-150 ease-out focus-visible:bg-white"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="feature-end-date" className="text-xs text-muted-foreground">
+            <Label htmlFor="feature-end-date" className="text-xs font-medium text-muted-ink">
               End date
             </Label>
             <Input
@@ -171,6 +175,7 @@ function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: 
                 setEndDate(e.target.value);
                 saveDates(startDate, e.target.value);
               }}
+              className="rounded-full border-transparent bg-[#f0f3f7] px-4 transition-colors duration-150 ease-out focus-visible:bg-white"
             />
           </div>
         </div>
@@ -183,18 +188,19 @@ function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: 
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label className="text-xs text-muted-foreground">Docs</Label>
+          <Label className="text-xs font-medium text-muted-ink">Docs</Label>
           <Button
             ref={newDocTriggerRef}
             variant="outline"
             size="sm"
+            className="rounded-full"
             onClick={() => setNewDocOpen(true)}
           >
             New doc
           </Button>
         </div>
         {feature.documents.length === 0 ? (
-          <p className="rounded-lg border border-dashed px-3 py-4 text-center text-sm text-muted-foreground">
+          <p className="rounded-xl border border-dashed border-[#c9d3df] px-3 py-4 text-center text-sm text-muted-ink">
             No docs yet
           </p>
         ) : (
@@ -204,7 +210,7 @@ function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: 
                 <button
                   type="button"
                   onClick={() => navigate(`/docs/${doc.id}`)}
-                  className="flex w-full items-center gap-2 rounded-lg border bg-card px-3 py-2 text-left text-sm shadow-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex w-full items-center gap-2 rounded-xl border border-[#eef1f5] bg-white px-3 py-2 text-left text-sm text-body-ink shadow-[0_4px_14px_rgba(60,75,95,.08)] transition-[box-shadow,transform] duration-150 ease-out hover:-translate-y-px hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <DocTypeChip type={doc.type} />
                   <span className="flex-1 truncate">{doc.title}</span>
@@ -215,8 +221,13 @@ function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: 
         )}
       </div>
 
-      <div className="border-t pt-4">
-        <Button variant="destructive" size="sm" onClick={() => setConfirmDeleteOpen(true)}>
+      <div className="border-t border-[#eef1f5] pt-5">
+        <Button
+          variant="destructive"
+          size="sm"
+          className="rounded-full"
+          onClick={() => setConfirmDeleteOpen(true)}
+        >
           Delete feature
         </Button>
       </div>

@@ -1,6 +1,7 @@
 import { useState, type RefObject } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { File, FileText, Briefcase, Wrench, Sparkles } from 'lucide-react';
 import { DOC_TYPES, DOC_TYPE_LABELS, type DocType, type FeatureWithDocs } from '@productmap/shared';
 import { TEMPLATES } from '@productmap/templates';
 import { useCreateDocument } from '@/lib/api';
@@ -18,6 +19,21 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 type TemplateChoice = DocType | 'blank';
+
+const TEMPLATE_ICONS: Record<TemplateChoice, typeof FileText> = {
+  prd: FileText,
+  brd: Briefcase,
+  tech_spec: Wrench,
+  feature_brief: Sparkles,
+  blank: File,
+};
+
+const templateCardClass =
+  'flex cursor-pointer items-start gap-3 rounded-xl border border-[#eef1f5] bg-white p-3 ' +
+  'transition-[box-shadow,background-color] duration-150 ease-out hover:bg-[#f6f8fb] ' +
+  'has-[[data-state=checked]]:border-transparent has-[[data-state=checked]]:bg-[#f3f8ff] ' +
+  'has-[[data-state=checked]]:ring-2 has-[[data-state=checked]]:ring-[#dcebff] ' +
+  'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring';
 
 interface NewDocDialogProps {
   feature: FeatureWithDocs;
@@ -84,29 +100,33 @@ export function NewDocDialog({ feature, open, onOpenChange, returnFocusRef }: Ne
           onValueChange={(v) => selectChoice(v as TemplateChoice)}
           className="gap-2"
         >
-          {DOC_TYPES.map((type) => (
-            <Label
-              key={type}
-              htmlFor={`tpl-${type}`}
-              className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-accent has-[[data-state=checked]]:border-ring"
-            >
-              <RadioGroupItem id={`tpl-${type}`} value={type} className="mt-0.5" />
-              <span className="space-y-1">
-                <span className="block text-sm font-medium">{DOC_TYPE_LABELS[type]}</span>
-                <span className="block text-xs font-normal text-muted-foreground">
-                  {TEMPLATES[type].description}
+          {DOC_TYPES.map((type) => {
+            const Icon = TEMPLATE_ICONS[type];
+            return (
+              <Label key={type} htmlFor={`tpl-${type}`} className={templateCardClass}>
+                <RadioGroupItem id={`tpl-${type}`} value={type} className="sr-only" />
+                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#edf1f7] text-[#2b557e]">
+                  <Icon className="h-4 w-4" aria-hidden="true" />
                 </span>
-              </span>
-            </Label>
-          ))}
-          <Label
-            htmlFor="tpl-blank"
-            className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-accent has-[[data-state=checked]]:border-ring"
-          >
-            <RadioGroupItem id="tpl-blank" value="blank" className="mt-0.5" />
+                <span className="space-y-1">
+                  <span className="block text-sm font-medium text-ink">
+                    {DOC_TYPE_LABELS[type]}
+                  </span>
+                  <span className="block text-xs font-normal text-muted-ink">
+                    {TEMPLATES[type].description}
+                  </span>
+                </span>
+              </Label>
+            );
+          })}
+          <Label htmlFor="tpl-blank" className={templateCardClass}>
+            <RadioGroupItem id="tpl-blank" value="blank" className="sr-only" />
+            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#edf1f7] text-[#2b557e]">
+              <File className="h-4 w-4" aria-hidden="true" />
+            </span>
             <span className="space-y-1">
-              <span className="block text-sm font-medium">Blank</span>
-              <span className="block text-xs font-normal text-muted-foreground">
+              <span className="block text-sm font-medium text-ink">Blank</span>
+              <span className="block text-xs font-normal text-muted-ink">
                 Start from an empty page.
               </span>
             </span>

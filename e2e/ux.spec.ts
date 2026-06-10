@@ -35,7 +35,7 @@ test('AC-UX1: doc editor shows a skeleton while loading', async ({ page, request
 
   await throttleApi(page);
   await page.goto(`/docs/${docId}`, { waitUntil: 'commit' });
-  await expect(page.locator('.animate-pulse').first()).toBeVisible();
+  await expect(page.locator('.shimmer').first()).toBeVisible();
   await expect(page.locator('[aria-label="Document body"]')).toBeVisible({ timeout: 15_000 });
 });
 

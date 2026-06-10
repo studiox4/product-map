@@ -74,10 +74,10 @@ export default function Board() {
         className="mx-auto grid max-w-[1280px] grid-cols-1 gap-6 px-6 py-8 md:grid-cols-3"
       >
         {HORIZONS.map((h) => (
-          <div key={h} className="space-y-3">
-            <Skeleton className="h-10 w-full rounded-lg" />
-            <Skeleton className="h-24 w-full rounded-lg" />
-            <Skeleton className="h-24 w-full rounded-lg" />
+          <div key={h} className="space-y-3 rounded-2xl bg-white/50 p-3">
+            <Skeleton className="h-8 w-1/2 rounded-full bg-white" />
+            <Skeleton className="h-24 w-full rounded-xl bg-white shadow-[0_4px_14px_rgba(60,75,95,.08)]" />
+            <Skeleton className="h-24 w-full rounded-xl bg-white shadow-[0_4px_14px_rgba(60,75,95,.08)]" />
           </div>
         ))}
       </div>
@@ -87,9 +87,9 @@ export default function Board() {
   if (isError) {
     return (
       <div className="mx-auto max-w-[1280px] px-6 py-8">
-        <div className="rounded-lg border bg-card p-6 text-center shadow-sm">
-          <p className="text-sm text-muted-foreground">Couldn't load the board.</p>
-          <Button className="mt-4" onClick={() => refetch()}>
+        <div className="rounded-2xl border border-transparent bg-white p-8 text-center shadow-card">
+          <p className="text-sm text-muted-ink">Couldn't load the board.</p>
+          <Button className="mt-4 rounded-full" onClick={() => refetch()}>
             Retry
           </Button>
         </div>
