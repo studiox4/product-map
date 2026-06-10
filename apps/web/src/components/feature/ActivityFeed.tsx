@@ -35,6 +35,12 @@ export function activityVerb(item: ActivityItem): string {
       return `marked a doc as ${label(STATUS_LABELS, to) ?? 'a new status'}`;
     case 'doc_renamed':
       return to ? `renamed a doc to “${to}”` : 'renamed a doc';
+    case 'comment_added':
+      return payloadString(item.payload, 'documentId') ? 'commented on a doc' : 'commented';
+    case 'comment_resolved':
+      return item.payload?.['resolved'] === false
+        ? 'reopened a comment thread'
+        : 'resolved a comment thread';
     default:
       return 'updated this feature';
   }

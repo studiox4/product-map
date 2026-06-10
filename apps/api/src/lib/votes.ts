@@ -10,12 +10,17 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 /**
  * Resolve the requesting user id for read paths (`currentUser` middleware
- * deliberately skips GETs). Mirrors its semantics: x-user-id header when
- * valid, otherwise the first seeded user.
+ * deliberately skips GETs). Mirrors its semantics: x-user-id header when it
+ * names an existing user, otherwise the first seeded user — a stale header id
+ * (e.g. localStorage surviving a db reset) must read the same identity that
+ * writes fall back to, or `myVote` would never match the recorded vote.
  */
 export async function requestUserId(c: Context): Promise<string | null> {
   const headerId = c.req.header('x-user-id');
-  if (headerId && UUID_RE.test(headerId)) return headerId;
+  if (headerId && UUID_RE.test(headerId)) {
+    const [row] = await db.select({ id: users.id }).from(users).where(eq(users.id, headerId));
+    if (row) return row.id;
+  }
   const [first] = await db.select({ id: users.id }).from(users).orderBy(asc(users.createdAt)).limit(1);
   return first?.id ?? null;
 }

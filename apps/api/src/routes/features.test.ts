@@ -194,6 +194,19 @@ describe('PUT /api/features/:id/vote', () => {
     const fresh = await (await app.request(`/api/features/${unvoted.id}`)).json();
     expect(fresh).toMatchObject({ score: 0, boosts: 0, cools: 0, myVote: 0 });
   });
+
+  it('reads with a stale/unknown x-user-id fall back to the first user (matches write path)', async () => {
+    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    // Stale id (e.g. localStorage survives a db reset): the write fell back to
+    // the first user, so the read must compute myVote for that same user.
+    const staleId = '11111111-2222-4333-8444-555555555555';
+    await app.request(`/api/features/${f.id}/vote`, put(1, staleId));
+
+    const single = await (
+      await app.request(`/api/features/${f.id}`, { headers: { 'x-user-id': staleId } })
+    ).json();
+    expect(single).toMatchObject({ score: 1, boosts: 1, cools: 0, myVote: 1 });
+  });
 });
 
 describe('GET /api/features/:id', () => {

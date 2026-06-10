@@ -56,9 +56,16 @@ test('AC-UX2: drag shows grab cursor, drop highlight, and moves optimistically',
 
   await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
   await page.mouse.down();
-  // Target the empty space at the bottom of the column — over a card, dnd-kit
-  // reports the card (not the column) as the drop target, so no column ring.
-  await page.mouse.move(to.x + to.width / 2, to.y + to.height - 24, { steps: 12 });
+  // Any on-screen point inside the column works: the column highlights when a
+  // drag hovers it or any card in it. Clamp to the viewport — tall boards push
+  // the column bottom off-screen, which would trigger dnd-kit auto-scroll and
+  // stale droppable geometry.
+  const viewport = page.viewportSize()!;
+  await page.mouse.move(
+    to.x + to.width / 2,
+    Math.min(to.y + to.height - 24, viewport.height - 60),
+    { steps: 12 },
+  );
 
   // While dragging: source dims, drop target highlights.
   await expect(card).toHaveClass(/opacity-50/);

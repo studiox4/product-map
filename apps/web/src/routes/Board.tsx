@@ -6,6 +6,7 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragOverEvent,
 } from '@dnd-kit/core';
 import { HORIZONS, type Horizon } from '@productmap/shared';
 import { toast } from 'sonner';
@@ -33,6 +34,7 @@ export default function Board() {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedId = searchParams.get('feature');
   const [sort, setSort] = useState<BoardSort>(getStoredSort);
+  const [dragOverHorizon, setDragOverHorizon] = useState<Horizon | null>(null);
 
   const changeSort = (next: BoardSort) => {
     setSort(next);
@@ -74,18 +76,24 @@ export default function Board() {
     });
   }, [setSearchParams]);
 
+  // Over a column (id = horizon) or over a card (resolve its column).
+  const resolveHorizon = (overId: string | number | undefined): Horizon | null => {
+    if (overId == null) return null;
+    if ((HORIZONS as readonly string[]).includes(String(overId))) return overId as Horizon;
+    return features?.find((f) => f.id === overId)?.horizon ?? null;
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    setDragOverHorizon(resolveHorizon(event.over?.id));
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
+    setDragOverHorizon(null);
     const { active, over } = event;
     if (!over || !features) return;
     const feature = features.find((f) => f.id === active.id);
     if (!feature) return;
-    // Dropped on a column (id = horizon) or on a card (resolve its column).
-    let target: Horizon | undefined;
-    if ((HORIZONS as readonly string[]).includes(String(over.id))) {
-      target = over.id as Horizon;
-    } else {
-      target = features.find((f) => f.id === over.id)?.horizon;
-    }
+    const target = resolveHorizon(over.id);
     if (!target || target === feature.horizon) return;
     updateFeature.mutate(
       { id: feature.id, horizon: target },
@@ -156,7 +164,12 @@ export default function Board() {
           ))}
         </div>
       </div>
-      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={sensors}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setDragOverHorizon(null)}
+      >
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {HORIZONS.map((horizon) => (
             <BoardColumn
@@ -164,6 +177,7 @@ export default function Board() {
               horizon={horizon}
               features={columnFeatures(horizon)}
               onOpenFeature={openFeature}
+              isDropTarget={dragOverHorizon === horizon}
             />
           ))}
         </div>

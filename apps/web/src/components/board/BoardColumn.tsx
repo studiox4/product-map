@@ -18,9 +18,16 @@ interface BoardColumnProps {
   horizon: Horizon;
   features: FeatureWithDocs[];
   onOpenFeature: (id: string) => void;
+  /** True while a drag hovers this column or any card inside it. */
+  isDropTarget?: boolean;
 }
 
-export function BoardColumn({ horizon, features, onOpenFeature }: BoardColumnProps) {
+export function BoardColumn({
+  horizon,
+  features,
+  onOpenFeature,
+  isDropTarget = false,
+}: BoardColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: horizon });
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -30,7 +37,7 @@ export function BoardColumn({ horizon, features, onOpenFeature }: BoardColumnPro
       data-testid={`column-${horizon}`}
       className={cn(
         'flex flex-col rounded-2xl bg-white/50 transition-shadow duration-150 ease-out',
-        isOver && 'ring-2 ring-inset ring-[#dcebff]',
+        (isOver || isDropTarget) && 'ring-2 ring-inset ring-[#dcebff]',
       )}
     >
       <header className="flex items-center justify-between px-4 py-3">
