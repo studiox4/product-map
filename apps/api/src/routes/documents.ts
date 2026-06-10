@@ -1,4 +1,144 @@
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { asc, eq } from 'drizzle-orm';
+import archiver from 'archiver';
+import { documentCreate, documentUpdate } from '@productmap/shared';
+import { TEMPLATES } from '@productmap/templates';
+import { documents, features } from '@productmap/db';
+import type { Context } from 'hono';
+import { db } from '../db';
+import { markdownToTiptap, tiptapToMarkdown } from '../lib/markdown';
 
-// Documents routes — implemented in Phase 2. Stub mount point owned by this file only.
-export const documentsRoutes = new Hono();
+const EMPTY_DOC = { type: 'doc', content: [] };
+
+type DocRow = typeof documents.$inferSelect;
+
+function toMeta(row: DocRow) {
+  const { contentJson: _json, contentMd: _md, ...meta } = row;
+  return meta;
+}
+
+export function slugify(s: string): string {
+  return (
+    s
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'untitled'
+  );
+}
+
+function validationHook(result: { success: boolean; error?: unknown }, c: Context) {
+  if (!result.success) {
+    return c.json(
+      { error: 'validation', issues: (result.error as { issues: unknown }).issues },
+      400,
+    );
+  }
+}
+
+export const documentsRoutes = new Hono()
+  // GET /api/documents?featureId= → DocumentMeta[]
+  .get('/', async (c) => {
+    const featureId = c.req.query('featureId');
+    const rows = await db
+      .select()
+      .from(documents)
+      .where(featureId ? eq(documents.featureId, featureId) : undefined)
+      .orderBy(asc(documents.createdAt));
+    return c.json(rows.map(toMeta));
+  })
+  // POST /api/documents → DocumentFull (201)
+  .post('/', zValidator('json', documentCreate, validationHook), async (c) => {
+    const body = c.req.valid('json');
+    const [feature] = await db.select().from(features).where(eq(features.id, body.featureId));
+    if (!feature) return c.json({ error: 'not_found' }, 404);
+
+    let contentJson: unknown = EMPTY_DOC;
+    let contentMd = '';
+    if (body.fromTemplate) {
+      contentMd = TEMPLATES[body.type].markdownBody.replaceAll('{{title}}', body.title);
+      contentJson = markdownToTiptap(contentMd);
+    }
+    const [row] = await db
+      .insert(documents)
+      .values({
+        featureId: body.featureId,
+        type: body.type,
+        title: body.title,
+        contentJson,
+        contentMd,
+      })
+      .returning();
+    return c.json(row, 201);
+  })
+  // GET /api/documents/:id/export.md → text/markdown attachment
+  .get('/:id/export.md', async (c) => {
+    const [row] = await db.select().from(documents).where(eq(documents.id, c.req.param('id')));
+    if (!row) return c.json({ error: 'not_found' }, 404);
+    return c.body(row.contentMd, 200, {
+      'content-type': 'text/markdown; charset=utf-8',
+      'content-disposition': `attachment; filename="${slugify(row.title)}.md"`,
+    });
+  })
+  // GET /api/documents/:id → DocumentFull
+  .get('/:id', async (c) => {
+    const [row] = await db.select().from(documents).where(eq(documents.id, c.req.param('id')));
+    if (!row) return c.json({ error: 'not_found' }, 404);
+    return c.json(row);
+  })
+  // PATCH /api/documents/:id → DocumentMeta (server derives contentMd)
+  .patch('/:id', zValidator('json', documentUpdate, validationHook), async (c) => {
+    const id = c.req.param('id')!;
+    const body = c.req.valid('json');
+    const set: Partial<typeof documents.$inferInsert> = { updatedAt: new Date() };
+    if (body.title !== undefined) set.title = body.title;
+    if (body.status !== undefined) set.status = body.status;
+    if (body.contentJson !== undefined) {
+      set.contentJson = body.contentJson;
+      set.contentMd = tiptapToMarkdown(body.contentJson);
+    }
+    const [row] = await db
+      .update(documents)
+      .set(set)
+      .where(eq(documents.id, id))
+      .returning();
+    if (!row) return c.json({ error: 'not_found' }, 404);
+    return c.json(toMeta(row));
+  })
+  // DELETE /api/documents/:id → 204
+  .delete('/:id', async (c) => {
+    const [row] = await db
+      .delete(documents)
+      .where(eq(documents.id, c.req.param('id')))
+      .returning({ id: documents.id });
+    if (!row) return c.json({ error: 'not_found' }, 404);
+    return c.body(null, 204);
+  });
+
+// Mounted at /api in app.ts → GET /api/export.zip
+export const exportRoutes = new Hono().get('/export.zip', async (c) => {
+  const featureRows = await db.select().from(features).orderBy(asc(features.createdAt));
+  const docRows = await db.select().from(documents).orderBy(asc(documents.createdAt));
+
+  const archive = archiver('zip', { zlib: { level: 9 } });
+  const chunks: Buffer[] = [];
+  const done = new Promise<Buffer>((resolve, reject) => {
+    archive.on('data', (chunk: Buffer) => chunks.push(chunk));
+    archive.on('error', reject);
+    archive.on('end', () => resolve(Buffer.concat(chunks)));
+  });
+
+  for (const feature of featureRows) {
+    const featureSlug = slugify(feature.title);
+    for (const doc of docRows.filter((d) => d.featureId === feature.id)) {
+      archive.append(doc.contentMd, { name: `${featureSlug}/${slugify(doc.title)}.md` });
+    }
+  }
+  void archive.finalize();
+  const buf = await done;
+
+  return c.body(new Uint8Array(buf).buffer as ArrayBuffer, 200, {
+    'content-type': 'application/zip',
+    'content-disposition': 'attachment; filename="productmap-export.zip"',
+  });
+});
