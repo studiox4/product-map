@@ -7,8 +7,8 @@ Demo shipped (see `docs/superpowers/specs/2026-06-09-product-map-demo-design.md`
 | # | Feature | What it is | Approach / why it's quick | Effort |
 |---|---------|------------|---------------------------|--------|
 | 1 | Users & auth | Accounts, sessions, who-did-what | Add `users` table + session middleware in Hono (e.g. lucia or hand-rolled cookie sessions). Schema already FK-ready. Single-tenant, invite-only — no signup flow needed. | M |
-| 2 | Comments & review | Threaded comments on docs and features; "needs attention" gets real | `comments` table (FK to document/feature + author + parent_id). Attention panel query already structured to join new sources. Tiptap supports inline comment marks later; start with doc-level threads. | M |
-| 3 | Up/down voting | Vote on features to drive prioritization | `votes` table (user_id + feature_id + direction, unique pair). Sort board columns by score. Tiny API + UI surface. | S |
+| 2 | ~~Comments & review~~ | **SHIPPED 2026-06-10** — threaded doc+feature comments, resolve flow, attention integration | spec: `docs/superpowers/specs/2026-06-10-comments-voting-design.md` | ✓ |
+| 3 | ~~Up/down voting~~ | **SHIPPED 2026-06-10** — 🚀 Boost / 🧊 Cool, score sort on board | same spec | ✓ |
 | 4 | Realtime collaboration | Multi-user live editing, Notion/Figma style | Tiptap → Yjs binding (`@tiptap/extension-collaboration`); Hono websocket server in `apps/api` (or sidecar `apps/sync`), y-postgres persistence. Replaces last-write-wins autosave — this is why contentJson is already the source of truth. | L |
 | 5 | Presence cursors | See teammates' cursors and selections live | Falls out of Yjs awareness protocol once #4 lands. | S (after #4) |
 
