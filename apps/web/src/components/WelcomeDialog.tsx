@@ -54,7 +54,9 @@ export function WelcomeDialog() {
   return (
     <Dialog open={open}>
       <DialogContent
-        className="max-w-md"
+        // First-run identity is required — hide the stray close X to match the
+        // blocked escape/outside dismissal.
+        className="max-w-md [&>button:last-child]:hidden"
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
