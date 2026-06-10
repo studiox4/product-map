@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@productmap/shared": ["packages/shared/src/index.ts"],
+      "@productmap/shared/*": ["packages/shared/src/*"],
+      "@productmap/db": ["packages/db/src/index.ts"],
+      "@productmap/db/*": ["packages/db/src/*"],
+      "@productmap/templates": ["packages/templates/src/index.ts"],
+      "@productmap/templates/*": ["packages/templates/src/*"]
+    }
+  }
+}

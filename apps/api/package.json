@@ -1,0 +1,50 @@
+{
+  "name": "@productmap/api",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@hono/node-server": "^1.13.7",
+    "@hono/zod-validator": "^0.4.2",
+    "@joplin/turndown-plugin-gfm": "^1.0.61",
+    "@productmap/db": "workspace:*",
+    "@productmap/shared": "workspace:*",
+    "@productmap/templates": "workspace:*",
+    "@tiptap/core": "^2.10.3",
+    "@tiptap/extension-image": "^2.10.3",
+    "@tiptap/extension-link": "^2.10.3",
+    "@tiptap/extension-table": "^2.10.3",
+    "@tiptap/extension-table-cell": "^2.10.3",
+    "@tiptap/extension-table-header": "^2.10.3",
+    "@tiptap/extension-table-row": "^2.10.3",
+    "@tiptap/extension-task-item": "^2.10.3",
+    "@tiptap/extension-task-list": "^2.10.3",
+    "@tiptap/html": "^2.10.3",
+    "@tiptap/starter-kit": "^2.10.3",
+    "archiver": "^7.0.1",
+    "drizzle-orm": "^0.38.2",
+    "hono": "^4.6.14",
+    "marked": "^15.0.4",
+    "nanoid": "^5.0.9",
+    "pg": "^8.13.1",
+    "turndown": "^7.2.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
+    "@types/archiver": "^6.0.3",
+    "@types/node": "^22.10.2",
+    "@types/pg": "^8.11.10",
+    "@types/turndown": "^5.0.5",
+    "adm-zip": "^0.5.16",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

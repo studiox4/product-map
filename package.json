@@ -1,0 +1,21 @@
+{
+  "name": "productmap",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "concurrently -n api,web \"pnpm --filter @productmap/api dev\" \"pnpm --filter @productmap/web dev\"",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "e2e": "playwright test",
+    "db:migrate": "pnpm --filter @productmap/db migrate",
+    "db:seed": "pnpm --filter @productmap/db seed",
+    "db:reset": "pnpm --filter @productmap/db reset"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "concurrently": "^9.1.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
