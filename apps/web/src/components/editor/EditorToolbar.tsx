@@ -35,7 +35,7 @@ export interface EditorToolbarProps {
 function SaveIndicator({ state }: { state: AutosaveState }) {
   if (state === 'saving') {
     return (
-      <span className="flex items-center gap-1 text-sm text-muted-foreground">
+      <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-medium text-muted-ink">
         <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
         Saving…
       </span>
@@ -43,8 +43,8 @@ function SaveIndicator({ state }: { state: AutosaveState }) {
   }
   if (state === 'saved') {
     return (
-      <span className="flex items-center gap-1 text-sm text-muted-foreground">
-        <Check className="h-3 w-3 text-green-600" aria-hidden />
+      <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-sage-soft px-3 py-1 text-xs font-medium text-sage">
+        <Check className="h-3 w-3" aria-hidden />
         Saved
       </span>
     );
@@ -67,18 +67,18 @@ export function EditorToolbar({
   useEffect(() => setDraftTitle(title), [title]);
 
   return (
-    <div className="border-b bg-background">
-      <div className="mx-auto flex max-w-[1280px] flex-wrap items-center gap-3 px-6 py-3">
+    <div className="mb-6">
+      <div className="flex flex-wrap items-center gap-2 rounded-full border border-transparent bg-white px-3 py-2 shadow-card">
         <Link
           to={backHref}
-          className="flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors duration-150 ease-out hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex max-w-[180px] shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm text-muted-ink transition-colors duration-150 ease-out hover:bg-secondary hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          {backLabel}
+          <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+          <span className="truncate">{backLabel}</span>
         </Link>
         <input
           aria-label="Document title"
-          className="min-w-0 flex-1 rounded-md border-0 bg-transparent px-2 py-1 text-lg font-semibold text-foreground outline-none transition-colors duration-150 ease-out hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+          className="min-w-0 flex-1 rounded-full border-0 bg-transparent px-3 py-1 font-display text-[28px] font-semibold leading-tight text-ink outline-none transition-colors duration-150 ease-out hover:bg-secondary/60 focus-visible:ring-2 focus-visible:ring-ring"
           value={draftTitle}
           onChange={(e) => setDraftTitle(e.target.value)}
           onBlur={() => {
@@ -93,7 +93,10 @@ export function EditorToolbar({
         />
         {typeChip}
         <Select value={status} onValueChange={(v) => onStatusChange(v as DocStatus)}>
-          <SelectTrigger className="w-32" aria-label="Document status">
+          <SelectTrigger
+            className="w-32 shrink-0 rounded-full border-transparent bg-secondary text-xs font-medium text-action shadow-none hover:bg-action-soft/60"
+            aria-label="Document status"
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -105,9 +108,9 @@ export function EditorToolbar({
           </SelectContent>
         </Select>
         <SaveIndicator state={saveState} />
-        <Button asChild variant="outline" size="sm">
+        <Button asChild variant="ghost" size="sm" className="shrink-0 text-body-ink">
           <a href={exportHref} download>
-            <Download className="mr-2 h-4 w-4" aria-hidden />
+            <Download className="mr-1 h-4 w-4" aria-hidden />
             Export .md
           </a>
         </Button>
@@ -115,7 +118,7 @@ export function EditorToolbar({
       {saveState === 'error' ? (
         <div
           role="alert"
-          className="flex items-center gap-2 border-t border-amber-200 bg-amber-50 px-6 py-2 text-sm text-amber-800"
+          className="mt-3 flex w-fit items-center gap-2 rounded-full bg-warm-soft px-4 py-1.5 text-sm font-medium text-warm shadow-card"
         >
           <TriangleAlert className="h-4 w-4" aria-hidden />
           Unsaved changes — retrying…

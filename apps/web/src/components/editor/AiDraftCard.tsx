@@ -120,13 +120,15 @@ export function AiDraftCard({
   }
 
   return (
-    <div className="rounded-lg border bg-card p-4 shadow-sm">
-      <div className="flex items-center gap-2 text-sm font-medium text-card-foreground">
-        <Sparkles className="h-4 w-4 text-indigo-500" aria-hidden />
+    <div className="rounded-2xl border border-transparent bg-action-soft/45 p-5 shadow-card">
+      <div className="flex items-center gap-2 font-display text-sm font-semibold text-ink">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-action shadow-card">
+          <Sparkles className="h-4 w-4" aria-hidden />
+        </span>
         Draft this document with AI
       </div>
       <Textarea
-        className="mt-3"
+        className="mt-3 rounded-xl border-transparent bg-white shadow-none focus-visible:ring-2 focus-visible:ring-action/40"
         rows={3}
         placeholder="Describe the feature in a sentence or two"
         value={brief}
@@ -153,7 +155,9 @@ export function AiDraftCard({
           </Button>
         )}
         {streaming ? (
-          <span className="text-sm text-muted-foreground">Drafting…</span>
+          <span className="rounded-full bg-white/70 px-3 py-1 text-xs font-medium text-muted-ink">
+            Drafting…
+          </span>
         ) : null}
       </div>
     </div>

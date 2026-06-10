@@ -49,7 +49,7 @@ export const SlashMenuList = forwardRef<SlashMenuListHandle, SlashMenuListProps>
       return (
         <div
           role="listbox"
-          className="w-72 rounded-lg border bg-popover p-2 text-sm text-muted-foreground shadow-md"
+          className="w-72 rounded-xl border border-transparent bg-white p-3 text-sm text-muted-ink shadow-card-hover"
         >
           No matching commands
         </div>
@@ -60,7 +60,7 @@ export const SlashMenuList = forwardRef<SlashMenuListHandle, SlashMenuListProps>
       <div
         role="listbox"
         aria-label="Insert block"
-        className="max-h-80 w-72 overflow-y-auto rounded-lg border bg-popover p-1 shadow-md"
+        className="max-h-80 w-72 overflow-y-auto rounded-xl border border-transparent bg-white p-1.5 shadow-card-hover"
       >
         {items.map((item, i) => (
           <button
@@ -69,21 +69,30 @@ export const SlashMenuList = forwardRef<SlashMenuListHandle, SlashMenuListProps>
             role="option"
             aria-selected={i === selected}
             className={cn(
-              'flex w-full cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-left text-sm transition-colors duration-150 ease-out hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring',
-              i === selected && 'bg-accent',
+              'flex w-full cursor-pointer items-center gap-3 rounded-full px-2 py-1.5 text-left text-sm transition-colors duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring',
+              i === selected && 'bg-action-soft',
             )}
             onMouseEnter={() => setSelected(i)}
             onClick={() => command(item)}
           >
-            <item.icon
-              className="h-4 w-4 shrink-0 text-muted-foreground"
-              aria-hidden
-            />
-            <span className="flex flex-col">
-              <span className="font-medium text-popover-foreground">
+            <span
+              className={cn(
+                'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-secondary text-body-ink transition-colors duration-150 ease-out',
+                i === selected && 'bg-white text-action',
+              )}
+            >
+              <item.icon className="h-4 w-4" aria-hidden />
+            </span>
+            <span className="flex min-w-0 flex-col">
+              <span
+                className={cn(
+                  'font-medium text-ink',
+                  i === selected && 'text-action',
+                )}
+              >
                 {item.title}
               </span>
-              <span className="text-xs text-muted-foreground">
+              <span className="truncate text-xs text-muted-ink">
                 {item.description}
               </span>
             </span>
@@ -152,6 +161,7 @@ export const SlashCommand = Extension.create<SlashCommandOptions>({
               container = document.createElement('div');
               container.style.position = 'absolute';
               container.style.zIndex = '50';
+              container.style.transition = 'left 120ms ease-out, top 120ms ease-out';
               container.appendChild(component.element);
               document.body.appendChild(container);
               position(props);

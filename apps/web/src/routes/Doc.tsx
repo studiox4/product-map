@@ -12,15 +12,13 @@ import { useAutosave } from '@/components/editor/useAutosave';
 
 function DocSkeleton() {
   return (
-    <div>
-      <div className="border-b bg-background">
-        <div className="mx-auto flex max-w-[1280px] items-center gap-3 px-6 py-3">
-          <Skeleton className="h-6 w-32" />
-          <Skeleton className="h-6 flex-1" />
-          <Skeleton className="h-8 w-32" />
-        </div>
+    <div className="mx-auto w-full max-w-[860px] px-4 pb-16 pt-6 sm:px-6">
+      <div className="flex items-center gap-3 rounded-full bg-white px-5 py-3 shadow-card">
+        <Skeleton className="h-6 w-32 rounded-full" />
+        <Skeleton className="h-7 flex-1 rounded-full" />
+        <Skeleton className="h-8 w-32 rounded-full" />
       </div>
-      <div className="mx-auto max-w-[1280px] space-y-4 px-6 py-8">
+      <div className="mt-6 space-y-4 rounded-2xl bg-white px-8 py-12 shadow-card sm:px-14">
         <Skeleton className="h-8 w-2/3" />
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-5/6" />
@@ -105,9 +103,9 @@ export default function DocPage() {
 
   if (docQuery.isError || !doc) {
     return (
-      <div className="mx-auto max-w-[1280px] px-6 py-8">
-        <div className="rounded-lg border bg-card p-6 shadow-sm">
-          <p className="text-sm text-card-foreground">
+      <div className="mx-auto max-w-[860px] px-6 py-8">
+        <div className="rounded-2xl border border-transparent bg-white p-6 shadow-card">
+          <p className="text-sm text-body-ink">
             Couldn't load this document.
           </p>
           <Button
@@ -125,7 +123,7 @@ export default function DocPage() {
   const feature = featureQuery.data;
 
   return (
-    <div>
+    <div className="mx-auto w-full max-w-[860px] px-4 pb-16 pt-6 sm:px-6">
       <EditorToolbar
         backHref={`/board?feature=${doc.featureId}`}
         backLabel={feature?.title ?? 'Back to board'}

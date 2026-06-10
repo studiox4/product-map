@@ -37,27 +37,32 @@ function docHasText(editor: TiptapEditor): boolean {
 
 /** Typography for ProseMirror content — scoped here since the app has no tailwind typography plugin. */
 const PROSE_CLASSES = cn(
-  'min-h-[60vh] focus:outline-none',
+  'min-h-[60vh] text-[16px] leading-[1.7] text-body-ink focus:outline-none',
   '[&_.ProseMirror]:min-h-[60vh] [&_.ProseMirror]:outline-none',
-  '[&_h1]:mt-8 [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:tracking-tight',
-  '[&_h2]:mt-6 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:tracking-tight',
-  '[&_h3]:mt-4 [&_h3]:text-xl [&_h3]:font-semibold',
-  '[&_p]:my-3 [&_p]:leading-7',
+  '[&_h1]:mt-10 [&_h1]:font-display [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:tracking-tight [&_h1]:text-ink [&_h1:first-child]:mt-0',
+  '[&_h2]:mt-9 [&_h2]:font-display [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2]:text-ink',
+  '[&_h3]:mt-7 [&_h3]:font-display [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:text-ink',
+  '[&_p]:my-3 [&_p]:leading-[1.7]',
   '[&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6',
-  '[&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted-foreground',
-  '[&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-muted [&_pre]:p-4 [&_pre]:font-mono [&_pre]:text-sm',
-  '[&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:font-mono [&_code]:text-sm [&_pre_code]:bg-transparent [&_pre_code]:p-0',
-  '[&_table]:my-3 [&_table]:w-full [&_table]:border-collapse',
-  '[&_td]:border [&_td]:border-border [&_td]:px-3 [&_td]:py-1 [&_th]:border [&_th]:border-border [&_th]:bg-muted [&_th]:px-3 [&_th]:py-1 [&_th]:text-left [&_th]:font-semibold',
-  '[&_img]:my-3 [&_img]:max-w-full [&_img]:rounded-md [&_img]:border',
-  '[&_hr]:my-6 [&_hr]:border-border',
-  '[&_a]:text-blue-600 [&_a]:underline',
-  // task lists
+  '[&_blockquote]:my-4 [&_blockquote]:rounded-r-xl [&_blockquote]:border-l-[3px] [&_blockquote]:border-action [&_blockquote]:bg-[#f6f9fd] [&_blockquote]:py-2 [&_blockquote]:pl-4 [&_blockquote]:pr-4 [&_blockquote]:italic [&_blockquote]:text-body-ink',
+  '[&_pre]:my-4 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-[#f3f6f4] [&_pre]:p-4 [&_pre]:font-mono [&_pre]:text-sm',
+  '[&_code]:rounded-md [&_code]:bg-[#f3f6f4] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-sm [&_pre_code]:bg-transparent [&_pre_code]:p-0',
+  // tables: rounded corners + soft row stripes, hairline separators only
+  '[&_table]:my-4 [&_table]:w-full [&_table]:border-separate [&_table]:border-spacing-0 [&_table]:overflow-hidden [&_table]:rounded-xl',
+  '[&_th]:border-b [&_th]:border-[#e3e8ef] [&_th]:bg-[#edf1f7] [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_th]:text-ink',
+  '[&_th:first-child]:rounded-tl-xl [&_th:last-child]:rounded-tr-xl',
+  '[&_td]:border-b [&_td]:border-[#eef1f5] [&_td]:px-3 [&_td]:py-2',
+  '[&_tbody_tr:nth-child(even)_td]:bg-[#f8fafc]',
+  '[&_img]:my-4 [&_img]:max-w-full [&_img]:rounded-xl [&_img]:shadow-card',
+  '[&_hr]:my-8 [&_hr]:border-[#e3e8ef]',
+  '[&_a]:text-action [&_a]:underline [&_a]:decoration-action/40 [&_a]:underline-offset-2',
+  // task lists: rounded checkboxes with a sage check
   '[&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:pl-1',
   '[&_li[data-type=taskItem]]:flex [&_li[data-type=taskItem]]:items-start [&_li[data-type=taskItem]]:gap-2',
   '[&_li[data-type=taskItem]_label]:mt-1',
+  '[&_input[type=checkbox]]:h-4 [&_input[type=checkbox]]:w-4 [&_input[type=checkbox]]:rounded [&_input[type=checkbox]]:accent-sage',
   // placeholder
-  '[&_p.is-editor-empty:first-child]:before:pointer-events-none [&_p.is-editor-empty:first-child]:before:float-left [&_p.is-editor-empty:first-child]:before:h-0 [&_p.is-editor-empty:first-child]:before:text-muted-foreground [&_p.is-editor-empty:first-child]:before:content-[attr(data-placeholder)]',
+  '[&_p.is-editor-empty:first-child]:before:pointer-events-none [&_p.is-editor-empty:first-child]:before:float-left [&_p.is-editor-empty:first-child]:before:h-0 [&_p.is-editor-empty:first-child]:before:text-muted-ink [&_p.is-editor-empty:first-child]:before:content-[attr(data-placeholder)]',
 );
 
 export const Editor = memo(function Editor({
@@ -167,7 +172,7 @@ export const Editor = memo(function Editor({
     aiEnabled && !!aiConfig && !!editor && (isEmpty || aiStreaming);
 
   return (
-    <div className="mx-auto max-w-[1280px] px-6 py-8">
+    <div className="rounded-2xl border border-transparent bg-white px-6 py-12 shadow-card sm:px-14">
       {showAiCard ? (
         <div className="mb-6">
           <AiDraftCard
