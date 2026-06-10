@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 const BoardPage = lazy(() => import('@/routes/Board'));
 const RoadmapPage = lazy(() => import('@/routes/Roadmap'));
 const DocPage = lazy(() => import('@/routes/Doc'));
+const DocsPage = lazy(() => import('@/routes/DocsPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -49,6 +50,14 @@ export default function App() {
               element={
                 <Suspense fallback={<RouteFallback />}>
                   <RoadmapPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/docs"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <DocsPage />
                 </Suspense>
               }
             />

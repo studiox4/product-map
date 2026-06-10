@@ -1,4 +1,8 @@
-import type { DocStatus, FeatureStatus } from '@productmap/shared';
+import {
+  DOC_STATUS_COLORS,
+  type DocStatus,
+  type FeatureStatus,
+} from '@productmap/shared';
 import { cn } from '@/lib/utils';
 
 type AnyStatus = FeatureStatus | DocStatus;
@@ -9,10 +13,8 @@ const STATUS_STYLES: Record<AnyStatus, string> = {
   planned: 'bg-[#dcebff] text-[#2b557e]',
   in_progress: 'bg-[#fdf0e3] text-[#9a6428]',
   shipped: 'bg-[#e4f0e4] text-[#3c6b46]',
-  // doc statuses
-  draft: 'bg-[#f0f3f7] text-[#7c8794]',
-  in_review: 'bg-[#fdf0e3] text-[#9a6428]',
-  final: 'bg-[#e4f0e4] text-[#3c6b46]',
+  // doc statuses — single shared source (@productmap/shared)
+  ...DOC_STATUS_COLORS,
 };
 
 const STATUS_LABELS: Record<AnyStatus, string> = {

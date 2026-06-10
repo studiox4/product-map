@@ -1,11 +1,13 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { Map } from 'lucide-react';
 import { Toaster } from '@/components/ui/sonner';
+import WelcomeDialog from '@/components/WelcomeDialog';
 import { cn } from '@/lib/utils';
 
 const NAV_LINKS = [
   { to: '/', label: 'Overview', end: true },
   { to: '/board', label: 'Board', end: false },
+  { to: '/docs', label: 'Docs', end: true },
   { to: '/roadmap', label: 'Roadmap', end: false },
 ];
 
@@ -46,6 +48,7 @@ export function AppShell() {
         <Outlet />
       </main>
       <Toaster position="bottom-right" />
+      <WelcomeDialog />
     </div>
   );
 }

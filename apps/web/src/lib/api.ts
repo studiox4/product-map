@@ -6,9 +6,11 @@ import {
   type QueryClient,
 } from '@tanstack/react-query';
 import type {
+  ActivityItem,
   DocStatus,
   DocType,
   DocumentFull,
+  DocumentListItem,
   DocumentMeta,
   Feature,
   FeatureStatus,
@@ -16,11 +18,37 @@ import type {
   Horizon,
   OverviewResponse,
   Product,
+  User,
 } from '@productmap/shared';
 import type { AppType } from '../../../api/src/app';
 
+// ---- identity (no auth — demo; see feature-hub spec) ----
+
+export const USER_ID_KEY = 'pmUserId';
+
+export function getStoredUserId(): string | null {
+  try {
+    return localStorage.getItem(USER_ID_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredUserId(id: string) {
+  try {
+    localStorage.setItem(USER_ID_KEY, id);
+  } catch {
+    // private mode etc. — identity falls back to first seeded user server-side
+  }
+}
+
+function userIdHeaders(): Record<string, string> {
+  const userId = getStoredUserId();
+  return userId ? { 'x-user-id': userId } : {};
+}
+
 /** Typed hono client for the API (same-origin; Vite proxies /api in dev). */
-export const api = hc<AppType>('/');
+export const api = hc<AppType>('/', { headers: userIdHeaders });
 
 // ---- request body types (mirror @productmap/shared zod schemas) ----
 
@@ -35,6 +63,10 @@ export interface FeatureUpdateInput {
   startDate?: string | null;
   endDate?: string | null;
   sortOrder?: number;
+  descriptionMd?: string;
+}
+export interface UserCreateInput {
+  name: string;
 }
 export interface DocumentCreateInput {
   featureId: string;
@@ -70,8 +102,12 @@ export class ApiError extends Error {
 
 export async function fetchJson<T>(input: string, init?: RequestInit): Promise<T> {
   const res = await fetch(input, {
-    headers: init?.body ? { 'Content-Type': 'application/json' } : undefined,
     ...init,
+    headers: {
+      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+      ...userIdHeaders(),
+      ...(init?.headers as Record<string, string> | undefined),
+    },
   });
   if (!res.ok) {
     let body: unknown = null;
@@ -93,6 +129,9 @@ export const queryKeys = {
   features: ['features'] as const,
   feature: (id: string) => ['features', id] as const,
   document: (id: string) => ['documents', id] as const,
+  allDocuments: ['documents', 'all'] as const,
+  users: ['users'] as const,
+  activity: (featureId: string) => ['features', featureId, 'activity'] as const,
   aiStatus: ['ai', 'status'] as const,
 };
 
@@ -125,6 +164,38 @@ export function useDocument(id: string) {
     queryKey: queryKeys.document(id),
     queryFn: () => fetchJson<DocumentFull>(`/api/documents/${id}`),
     enabled: !!id,
+  });
+}
+
+export function useUsers() {
+  return useQuery({
+    queryKey: queryKeys.users,
+    queryFn: () => fetchJson<User[]>('/api/users'),
+  });
+}
+
+/** Current user, resolved from localStorage.pmUserId against the users list (falls back to the first user, mirroring the server). */
+export function useMe() {
+  const query = useUsers();
+  const storedId = getStoredUserId();
+  const me: User | null | undefined = query.data
+    ? (query.data.find((u) => u.id === storedId) ?? query.data[0] ?? null)
+    : undefined;
+  return { ...query, me };
+}
+
+export function useActivity(featureId: string) {
+  return useQuery({
+    queryKey: queryKeys.activity(featureId),
+    queryFn: () => fetchJson<ActivityItem[]>(`/api/features/${featureId}/activity`),
+    enabled: !!featureId,
+  });
+}
+
+export function useAllDocuments() {
+  return useQuery({
+    queryKey: queryKeys.allDocuments,
+    queryFn: () => fetchJson<DocumentListItem[]>('/api/documents?all=true'),
   });
 }
 
@@ -276,6 +347,41 @@ export function useDeleteDocument() {
     onSettled: () => {
       qc.invalidateQueries({ queryKey: queryKeys.features });
       qc.invalidateQueries({ queryKey: queryKeys.overview });
+    },
+  });
+}
+
+export function useCreateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UserCreateInput) =>
+      fetchJson<User>('/api/users', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.users });
+    },
+  });
+}
+
+export interface UpdateCollaboratorsVars {
+  featureId: string;
+  userIds: string[];
+}
+
+/** Replaces a feature's collaborator set (PUT, returns 204). */
+export function useCollaborators() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ featureId, userIds }: UpdateCollaboratorsVars) =>
+      fetchJson<void>(`/api/features/${featureId}/collaborators`, {
+        method: 'PUT',
+        body: JSON.stringify({ userIds }),
+      }),
+    onSettled: (_data, _err, { featureId }) => {
+      qc.invalidateQueries({ queryKey: queryKeys.feature(featureId) });
+      qc.invalidateQueries({ queryKey: queryKeys.activity(featureId) });
     },
   });
 }
