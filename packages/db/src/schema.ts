@@ -1,4 +1,18 @@
-import { pgTable, uuid, text, date, timestamp, integer, jsonb, pgEnum, primaryKey } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import {
+  pgTable,
+  uuid,
+  text,
+  date,
+  timestamp,
+  integer,
+  smallint,
+  jsonb,
+  pgEnum,
+  primaryKey,
+  check,
+  type AnyPgColumn,
+} from 'drizzle-orm/pg-core';
 
 export const horizonEnum = pgEnum('horizon', ['now', 'next', 'later']);
 export const featureStatusEnum = pgEnum('feature_status', ['idea', 'planned', 'in_progress', 'shipped']);
@@ -62,6 +76,39 @@ export const activity = pgTable('activity', {
   payload: jsonb('payload'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+export const comments = pgTable(
+  'comments',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    authorId: uuid('author_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    featureId: uuid('feature_id').references(() => features.id, { onDelete: 'cascade' }),
+    documentId: uuid('document_id').references(() => documents.id, { onDelete: 'cascade' }),
+    parentId: uuid('parent_id').references((): AnyPgColumn => comments.id, { onDelete: 'cascade' }),
+    body: text('body').notNull(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    resolvedBy: uuid('resolved_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // Exactly one of feature_id / document_id is set.
+    check('comments_target_check', sql`(${t.featureId} IS NULL) <> (${t.documentId} IS NULL)`),
+    check('comments_body_check', sql`char_length(${t.body}) BETWEEN 1 AND 4000`),
+  ],
+);
+export const votes = pgTable(
+  'votes',
+  {
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    featureId: uuid('feature_id').notNull().references(() => features.id, { onDelete: 'cascade' }),
+    value: smallint('value').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.featureId] }),
+    check('votes_value_check', sql`${t.value} IN (1, -1)`),
+  ],
+);
 export const uploads = pgTable('uploads', {
   id: uuid('id').defaultRandom().primaryKey(),
   documentId: uuid('document_id').references(() => documents.id, { onDelete: 'set null' }),

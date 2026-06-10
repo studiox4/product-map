@@ -30,6 +30,10 @@ const fixture: FeatureWithDocs[] = [
   {
     id: 'f1',
     productId: 'p1',
+    score: 0,
+    boosts: 0,
+    cools: 0,
+    myVote: 0 as const,
     title: 'Rich markdown editor',
     horizon: 'now',
     status: 'in_progress',
@@ -48,6 +52,10 @@ const fixture: FeatureWithDocs[] = [
   {
     id: 'f2',
     productId: 'p1',
+    score: 0,
+    boosts: 0,
+    cools: 0,
+    myVote: 0 as const,
     title: 'Gantt roadmap',
     horizon: 'next',
     status: 'planned',
@@ -238,6 +246,10 @@ describe('Board', () => {
           {
             id: 'f-new',
             productId: 'p1',
+            score: 0,
+            boosts: 0,
+            cools: 0,
+            myVote: 0 as const,
             title: posted.title,
             horizon: posted.horizon,
             status: 'idea',

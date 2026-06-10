@@ -1,11 +1,12 @@
 import { useNavigate } from 'react-router-dom';
-import { CalendarX, Eye, FileQuestion, FileText, type LucideIcon } from 'lucide-react';
+import { CalendarX, Eye, FileQuestion, FileText, MessageCircle, type LucideIcon } from 'lucide-react';
 import type { AttentionItem } from '@productmap/shared';
 
 const KIND_META: Record<
   AttentionItem['kind'],
   { icon: LucideIcon; label: string; chip: string }
 > = {
+  open_comments: { icon: MessageCircle, label: 'Open comments', chip: 'bg-[#e4f0e4] text-[#3c6b46]' },
   draft_doc: { icon: FileText, label: 'Draft doc', chip: 'bg-[#fdf0e3] text-[#9a6428]' },
   in_review_doc: { icon: Eye, label: 'In review', chip: 'bg-[#fbeedd] text-[#8a5a22]' },
   missing_dates: { icon: CalendarX, label: 'No dates', chip: 'bg-[#fcebe3] text-[#9a5a3c]' },
@@ -16,7 +17,9 @@ export function AttentionPanel({ items }: { items: AttentionItem[] }) {
   const navigate = useNavigate();
 
   function open(item: AttentionItem) {
-    if (item.kind === 'draft_doc' || item.kind === 'in_review_doc') {
+    if (item.kind === 'open_comments') {
+      navigate(`/features/${item.featureId}#comments`);
+    } else if (item.kind === 'draft_doc' || item.kind === 'in_review_doc') {
       navigate(`/docs/${item.documentId}`);
     } else {
       navigate(`/board?feature=${item.featureId}`);

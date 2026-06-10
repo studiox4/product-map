@@ -7,7 +7,7 @@ process.env.DATABASE_URL = 'postgres://localhost:5432/productmap_test';
 
 const { app } = await import('../app');
 const { db, pool } = await import('../db');
-const { products, features, documents } = await import('@productmap/db');
+const { products, features, documents, users, comments, votes } = await import('@productmap/db');
 
 const migrationsFolder = fileURLToPath(
   new URL('../../../../packages/db/migrations', import.meta.url),
@@ -18,7 +18,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await db.execute('truncate table documents, features, products cascade' as never);
+  await db.execute('truncate table documents, features, products, users cascade' as never);
 });
 
 afterAll(async () => {
@@ -188,6 +188,61 @@ describe('GET /api/overview', () => {
       .map((a, i) => ('documentId' in a ? i : -1))
       .reduce((m, i) => Math.max(m, i), -1);
     expect(lastDocItem).toBeLessThan(firstFeatureItem);
+  });
+
+  it('includes vote summaries on features with per-user myVote', async () => {
+    const { editor, gantt } = await seedFixture();
+    const [corban] = await db.insert(users).values({ name: 'Corban', color: '#2b557e' }).returning();
+    const [ada] = await db.insert(users).values({ name: 'Ada', color: '#3c6b46' }).returning();
+    await db.insert(votes).values([
+      { userId: corban.id, featureId: editor.id, value: 1 },
+      { userId: ada.id, featureId: editor.id, value: 1 },
+      { userId: ada.id, featureId: gantt.id, value: -1 },
+    ]);
+
+    const res = await app.request('/api/overview', { headers: { 'x-user-id': ada.id } });
+    const body = (await res.json()) as OverviewResponse;
+    const editorF = body.features.find((f) => f.id === editor.id)!;
+    expect(editorF).toMatchObject({ score: 2, boosts: 2, cools: 0, myVote: 1 });
+    const ganttF = body.features.find((f) => f.id === gantt.id)!;
+    expect(ganttF).toMatchObject({ score: -1, boosts: 0, cools: 1, myVote: -1 });
+    const unvoted = body.features.find((f) => f.id !== editor.id && f.id !== gantt.id)!;
+    expect(unvoted).toMatchObject({ score: 0, boosts: 0, cools: 0, myVote: 0 });
+  });
+
+  it('adds open_comments attention items first, combining feature and doc threads', async () => {
+    const { editor, gantt, draftDoc } = await seedFixture();
+    const [corban] = await db.insert(users).values({ name: 'Corban', color: '#2b557e' }).returning();
+
+    // editor: one unresolved doc root (reply must not count) + one unresolved feature root = 2
+    const [docRoot] = await db
+      .insert(comments)
+      .values({ authorId: corban.id, documentId: draftDoc.id, body: 'doc root' })
+      .returning();
+    await db.insert(comments).values({
+      authorId: corban.id,
+      documentId: draftDoc.id,
+      parentId: docRoot.id,
+      body: 'reply',
+    });
+    await db.insert(comments).values({ authorId: corban.id, featureId: editor.id, body: 'feature root' });
+    // gantt: only a resolved root → no item
+    await db.insert(comments).values({
+      authorId: corban.id,
+      featureId: gantt.id,
+      body: 'done',
+      resolvedAt: new Date(),
+      resolvedBy: corban.id,
+    });
+
+    const res = await app.request('/api/overview');
+    const body = (await res.json()) as OverviewResponse;
+    const openItems = body.attention.filter((a) => a.kind === 'open_comments');
+    expect(openItems).toEqual([
+      { kind: 'open_comments', featureId: editor.id, title: 'Rich markdown editor', count: 2 },
+    ]);
+    // open_comments sorts above every other kind
+    expect(body.attention[0].kind).toBe('open_comments');
   });
 
   it('404s when no product exists', async () => {

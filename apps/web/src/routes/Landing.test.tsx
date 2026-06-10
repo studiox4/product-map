@@ -18,6 +18,10 @@ const product = {
 function feature(overrides: Partial<OverviewResponse['features'][number]> & { id: string; title: string }) {
   return {
     productId: 'p1',
+    score: 0,
+    boosts: 0,
+    cools: 0,
+    myVote: 0 as const,
     horizon: 'now' as const,
     status: 'idea' as const,
     startDate: null,

@@ -1,7 +1,8 @@
 import { Hono } from 'hono';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '../db';
-import { products, features, documents } from '@productmap/db';
+import { products, features, documents, comments } from '@productmap/db';
+import { EMPTY_VOTE_SUMMARY, requestUserId, voteSummaries } from '../lib/votes';
 import type {
   AttentionItem,
   DocumentMeta,
@@ -65,7 +66,13 @@ export const overviewRoutes = new Hono().get('/', async (c) => {
     list.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
+  const voteMap = await voteSummaries(
+    featureRows.map((f) => f.id),
+    await requestUserId(c),
+  );
+
   const featuresWithDocs: FeatureWithDocs[] = featureRows.map((f) => ({
+    ...(voteMap.get(f.id) ?? EMPTY_VOTE_SUMMARY),
     id: f.id,
     productId: f.productId,
     title: f.title,
@@ -82,9 +89,27 @@ export const overviewRoutes = new Hono().get('/', async (c) => {
     documents: docsByFeature.get(f.id) ?? [],
   }));
 
-  // Attention items: doc items first (draft / in_review), then feature items
-  // (missing dates / no docs). Iterate features in display order for stability.
+  // Attention items: open_comments first, then doc items (draft / in_review),
+  // then feature items (missing dates / no docs). Iterate features in display
+  // order for stability.
   const attention: AttentionItem[] = [];
+
+  // Unresolved root comments per feature, across the feature and its docs.
+  const featureIdOfComment = sql<string>`coalesce(${comments.featureId}, ${documents.featureId})`;
+  const openCommentRows = await db
+    .select({ featureId: featureIdOfComment, count: sql<number>`count(*)::int` })
+    .from(comments)
+    .leftJoin(documents, eq(comments.documentId, documents.id))
+    .where(and(isNull(comments.parentId), isNull(comments.resolvedAt)))
+    .groupBy(featureIdOfComment);
+  const openByFeature = new Map(openCommentRows.map((r) => [r.featureId, r.count]));
+  for (const f of featuresWithDocs) {
+    const count = openByFeature.get(f.id) ?? 0;
+    if (count > 0) {
+      attention.push({ kind: 'open_comments', featureId: f.id, title: f.title, count });
+    }
+  }
+
   for (const f of featuresWithDocs) {
     for (const d of f.documents) {
       if (d.status === 'draft') {

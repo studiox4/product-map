@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { createDb, products, features, documents, users, featureCollaborators, activity } from './index';
+import { createDb, products, features, documents, users, featureCollaborators, activity, comments, votes } from './index';
 
 const connectionString = process.env.DATABASE_URL ?? 'postgres://localhost:5432/productmap';
 
@@ -29,7 +29,7 @@ const { db, pool } = createDb(connectionString);
 try {
   // Idempotent: wipe everything first.
   await db.execute(
-    sql`truncate table activity, feature_collaborators, uploads, documents, features, products, users restart identity cascade`,
+    sql`truncate table comments, votes, activity, feature_collaborators, uploads, documents, features, products, users restart identity cascade`,
   );
 
   const [corban] = await db.insert(users).values({ name: 'Corban', color: '#2b557e' }).returning();
@@ -114,7 +114,7 @@ try {
   const editor = byTitle.get('Rich markdown editor')!;
   const gantt = byTitle.get('Gantt roadmap')!;
 
-  await db.insert(documents).values([
+  const docRows = await db.insert(documents).values([
     {
       featureId: editor.id,
       type: 'prd',
@@ -205,7 +205,7 @@ try {
         'A PM can reschedule a feature in under five seconds with no page reload, and the change survives refresh.',
       ].join('\n'),
     },
-  ]);
+  ]).returning();
 
   // Attribute everything in the seed to Corban.
   await db.update(features).set({ createdBy: corban.id, updatedBy: corban.id });
@@ -238,7 +238,62 @@ try {
     },
   ]);
 
-  console.log(`seeded: 1 product, ${featureRows.length} features, 3 documents, 1 user`);
+  // --- comments: two unresolved threads (PRD doc + Gantt feature), one resolved ---
+  const prdDoc = docRows.find((d) => d.type === 'prd')!;
+  const minutesAgo = (n: number) => new Date(Date.now() - n * 60_000);
+
+  const [prdRoot] = await db
+    .insert(comments)
+    .values({
+      authorId: corban.id,
+      documentId: prdDoc.id,
+      body: 'Should the requirements call out keyboard shortcuts explicitly? Slash commands alone may not cover power users.',
+      createdAt: minutesAgo(90),
+      updatedAt: minutesAgo(90),
+    })
+    .returning();
+  await db.insert(comments).values({
+    authorId: corban.id,
+    documentId: prdDoc.id,
+    parentId: prdRoot.id,
+    body: 'Good catch — adding a "Should" line for Cmd+B/Cmd+I and the link dialog.',
+    createdAt: minutesAgo(75),
+    updatedAt: minutesAgo(75),
+  });
+
+  const [ganttRoot] = await db
+    .insert(comments)
+    .values({
+      authorId: corban.id,
+      featureId: gantt.id,
+      body: 'Do we want week or month granularity for the first cut of the timeline?',
+      createdAt: minutesAgo(60),
+      updatedAt: minutesAgo(60),
+    })
+    .returning();
+  await db.insert(comments).values({
+    authorId: corban.id,
+    featureId: gantt.id,
+    parentId: ganttRoot.id,
+    body: 'Month view first — weeks can land with the zoom control.',
+    createdAt: minutesAgo(45),
+    updatedAt: minutesAgo(45),
+  });
+
+  await db.insert(comments).values({
+    authorId: corban.id,
+    featureId: editor.id,
+    body: 'Confirmed: tables are in scope for the demo.',
+    resolvedAt: minutesAgo(30),
+    resolvedBy: corban.id,
+    createdAt: minutesAgo(120),
+    updatedAt: minutesAgo(120),
+  });
+
+  // --- votes: Rich markdown editor at +1 ---
+  await db.insert(votes).values({ userId: corban.id, featureId: editor.id, value: 1 });
+
+  console.log(`seeded: 1 product, ${featureRows.length} features, 3 documents, 1 user, 5 comments, 1 vote`);
 } finally {
   await pool.end();
 }

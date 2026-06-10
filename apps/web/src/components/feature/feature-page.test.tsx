@@ -32,6 +32,10 @@ const ada: User = { id: 'u2', name: 'Ada', color: '#3c6b46', createdAt: now };
 const feature: FeatureWithDocs = {
   id: 'f1',
   productId: 'p1',
+  score: 0,
+  boosts: 0,
+  cools: 0,
+  myVote: 0 as const,
   title: 'Rich markdown editor',
   horizon: 'now',
   status: 'in_progress',

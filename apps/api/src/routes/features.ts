@@ -1,11 +1,12 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { asc, desc, eq, inArray, sql } from 'drizzle-orm';
-import { featureCreate, featureUpdate, collaboratorsPut } from '@productmap/shared';
-import { features, documents, products, activity, featureCollaborators, users } from '@productmap/db';
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { featureCreate, featureUpdate, collaboratorsPut, voteBody } from '@productmap/shared';
+import { features, documents, products, activity, featureCollaborators, users, votes } from '@productmap/db';
 import { db } from '../db';
 import { currentUser, type CurrentUserEnv } from '../middleware/current-user';
 import { recordActivity, addCollaborator } from '../lib/activity';
+import { EMPTY_VOTE_SUMMARY, requestUserId, voteSummaries, voteSummaryFor } from '../lib/votes';
 
 const horizonOrder = sql`case ${features.horizon} when 'now' then 0 when 'next' then 1 else 2 end`;
 
@@ -42,8 +43,16 @@ export const featuresRoutes = new Hono<CurrentUserEnv>()
       .select()
       .from(features)
       .orderBy(horizonOrder, asc(features.sortOrder), asc(features.createdAt));
-    const docs = await docsForFeatures(rows.map((f) => f.id));
-    return c.json(rows.map((f) => ({ ...f, documents: docs.get(f.id) ?? [] })));
+    const ids = rows.map((f) => f.id);
+    const docs = await docsForFeatures(ids);
+    const voteMap = await voteSummaries(ids, await requestUserId(c));
+    return c.json(
+      rows.map((f) => ({
+        ...f,
+        ...(voteMap.get(f.id) ?? EMPTY_VOTE_SUMMARY),
+        documents: docs.get(f.id) ?? [],
+      })),
+    );
   })
   .post(
     '/',
@@ -77,8 +86,34 @@ export const featuresRoutes = new Hono<CurrentUserEnv>()
     const [row] = await db.select().from(features).where(eq(features.id, id));
     if (!row) return c.json({ error: 'not_found' }, 404);
     const docs = await docsForFeatures([row.id]);
-    return c.json({ ...row, documents: docs.get(row.id) ?? [] });
+    const voteSummary = await voteSummaryFor(row.id, await requestUserId(c));
+    return c.json({ ...row, ...voteSummary, documents: docs.get(row.id) ?? [] });
   })
+  .put(
+    '/:id/vote',
+    zValidator('json', voteBody, (result, c) => {
+      if (!result.success) {
+        return c.json({ error: 'validation', issues: result.error.issues }, 400);
+      }
+    }),
+    async (c) => {
+      const id = c.req.param('id');
+      const { value } = c.req.valid('json');
+      const user = c.get('currentUser');
+      const [feature] = await db.select({ id: features.id }).from(features).where(eq(features.id, id));
+      if (!feature) return c.json({ error: 'not_found' }, 404);
+      if (!user) return c.json({ error: 'unauthorized' }, 401);
+      if (value === 0) {
+        await db.delete(votes).where(and(eq(votes.userId, user.id), eq(votes.featureId, id)));
+      } else {
+        await db
+          .insert(votes)
+          .values({ userId: user.id, featureId: id, value })
+          .onConflictDoUpdate({ target: [votes.userId, votes.featureId], set: { value } });
+      }
+      return c.json(await voteSummaryFor(id, user.id));
+    },
+  )
   .patch(
     '/:id',
     zValidator('json', featureUpdate, (result, c) => {

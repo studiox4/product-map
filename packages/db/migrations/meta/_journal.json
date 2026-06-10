@@ -15,6 +15,13 @@
       "when": 1781065272432,
       "tag": "0001_overconfident_talkback",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781099909993,
+      "tag": "0002_loose_wild_pack",
+      "breakpoints": true
     }
   ]
 }

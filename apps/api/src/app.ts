@@ -7,11 +7,13 @@ import { uploadsRoutes } from './routes/uploads';
 import { overviewRoutes } from './routes/overview';
 import { aiRoutes } from './routes/ai';
 import { usersRoutes } from './routes/users';
+import { commentsRoutes } from './routes/comments';
 
 export const app = new Hono()
   .get('/api/healthz', (c) => c.json({ ok: true }))
   .route('/api/users', usersRoutes)
   .route('/api/features', featuresRoutes)
+  .route('/api/comments', commentsRoutes)
   .route('/api/products', productsRoutes)
   .route('/api/documents', documentsRoutes)
   .route('/api', exportRoutes)

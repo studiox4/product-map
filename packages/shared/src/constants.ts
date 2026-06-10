@@ -19,6 +19,7 @@ export const DOC_TYPE_LABELS: Record<DocType, string> = {
 export const ACTIVITY_KINDS = [
   'feature_created', 'horizon_changed', 'status_changed', 'dates_changed',
   'description_edited', 'doc_created', 'doc_status_changed', 'doc_renamed',
+  'comment_added', 'comment_resolved',
 ] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 

@@ -6,7 +6,13 @@ import {
   generateDoc,
   userCreate,
   collaboratorsPut,
+  commentCreate,
+  commentUpdate,
+  resolveBody,
+  voteBody,
 } from './schemas';
+
+const UUID = '4b6f9f6e-3f1a-4c8e-9a64-6a3d2c1b0e9f';
 
 describe('featureUpdate', () => {
   it('rejects startDate > endDate', () => {
@@ -73,6 +79,51 @@ describe('documentUpdate', () => {
     expect(
       documentUpdate.safeParse({ contentJson: { type: 'doc', content: [] } }).success,
     ).toBe(true);
+  });
+});
+
+describe('commentCreate', () => {
+  it('requires exactly one of featureId/documentId', () => {
+    expect(commentCreate.safeParse({ featureId: UUID, body: 'hi' }).success).toBe(true);
+    expect(commentCreate.safeParse({ documentId: UUID, body: 'hi' }).success).toBe(true);
+    expect(commentCreate.safeParse({ body: 'hi' }).success).toBe(false);
+    expect(commentCreate.safeParse({ featureId: UUID, documentId: UUID, body: 'hi' }).success).toBe(false);
+  });
+
+  it('bounds body to 1..4000 chars and accepts optional parentId', () => {
+    expect(commentCreate.safeParse({ featureId: UUID, body: '' }).success).toBe(false);
+    expect(commentCreate.safeParse({ featureId: UUID, body: 'a'.repeat(4000) }).success).toBe(true);
+    expect(commentCreate.safeParse({ featureId: UUID, body: 'a'.repeat(4001) }).success).toBe(false);
+    expect(commentCreate.safeParse({ featureId: UUID, parentId: UUID, body: 'hi' }).success).toBe(true);
+    expect(commentCreate.safeParse({ featureId: UUID, parentId: 'nope', body: 'hi' }).success).toBe(false);
+  });
+});
+
+describe('commentUpdate', () => {
+  it('accepts partial bodies within bounds', () => {
+    expect(commentUpdate.safeParse({}).success).toBe(true);
+    expect(commentUpdate.safeParse({ body: 'edited' }).success).toBe(true);
+    expect(commentUpdate.safeParse({ body: '' }).success).toBe(false);
+    expect(commentUpdate.safeParse({ body: 'a'.repeat(4001) }).success).toBe(false);
+  });
+});
+
+describe('resolveBody', () => {
+  it('requires a boolean resolved flag', () => {
+    expect(resolveBody.safeParse({ resolved: true }).success).toBe(true);
+    expect(resolveBody.safeParse({ resolved: false }).success).toBe(true);
+    expect(resolveBody.safeParse({}).success).toBe(false);
+    expect(resolveBody.safeParse({ resolved: 'yes' }).success).toBe(false);
+  });
+});
+
+describe('voteBody', () => {
+  it('accepts only 1, -1, 0', () => {
+    expect(voteBody.safeParse({ value: 1 }).success).toBe(true);
+    expect(voteBody.safeParse({ value: -1 }).success).toBe(true);
+    expect(voteBody.safeParse({ value: 0 }).success).toBe(true);
+    expect(voteBody.safeParse({ value: 2 }).success).toBe(false);
+    expect(voteBody.safeParse({}).success).toBe(false);
   });
 });
 

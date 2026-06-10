@@ -40,6 +40,22 @@ export const userUpdate = z.object({
 export const collaboratorsPut = z.object({
   userIds: z.array(z.string().uuid()),
 });
+export const commentCreate = z.object({
+  featureId: z.string().uuid().optional(),
+  documentId: z.string().uuid().optional(),
+  parentId: z.string().uuid().optional(),
+  body: z.string().min(1).max(4000),
+}).refine(d => (d.featureId !== undefined) !== (d.documentId !== undefined),
+  { message: 'exactly one of featureId or documentId is required' });
+export const commentUpdate = z.object({
+  body: z.string().min(1).max(4000).optional(),
+});
+export const resolveBody = z.object({
+  resolved: z.boolean(),
+});
+export const voteBody = z.object({
+  value: z.union([z.literal(1), z.literal(-1), z.literal(0)]),
+});
 export const generateDoc = z.object({
   docType: z.enum(DOC_TYPES),
   featureId: z.string().uuid(),

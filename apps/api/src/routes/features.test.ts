@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { products, features, documents, users, activity, featureCollaborators } from '@productmap/db';
+import { products, features, documents, users, activity, featureCollaborators, votes } from '@productmap/db';
 import { asc, eq } from 'drizzle-orm';
 
 let productId: string;
@@ -130,6 +130,69 @@ describe('GET /api/features', () => {
       'next-0',
       'later-0',
     ]);
+  });
+});
+
+describe('PUT /api/features/:id/vote', () => {
+  const put = (value: number, asUser?: string) => ({
+    method: 'PUT',
+    headers: { 'content-type': 'application/json', ...(asUser ? { 'x-user-id': asUser } : {}) },
+    body: JSON.stringify({ value }),
+  });
+
+  it('votes, flips, and clears with persisted summaries', async () => {
+    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+
+    const boost = await app.request(`/api/features/${f.id}/vote`, put(1));
+    expect(boost.status).toBe(200);
+    expect(await boost.json()).toEqual({ score: 1, boosts: 1, cools: 0, myVote: 1 });
+
+    const flip = await app.request(`/api/features/${f.id}/vote`, put(-1));
+    expect(await flip.json()).toEqual({ score: -1, boosts: 0, cools: 1, myVote: -1 });
+
+    const clear = await app.request(`/api/features/${f.id}/vote`, put(0));
+    expect(await clear.json()).toEqual({ score: 0, boosts: 0, cools: 0, myVote: 0 });
+
+    const rows = await db.select().from(votes).where(eq(votes.featureId, f.id));
+    expect(rows).toHaveLength(0);
+  });
+
+  it('enforces one vote per user and aggregates across users', async () => {
+    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const [ada] = await db.insert(users).values({ name: 'Ada', color: '#3c6b46' }).returning();
+
+    await app.request(`/api/features/${f.id}/vote`, put(1));
+    await app.request(`/api/features/${f.id}/vote`, put(1)); // same user again: still one row
+    const res = await app.request(`/api/features/${f.id}/vote`, put(-1, ada.id));
+    expect(await res.json()).toEqual({ score: 0, boosts: 1, cools: 1, myVote: -1 });
+
+    const rows = await db.select().from(votes).where(eq(votes.featureId, f.id));
+    expect(rows).toHaveLength(2);
+  });
+
+  it('404 on unknown feature and 400 on invalid value', async () => {
+    const missing = await app.request('/api/features/00000000-0000-4000-8000-000000000000/vote', put(1));
+    expect(missing.status).toBe(404);
+    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const bad = await app.request(`/api/features/${f.id}/vote`, put(2));
+    expect(bad.status).toBe(400);
+  });
+
+  it('GET /api/features and /api/features/:id include vote fields with per-user myVote', async () => {
+    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const [ada] = await db.insert(users).values({ name: 'Ada', color: '#3c6b46' }).returning();
+    await app.request(`/api/features/${f.id}/vote`, put(1));
+    await app.request(`/api/features/${f.id}/vote`, put(-1, ada.id));
+
+    const list = await (await app.request('/api/features', { headers: { 'x-user-id': ada.id } })).json();
+    expect(list[0]).toMatchObject({ score: 0, boosts: 1, cools: 1, myVote: -1 });
+
+    const single = await (await app.request(`/api/features/${f.id}`)).json();
+    expect(single).toMatchObject({ score: 0, boosts: 1, cools: 1, myVote: 1 }); // fallback user = Corban
+
+    const [unvoted] = await db.insert(features).values({ productId, title: 'G', horizon: 'later' }).returning();
+    const fresh = await (await app.request(`/api/features/${unvoted.id}`)).json();
+    expect(fresh).toMatchObject({ score: 0, boosts: 0, cools: 0, myVote: 0 });
   });
 });
 
