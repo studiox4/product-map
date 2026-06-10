@@ -16,6 +16,7 @@ app.use(
   serveStatic({ root: path.relative(process.cwd(), repoRoot) || '.' })
 );
 
-serve({ fetch: app.fetch, port: 3000 }, (info) => {
+const port = Number(process.env.PORT ?? 3411);
+serve({ fetch: app.fetch, port }, (info) => {
   console.log(`api listening on http://localhost:${info.port}`);
 });

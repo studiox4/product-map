@@ -19,7 +19,7 @@ export default defineConfig({
   webServer: [
     {
       command: 'pnpm --filter @productmap/api dev',
-      url: 'http://localhost:3000/api/healthz',
+      url: 'http://localhost:3411/api/healthz',
       reuseExistingServer: !process.env.CI,
     },
     {
