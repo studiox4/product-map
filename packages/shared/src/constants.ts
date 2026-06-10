@@ -15,3 +15,22 @@ export const HORIZON_COLORS: Record<Horizon, { badge: string; bar: string; heade
 export const DOC_TYPE_LABELS: Record<DocType, string> = {
   prd: 'PRD', brd: 'BRD', tech_spec: 'Tech spec', feature_brief: 'Feature brief',
 };
+
+export const ACTIVITY_KINDS = [
+  'feature_created', 'horizon_changed', 'status_changed', 'dates_changed',
+  'description_edited', 'doc_created', 'doc_status_changed', 'doc_renamed',
+] as const;
+export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
+
+export const DOC_TYPE_COLORS: Record<DocType, { chip: string; edge: string }> = {
+  prd:           { chip: 'bg-[#dcebff] text-[#2b557e]', edge: '#2b557e' },
+  tech_spec:     { chip: 'bg-[#efe3fb] text-[#6d3f9e]', edge: '#6d3f9e' },
+  brd:           { chip: 'bg-[#d9f2f0] text-[#0e7490]', edge: '#0e7490' },
+  feature_brief: { chip: 'bg-[#e4f0e4] text-[#3c6b46]', edge: '#3c6b46' },
+};
+export const DOC_STATUS_COLORS: Record<DocStatus, string> = {
+  draft:     'bg-[#f1f3f5] text-[#5a6b80]',
+  in_review: 'bg-[#fdf0e3] text-[#9a6428]',
+  final:     'bg-[#e4f0e4] text-[#3c6b46]',
+};
+export const USER_COLORS = ['#2b557e', '#3c6b46', '#9a6428', '#6d3f9e', '#0e7490', '#9a5a3c']; // assigned round-robin

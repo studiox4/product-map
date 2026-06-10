@@ -35,6 +35,8 @@ export const overviewRoutes = new Hono().get('/', async (c) => {
       type: documents.type,
       title: documents.title,
       status: documents.status,
+      createdBy: documents.createdBy,
+      updatedBy: documents.updatedBy,
       createdAt: documents.createdAt,
       updatedAt: documents.updatedAt,
     })
@@ -50,6 +52,8 @@ export const overviewRoutes = new Hono().get('/', async (c) => {
       type: d.type,
       title: d.title,
       status: d.status,
+      createdBy: d.createdBy,
+      updatedBy: d.updatedBy,
       createdAt: d.createdAt.toISOString(),
       updatedAt: d.updatedAt.toISOString(),
     };
@@ -70,6 +74,9 @@ export const overviewRoutes = new Hono().get('/', async (c) => {
     startDate: f.startDate,
     endDate: f.endDate,
     sortOrder: f.sortOrder,
+    descriptionMd: f.descriptionMd,
+    createdBy: f.createdBy,
+    updatedBy: f.updatedBy,
     createdAt: f.createdAt.toISOString(),
     updatedAt: f.updatedAt.toISOString(),
     documents: docsByFeature.get(f.id) ?? [],

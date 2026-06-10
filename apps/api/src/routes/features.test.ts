@@ -2,10 +2,11 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { products, features, documents } from '@productmap/db';
-import { eq } from 'drizzle-orm';
+import { products, features, documents, users, activity, featureCollaborators } from '@productmap/db';
+import { asc, eq } from 'drizzle-orm';
 
 let productId: string;
+let userId: string;
 
 beforeAll(async () => {
   await setupTestDb();
@@ -22,7 +23,17 @@ beforeEach(async () => {
     .values({ name: 'ProductMap', vision: 'v', aboutMd: '' })
     .returning();
   productId = p.id;
+  const [u] = await db.insert(users).values({ name: 'Corban', color: '#2b557e' }).returning();
+  userId = u.id;
 });
+
+async function activityRows(featureId: string) {
+  return db
+    .select()
+    .from(activity)
+    .where(eq(activity.featureId, featureId))
+    .orderBy(asc(activity.createdAt));
+}
 
 const json = (body: unknown) => ({
   method: 'POST',
@@ -49,6 +60,37 @@ describe('POST /api/features', () => {
     expect(body.endDate).toBeNull();
     expect(body.productId).toBe(productId);
     expect(body.id).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it('attributes creation to the fallback user and records feature_created activity', async () => {
+    const res = await app.request('/api/features', json({ title: 'Gantt', horizon: 'next' }));
+    const body = await res.json();
+    expect(body.createdBy).toBe(userId);
+    expect(body.updatedBy).toBe(userId);
+    expect(body.descriptionMd).toBe('');
+
+    const acts = await activityRows(body.id);
+    expect(acts).toHaveLength(1);
+    expect(acts[0].kind).toBe('feature_created');
+    expect(acts[0].actorId).toBe(userId);
+
+    const collabs = await db
+      .select()
+      .from(featureCollaborators)
+      .where(eq(featureCollaborators.featureId, body.id));
+    expect(collabs.map((c) => c.userId)).toEqual([userId]);
+  });
+
+  it('resolves x-user-id header as the actor', async () => {
+    const [other] = await db.insert(users).values({ name: 'Ada', color: '#3c6b46' }).returning();
+    const res = await app.request('/api/features', {
+      ...json({ title: 'Voting', horizon: 'later' }),
+      headers: { 'content-type': 'application/json', 'x-user-id': other.id },
+    });
+    const body = await res.json();
+    expect(body.createdBy).toBe(other.id);
+    const acts = await activityRows(body.id);
+    expect(acts[0].actorId).toBe(other.id);
   });
 
   it('400 on invalid body', async () => {
@@ -129,6 +171,51 @@ describe('PATCH /api/features/:id', () => {
     expect(new Date(body.updatedAt).getTime()).toBeGreaterThanOrEqual(new Date(body.createdAt).getTime());
   });
 
+  it('records one activity entry per changed field group, with {from,to} payloads', async () => {
+    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    await app.request(
+      `/api/features/${f.id}`,
+      patch({ horizon: 'later', status: 'planned', startDate: '2026-06-01', endDate: '2026-06-15' }),
+    );
+    const acts = await activityRows(f.id);
+    const byKind = new Map(acts.map((a) => [a.kind, a]));
+    expect(byKind.get('horizon_changed')?.payload).toEqual({ from: 'now', to: 'later' });
+    expect(byKind.get('status_changed')?.payload).toEqual({ from: 'idea', to: 'planned' });
+    expect(byKind.get('dates_changed')?.payload).toEqual({
+      from: { startDate: null, endDate: null },
+      to: { startDate: '2026-06-01', endDate: '2026-06-15' },
+    });
+    expect(acts).toHaveLength(3);
+    expect(acts.every((a) => a.actorId === userId)).toBe(true);
+  });
+
+  it('records description_edited and sets updatedBy when descriptionMd changes', async () => {
+    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const res = await app.request(`/api/features/${f.id}`, patch({ descriptionMd: '## Why' }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.descriptionMd).toBe('## Why');
+    expect(body.updatedBy).toBe(userId);
+    const acts = await activityRows(f.id);
+    expect(acts.map((a) => a.kind)).toEqual(['description_edited']);
+  });
+
+  it('records no activity when values do not change', async () => {
+    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    await app.request(`/api/features/${f.id}`, patch({ horizon: 'now', sortOrder: 3 }));
+    expect(await activityRows(f.id)).toHaveLength(0);
+  });
+
+  it('auto-adds the editor as collaborator on PATCH', async () => {
+    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    await app.request(`/api/features/${f.id}`, patch({ status: 'planned' }));
+    const collabs = await db
+      .select()
+      .from(featureCollaborators)
+      .where(eq(featureCollaborators.featureId, f.id));
+    expect(collabs.map((c) => c.userId)).toEqual([userId]);
+  });
+
   it('400 on inverted dates', async () => {
     const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
     const res = await app.request(
@@ -168,5 +255,74 @@ describe('DELETE /api/features/:id', () => {
       method: 'DELETE',
     });
     expect(res.status).toBe(404);
+  });
+});
+
+describe('GET /api/features/:id/activity', () => {
+  it('returns ActivityItems joined with actor name/color, newest first, capped at 50', async () => {
+    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    for (let i = 0; i < 55; i++) {
+      await db.insert(activity).values({
+        featureId: f.id,
+        actorId: userId,
+        kind: 'status_changed',
+        payload: { from: 'idea', to: `step-${i}` },
+        createdAt: new Date(Date.now() - (55 - i) * 1000),
+      });
+    }
+    const res = await app.request(`/api/features/${f.id}/activity`);
+    expect(res.status).toBe(200);
+    const list = await res.json();
+    expect(list).toHaveLength(50);
+    expect(list[0].actorName).toBe('Corban');
+    expect(list[0].actorColor).toBe('#2b557e');
+    expect(list[0].payload.to).toBe('step-54'); // newest first
+    expect(list[49].payload.to).toBe('step-5');
+  });
+
+  it('404 on unknown feature', async () => {
+    const res = await app.request('/api/features/00000000-0000-4000-8000-000000000000/activity');
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('PUT /api/features/:id/collaborators', () => {
+  it('replaces the collaborator set and returns 204', async () => {
+    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const [other] = await db.insert(users).values({ name: 'Ada', color: '#3c6b46' }).returning();
+    await db.insert(featureCollaborators).values({ featureId: f.id, userId });
+
+    const res = await app.request(`/api/features/${f.id}/collaborators`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ userIds: [other.id] }),
+    });
+    expect(res.status).toBe(204);
+
+    const collabs = await db
+      .select()
+      .from(featureCollaborators)
+      .where(eq(featureCollaborators.featureId, f.id));
+    expect(collabs.map((c) => c.userId)).toEqual([other.id]);
+  });
+
+  it('400 on non-uuid ids and 404 on unknown feature', async () => {
+    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const bad = await app.request(`/api/features/${f.id}/collaborators`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ userIds: ['nope'] }),
+    });
+    expect(bad.status).toBe(400);
+
+    const missing = await app.request(
+      '/api/features/00000000-0000-4000-8000-000000000000/collaborators',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ userIds: [] }),
+      },
+    );
+    expect(missing.status).toBe(404);
   });
 });

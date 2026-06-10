@@ -3,12 +3,14 @@
 import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { products, features } from '@productmap/db';
+import { products, features, users, activity, featureCollaborators } from '@productmap/db';
+import { asc, eq } from 'drizzle-orm';
 import AdmZip from 'adm-zip';
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 
 let productId: string;
 let featureId: string;
+let userId: string;
 
 beforeAll(async () => {
   await setupTestDb();
@@ -30,7 +32,17 @@ beforeEach(async () => {
     .values({ productId, title: 'Rich Markdown Editor', horizon: 'now' })
     .returning();
   featureId = feature.id;
+  const [u] = await db.insert(users).values({ name: 'Corban', color: '#2b557e' }).returning();
+  userId = u.id;
 });
+
+async function activityRows() {
+  return db
+    .select()
+    .from(activity)
+    .where(eq(activity.featureId, featureId))
+    .orderBy(asc(activity.createdAt));
+}
 
 async function createDoc(overrides: Record<string, unknown> = {}) {
   const res = await app.request('/api/documents', {
@@ -77,6 +89,23 @@ describe('POST /api/documents', () => {
     expect(body.contentMd).toBe('');
   });
 
+  it('attributes creation, records doc_created activity and adds collaborator', async () => {
+    const body = await (await createDoc()).json();
+    expect(body.createdBy).toBe(userId);
+    expect(body.updatedBy).toBe(userId);
+
+    const acts = await activityRows();
+    expect(acts).toHaveLength(1);
+    expect(acts[0].kind).toBe('doc_created');
+    expect(acts[0].actorId).toBe(userId);
+
+    const collabs = await db
+      .select()
+      .from(featureCollaborators)
+      .where(eq(featureCollaborators.featureId, featureId));
+    expect(collabs.map((c) => c.userId)).toEqual([userId]);
+  });
+
   it('rejects invalid body with 400 validation', async () => {
     const res = await app.request('/api/documents', {
       method: 'POST',
@@ -106,6 +135,29 @@ describe('GET /api/documents', () => {
     expect(list).toHaveLength(2);
     expect(list[0].contentJson).toBeUndefined();
     expect(list[0].contentMd).toBeUndefined();
+  });
+
+  it('?all=true returns DocumentListItems with featureTitle, featureHorizon and wordCount', async () => {
+    await createDoc(); // templated PRD → non-trivial word count
+    const res = await app.request('/api/documents?all=true');
+    expect(res.status).toBe(200);
+    const list = await res.json();
+    expect(list).toHaveLength(1);
+    const item = list[0];
+    expect(item.featureTitle).toBe('Rich Markdown Editor');
+    expect(item.featureHorizon).toBe('now');
+    expect(item.wordCount).toBeGreaterThan(0);
+    expect(item.contentJson).toBeUndefined();
+    expect(item.contentMd).toBeUndefined();
+  });
+
+  it('?all=true wordCount counts whitespace-separated words of contentMd', async () => {
+    const doc = await (await createDoc({ fromTemplate: false })).json();
+    const full = await (await app.request(`/api/documents/${doc.id}`)).json();
+    expect(full.contentMd).toBe('');
+    const res = await app.request('/api/documents?all=true');
+    const [item] = await res.json();
+    expect(item.wordCount).toBe(0);
   });
 });
 
@@ -149,6 +201,35 @@ describe('PATCH /api/documents/:id', () => {
       body: JSON.stringify({ status: 'final' }),
     });
     expect((await r2.json()).status).toBe('final');
+  });
+
+  it('records doc_status_changed and doc_renamed activity with {from,to} payloads', async () => {
+    const doc = await (await createDoc()).json();
+    await app.request(`/api/documents/${doc.id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ status: 'in_review', title: 'Editor PRD v2' }),
+    });
+    const acts = await activityRows();
+    const byKind = new Map(acts.map((a) => [a.kind, a]));
+    expect(byKind.get('doc_status_changed')?.payload).toEqual({ from: 'draft', to: 'in_review' });
+    expect(byKind.get('doc_renamed')?.payload).toEqual({ from: 'Editor PRD', to: 'Editor PRD v2' });
+    // doc_created from the POST plus the two PATCH entries
+    expect(acts).toHaveLength(3);
+  });
+
+  it('sets updatedBy from x-user-id and content-only saves record no activity', async () => {
+    const doc = await (await createDoc({ fromTemplate: false })).json();
+    const [other] = await db.insert(users).values({ name: 'Ada', color: '#3c6b46' }).returning();
+    const res = await app.request(`/api/documents/${doc.id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json', 'x-user-id': other.id },
+      body: JSON.stringify({ contentJson: { type: 'doc', content: [] } }),
+    });
+    expect(res.status).toBe(200);
+    expect((await res.json()).updatedBy).toBe(other.id);
+    const acts = await activityRows();
+    expect(acts.map((a) => a.kind)).toEqual(['doc_created']); // only from POST
   });
 
   it('404 for unknown id', async () => {

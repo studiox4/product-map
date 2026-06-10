@@ -12,6 +12,7 @@ export const featureUpdate = z.object({
   startDate: z.string().date().nullable().optional(),
   endDate: z.string().date().nullable().optional(),
   sortOrder: z.number().int().optional(),
+  descriptionMd: z.string().optional(),
 }).refine(d => !(d.startDate && d.endDate) || d.startDate <= d.endDate,
   { message: 'startDate must be on or before endDate' });
 export const documentCreate = z.object({
@@ -29,6 +30,15 @@ export const productUpdate = z.object({
   name: z.string().min(1).optional(),
   vision: z.string().optional(),
   aboutMd: z.string().optional(),
+});
+export const userCreate = z.object({
+  name: z.string().min(1).max(80),
+});
+export const userUpdate = z.object({
+  name: z.string().min(1).max(80).optional(),
+});
+export const collaboratorsPut = z.object({
+  userIds: z.array(z.string().uuid()),
 });
 export const generateDoc = z.object({
   docType: z.enum(DOC_TYPES),

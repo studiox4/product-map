@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { createDb, products, features, documents } from './index';
+import { createDb, products, features, documents, users, featureCollaborators, activity } from './index';
 
 const connectionString = process.env.DATABASE_URL ?? 'postgres://localhost:5432/productmap';
 
@@ -28,7 +28,11 @@ const { db, pool } = createDb(connectionString);
 
 try {
   // Idempotent: wipe everything first.
-  await db.execute(sql`truncate table uploads, documents, features, products restart identity cascade`);
+  await db.execute(
+    sql`truncate table activity, feature_collaborators, uploads, documents, features, products, users restart identity cascade`,
+  );
+
+  const [corban] = await db.insert(users).values({ name: 'Corban', color: '#2b557e' }).returning();
 
   const [product] = await db
     .insert(products)
@@ -203,7 +207,38 @@ try {
     },
   ]);
 
-  console.log(`seeded: 1 product, ${featureRows.length} features, 3 documents`);
+  // Attribute everything in the seed to Corban.
+  await db.update(features).set({ createdBy: corban.id, updatedBy: corban.id });
+  await db.update(documents).set({ createdBy: corban.id, updatedBy: corban.id });
+
+  // Corban collaborates on the two documented features.
+  await db.insert(featureCollaborators).values([
+    { featureId: editor.id, userId: corban.id },
+    { featureId: gantt.id, userId: corban.id },
+  ]);
+
+  // A little history on "Rich markdown editor" so the feature page feed isn't empty.
+  await db.insert(activity).values([
+    { featureId: editor.id, actorId: corban.id, kind: 'feature_created', payload: { to: editor.title } },
+    {
+      featureId: editor.id,
+      actorId: corban.id,
+      kind: 'doc_created',
+      payload: { to: 'Rich markdown editor — PRD' },
+    },
+    { featureId: editor.id, actorId: corban.id, kind: 'status_changed', payload: { from: 'planned', to: 'in_progress' } },
+    {
+      featureId: editor.id,
+      actorId: corban.id,
+      kind: 'dates_changed',
+      payload: {
+        from: { startDate: null, endDate: null },
+        to: { startDate: editor.startDate, endDate: editor.endDate },
+      },
+    },
+  ]);
+
+  console.log(`seeded: 1 product, ${featureRows.length} features, 3 documents, 1 user`);
 } finally {
   await pool.end();
 }

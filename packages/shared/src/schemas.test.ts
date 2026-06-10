@@ -4,6 +4,8 @@ import {
   featureUpdate,
   documentUpdate,
   generateDoc,
+  userCreate,
+  collaboratorsPut,
 } from './schemas';
 
 describe('featureUpdate', () => {
@@ -29,6 +31,30 @@ describe('featureUpdate', () => {
       endDate: null,
     });
     expect(result.success).toBe(true);
+  });
+
+  it('accepts descriptionMd', () => {
+    expect(featureUpdate.safeParse({ descriptionMd: '## Notes' }).success).toBe(true);
+    expect(featureUpdate.safeParse({ descriptionMd: '' }).success).toBe(true);
+  });
+});
+
+describe('userCreate', () => {
+  it('accepts 1..80 char names and rejects outside the range', () => {
+    expect(userCreate.safeParse({ name: 'Corban' }).success).toBe(true);
+    expect(userCreate.safeParse({ name: '' }).success).toBe(false);
+    expect(userCreate.safeParse({ name: 'a'.repeat(80) }).success).toBe(true);
+    expect(userCreate.safeParse({ name: 'a'.repeat(81) }).success).toBe(false);
+  });
+});
+
+describe('collaboratorsPut', () => {
+  it('accepts uuid arrays and rejects non-uuids', () => {
+    expect(collaboratorsPut.safeParse({ userIds: [] }).success).toBe(true);
+    expect(
+      collaboratorsPut.safeParse({ userIds: ['4b6f9f6e-3f1a-4c8e-9a64-6a3d2c1b0e9f'] }).success,
+    ).toBe(true);
+    expect(collaboratorsPut.safeParse({ userIds: ['nope'] }).success).toBe(false);
   });
 });
 

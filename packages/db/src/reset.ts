@@ -5,7 +5,9 @@ const connectionString = process.env.DATABASE_URL ?? 'postgres://localhost:5432/
 
 const { db, pool } = createDb(connectionString);
 try {
-  await db.execute(sql`truncate table uploads, documents, features, products restart identity cascade`);
+  await db.execute(
+    sql`truncate table activity, feature_collaborators, uploads, documents, features, products, users restart identity cascade`,
+  );
   console.log('database reset (all tables truncated)');
 } finally {
   await pool.end();

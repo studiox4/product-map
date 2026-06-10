@@ -1,9 +1,11 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { asc, eq, inArray, sql } from 'drizzle-orm';
-import { featureCreate, featureUpdate } from '@productmap/shared';
-import { features, documents, products } from '@productmap/db';
+import { asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { featureCreate, featureUpdate, collaboratorsPut } from '@productmap/shared';
+import { features, documents, products, activity, featureCollaborators, users } from '@productmap/db';
 import { db } from '../db';
+import { currentUser, type CurrentUserEnv } from '../middleware/current-user';
+import { recordActivity, addCollaborator } from '../lib/activity';
 
 const horizonOrder = sql`case ${features.horizon} when 'now' then 0 when 'next' then 1 else 2 end`;
 
@@ -33,7 +35,8 @@ async function docsForFeatures(featureIds: string[]) {
   return byFeature;
 }
 
-export const featuresRoutes = new Hono()
+export const featuresRoutes = new Hono<CurrentUserEnv>()
+  .use('*', currentUser)
   .get('/', async (c) => {
     const rows = await db
       .select()
@@ -51,12 +54,21 @@ export const featuresRoutes = new Hono()
     }),
     async (c) => {
       const body = c.req.valid('json');
+      const user = c.get('currentUser');
       const [product] = await db.select({ id: products.id }).from(products).limit(1);
       if (!product) return c.json({ error: 'not_found' }, 404);
       const [row] = await db
         .insert(features)
-        .values({ productId: product.id, title: body.title, horizon: body.horizon })
+        .values({
+          productId: product.id,
+          title: body.title,
+          horizon: body.horizon,
+          createdBy: user?.id ?? null,
+          updatedBy: user?.id ?? null,
+        })
         .returning();
+      await recordActivity(row.id, user?.id, 'feature_created', { to: row.title });
+      await addCollaborator(row.id, user?.id);
       return c.json(row, 201);
     },
   )
@@ -77,13 +89,79 @@ export const featuresRoutes = new Hono()
     async (c) => {
       const id = c.req.param('id');
       const updates = c.req.valid('json');
+      const user = c.get('currentUser');
+      const [prev] = await db.select().from(features).where(eq(features.id, id));
+      if (!prev) return c.json({ error: 'not_found' }, 404);
       const [row] = await db
         .update(features)
-        .set({ ...updates, updatedAt: sql`now()` })
+        .set({ ...updates, updatedBy: user?.id ?? null, updatedAt: sql`now()` })
         .where(eq(features.id, id))
         .returning();
-      if (!row) return c.json({ error: 'not_found' }, 404);
+
+      if (updates.horizon !== undefined && row.horizon !== prev.horizon) {
+        await recordActivity(id, user?.id, 'horizon_changed', { from: prev.horizon, to: row.horizon });
+      }
+      if (updates.status !== undefined && row.status !== prev.status) {
+        await recordActivity(id, user?.id, 'status_changed', { from: prev.status, to: row.status });
+      }
+      if (
+        (updates.startDate !== undefined || updates.endDate !== undefined) &&
+        (row.startDate !== prev.startDate || row.endDate !== prev.endDate)
+      ) {
+        await recordActivity(id, user?.id, 'dates_changed', {
+          from: { startDate: prev.startDate, endDate: prev.endDate },
+          to: { startDate: row.startDate, endDate: row.endDate },
+        });
+      }
+      if (updates.descriptionMd !== undefined && row.descriptionMd !== prev.descriptionMd) {
+        await recordActivity(id, user?.id, 'description_edited');
+      }
+      await addCollaborator(id, user?.id);
       return c.json(row);
+    },
+  )
+  .get('/:id/activity', async (c) => {
+    const id = c.req.param('id');
+    const [feature] = await db.select({ id: features.id }).from(features).where(eq(features.id, id));
+    if (!feature) return c.json({ error: 'not_found' }, 404);
+    const rows = await db
+      .select({
+        id: activity.id,
+        featureId: activity.featureId,
+        actorId: activity.actorId,
+        actorName: users.name,
+        actorColor: users.color,
+        kind: activity.kind,
+        payload: activity.payload,
+        createdAt: activity.createdAt,
+      })
+      .from(activity)
+      .innerJoin(users, eq(activity.actorId, users.id))
+      .where(eq(activity.featureId, id))
+      .orderBy(desc(activity.createdAt))
+      .limit(50);
+    return c.json(rows);
+  })
+  .put(
+    '/:id/collaborators',
+    zValidator('json', collaboratorsPut, (result, c) => {
+      if (!result.success) {
+        return c.json({ error: 'validation', issues: result.error.issues }, 400);
+      }
+    }),
+    async (c) => {
+      const id = c.req.param('id');
+      const { userIds } = c.req.valid('json');
+      const [feature] = await db.select({ id: features.id }).from(features).where(eq(features.id, id));
+      if (!feature) return c.json({ error: 'not_found' }, 404);
+      await db.delete(featureCollaborators).where(eq(featureCollaborators.featureId, id));
+      if (userIds.length > 0) {
+        await db
+          .insert(featureCollaborators)
+          .values(userIds.map((userId) => ({ featureId: id, userId })))
+          .onConflictDoNothing();
+      }
+      return c.body(null, 204);
     },
   )
   .delete('/:id', async (c) => {

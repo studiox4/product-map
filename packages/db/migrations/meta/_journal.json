@@ -8,6 +8,13 @@
       "when": 1781059341501,
       "tag": "0000_safe_red_skull",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1781065272432,
+      "tag": "0001_overconfident_talkback",
+      "breakpoints": true
     }
   ]
 }

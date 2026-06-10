@@ -8,6 +8,8 @@ import { documents, features } from '@productmap/db';
 import type { Context } from 'hono';
 import { db } from '../db';
 import { markdownToTiptap, tiptapToMarkdown } from '../lib/markdown';
+import { currentUser, type CurrentUserEnv } from '../middleware/current-user';
+import { recordActivity, addCollaborator } from '../lib/activity';
 
 const EMPTY_DOC = { type: 'doc', content: [] };
 
@@ -36,9 +38,36 @@ function validationHook(result: { success: boolean; error?: unknown }, c: Contex
   }
 }
 
-export const documentsRoutes = new Hono()
+function wordCount(md: string): number {
+  return md.split(/\s+/).filter(Boolean).length;
+}
+
+export const documentsRoutes = new Hono<CurrentUserEnv>()
+  .use('*', currentUser)
   // GET /api/documents?featureId= → DocumentMeta[]
+  // GET /api/documents?all=true   → DocumentListItem[] (meta + featureTitle/featureHorizon/wordCount)
   .get('/', async (c) => {
+    if (c.req.query('all') === 'true') {
+      const rows = await db
+        .select({
+          id: documents.id,
+          featureId: documents.featureId,
+          type: documents.type,
+          title: documents.title,
+          status: documents.status,
+          createdBy: documents.createdBy,
+          updatedBy: documents.updatedBy,
+          createdAt: documents.createdAt,
+          updatedAt: documents.updatedAt,
+          featureTitle: features.title,
+          featureHorizon: features.horizon,
+          contentMd: documents.contentMd,
+        })
+        .from(documents)
+        .innerJoin(features, eq(documents.featureId, features.id))
+        .orderBy(asc(documents.createdAt));
+      return c.json(rows.map(({ contentMd, ...item }) => ({ ...item, wordCount: wordCount(contentMd) })));
+    }
     const featureId = c.req.query('featureId');
     const rows = await db
       .select()
@@ -59,6 +88,7 @@ export const documentsRoutes = new Hono()
       contentMd = TEMPLATES[body.type].markdownBody.replaceAll('{{title}}', body.title);
       contentJson = markdownToTiptap(contentMd);
     }
+    const user = c.get('currentUser');
     const [row] = await db
       .insert(documents)
       .values({
@@ -67,8 +97,12 @@ export const documentsRoutes = new Hono()
         title: body.title,
         contentJson,
         contentMd,
+        createdBy: user?.id ?? null,
+        updatedBy: user?.id ?? null,
       })
       .returning();
+    await recordActivity(body.featureId, user?.id, 'doc_created', { to: row.title });
+    await addCollaborator(body.featureId, user?.id);
     return c.json(row, 201);
   })
   // GET /api/documents/:id/export.md → text/markdown attachment
@@ -90,7 +124,13 @@ export const documentsRoutes = new Hono()
   .patch('/:id', zValidator('json', documentUpdate, validationHook), async (c) => {
     const id = c.req.param('id')!;
     const body = c.req.valid('json');
-    const set: Partial<typeof documents.$inferInsert> = { updatedAt: new Date() };
+    const user = c.get('currentUser');
+    const [prev] = await db.select().from(documents).where(eq(documents.id, id));
+    if (!prev) return c.json({ error: 'not_found' }, 404);
+    const set: Partial<typeof documents.$inferInsert> = {
+      updatedAt: new Date(),
+      updatedBy: user?.id ?? null,
+    };
     if (body.title !== undefined) set.title = body.title;
     if (body.status !== undefined) set.status = body.status;
     if (body.contentJson !== undefined) {
@@ -103,6 +143,16 @@ export const documentsRoutes = new Hono()
       .where(eq(documents.id, id))
       .returning();
     if (!row) return c.json({ error: 'not_found' }, 404);
+    if (body.status !== undefined && row.status !== prev.status) {
+      await recordActivity(row.featureId, user?.id, 'doc_status_changed', {
+        from: prev.status,
+        to: row.status,
+      });
+    }
+    if (body.title !== undefined && row.title !== prev.title) {
+      await recordActivity(row.featureId, user?.id, 'doc_renamed', { from: prev.title, to: row.title });
+    }
+    await addCollaborator(row.featureId, user?.id);
     return c.json(toMeta(row));
   })
   // DELETE /api/documents/:id → 204
