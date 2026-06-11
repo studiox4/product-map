@@ -108,8 +108,12 @@ export function GanttBar({ feature, rect, pxPerDay, onCommit, onClick, highlight
         fillOpacity={drag ? 0.6 : 1}
         stroke={highlighted ? 'var(--pm-action)' : 'none'}
         strokeWidth={highlighted ? 2 : 0}
-        style={{ filter: 'drop-shadow(0 2px 4px var(--pm-bar-shadow))' }}
-        className={`cursor-grab transition-opacity duration-150 ease-out hover:opacity-90 focus-visible:outline-none ${
+        style={{
+          filter: 'drop-shadow(0 2px 4px var(--pm-bar-shadow))',
+          // Live drag tracks the pointer 1:1; the spring settle applies on drop.
+          ...(drag ? { transition: 'none' } : {}),
+        }}
+        className={`gantt-settle cursor-grab hover:opacity-90 focus-visible:outline-none ${
           drag?.mode === 'move' ? 'cursor-grabbing' : ''
         } ${highlighted ? 'animate-pulse' : ''}`}
         tabIndex={0}

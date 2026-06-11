@@ -20,6 +20,10 @@ interface BoardColumnProps {
   onOpenFeature: (id: string) => void;
   /** True while a drag hovers this column or any card inside it. */
   isDropTarget?: boolean;
+  /** True briefly after a card drops here — pulses the header dot. */
+  isDropPulse?: boolean;
+  /** Column position for the first-mount staggered fade-up (40ms steps). */
+  staggerIndex?: number;
 }
 
 export function BoardColumn({
@@ -27,6 +31,8 @@ export function BoardColumn({
   features,
   onOpenFeature,
   isDropTarget = false,
+  isDropPulse = false,
+  staggerIndex = 0,
 }: BoardColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: horizon });
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -36,15 +42,16 @@ export function BoardColumn({
       ref={setNodeRef}
       data-testid={`column-${horizon}`}
       className={cn(
-        'flex flex-col rounded-2xl bg-surface/50 transition-shadow duration-150 ease-out',
+        'fade-up flex flex-col rounded-2xl bg-surface/50 transition-shadow duration-150 ease-out',
         (isOver || isDropTarget) && 'ring-2 ring-inset ring-[#dcebff]',
       )}
+      style={{ animationDelay: `${staggerIndex * 40}ms` }}
     >
       <header className="flex items-center justify-between px-4 py-3">
         <h2 className="flex items-center gap-2 font-display text-sm font-semibold text-ink">
           <span
             aria-hidden="true"
-            className="h-2 w-2 rounded-full"
+            className={cn('h-2 w-2 rounded-full', isDropPulse && 'dot-pulse')}
             style={{ backgroundColor: HORIZON_COLORS[horizon].bar }}
           />
           {HORIZON_LABELS[horizon]}

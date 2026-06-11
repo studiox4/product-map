@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import type { VoteSummary } from '@productmap/shared';
 import { cn } from '@/lib/utils';
 import { useVote, type VoteInput } from '@/lib/api';
+import { emojiParticleBurst, frostRing } from '@/lib/delight';
 
 interface VoteWidgetProps {
   featureId: string;
@@ -25,9 +26,14 @@ export function VoteWidget({ featureId, summary, size = 'full' }: VoteWidgetProp
   const [popped, setPopped] = useState<'boost' | 'cool' | null>(null);
   const popTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const cast = (control: 'boost' | 'cool') => {
+  const cast = (control: 'boost' | 'cool', el: HTMLElement) => {
     const target: VoteInput = control === 'boost' ? 1 : -1;
     const next: VoteInput = summary.myVote === target ? 0 : target;
+    if (next !== 0) {
+      // Micro-delight on casting (not clearing) a vote.
+      if (control === 'boost') emojiParticleBurst(el, '🚀');
+      else frostRing(el);
+    }
     setPopped(control);
     if (popTimer.current) clearTimeout(popTimer.current);
     popTimer.current = setTimeout(() => setPopped(null), 150);
@@ -55,7 +61,7 @@ export function VoteWidget({ featureId, summary, size = 'full' }: VoteWidgetProp
         type="button"
         aria-label="Boost"
         aria-pressed={summary.myVote === 1}
-        onClick={() => cast('boost')}
+        onClick={(e) => cast('boost', e.currentTarget)}
         className={cn(
           pill,
           summary.myVote === 1
@@ -81,7 +87,7 @@ export function VoteWidget({ featureId, summary, size = 'full' }: VoteWidgetProp
         type="button"
         aria-label="Cool"
         aria-pressed={summary.myVote === -1}
-        onClick={() => cast('cool')}
+        onClick={(e) => cast('cool', e.currentTarget)}
         className={cn(
           pill,
           summary.myVote === -1
