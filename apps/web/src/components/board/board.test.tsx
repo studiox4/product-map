@@ -73,6 +73,25 @@ const fixture: FeatureWithDocs[] = [
 
 const server = setupServer(
   http.get('/api/users', () => HttpResponse.json([])),
+  // New-doc dialog lists DB templates (settings/templates addendum).
+  http.get('/api/templates', () =>
+    HttpResponse.json([
+      {
+        id: 'tpl-prd',
+        type: 'prd',
+        name: 'PRD',
+        description: 'Problem, goals, requirements.',
+        bodyJson: { type: 'doc', content: [] },
+        bodyMd: '',
+        promptHints: '',
+        isDefault: true,
+        archivedAt: null,
+        createdBy: null,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]),
+  ),
   http.get('/api/features', () => HttpResponse.json(fixture)),
   http.get('/api/features/:id', ({ params }) => {
     const f = fixture.find((x) => x.id === params.id);
