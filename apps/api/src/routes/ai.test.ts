@@ -7,7 +7,7 @@ process.env.DATABASE_URL = 'postgres://localhost:5432/productmap_test';
 
 const { app } = await import('../app');
 const { db, pool } = await import('../db');
-const { products, features } = await import('@productmap/db');
+const { products, features, users, activity } = await import('@productmap/db');
 const { setAiClientFactory } = await import('../lib/ai');
 type AiClient = import('../lib/ai').AiClient;
 
@@ -152,5 +152,57 @@ describe('POST /api/ai/generate-doc', () => {
     expect(user).toContain(TEMPLATES.prd.markdownBody);
     expect(user).toContain(brief);
     expect(user).toContain('Rich markdown editor');
+  });
+});
+
+describe('POST /api/ai/digest', () => {
+  it('503 when AI disabled', async () => {
+    const res = await app.request('/api/ai/digest', { method: 'POST' });
+    expect(res.status).toBe(503);
+    expect((await res.json()).error).toBe('ai_disabled');
+  });
+
+  it('streams SSE chunks then done, prompting only with last-7-days activity', async () => {
+    process.env.ANTHROPIC_API_KEY = 'test';
+    const captured: { params?: Record<string, unknown> } = {};
+    setAiClientFactory(() => makeMockClient(captured));
+
+    const feature = await seedFeature();
+    const [actor] = await db.insert(users).values({ name: 'Corban', color: '#2b557e' }).returning();
+    const daysAgo = (n: number) => new Date(Date.now() - n * 24 * 60 * 60 * 1000);
+    await db.insert(activity).values([
+      {
+        featureId: feature.id,
+        actorId: actor.id,
+        kind: 'horizon_changed',
+        payload: { from: 'later', to: 'now' },
+        createdAt: daysAgo(2),
+      },
+      {
+        featureId: feature.id,
+        actorId: actor.id,
+        kind: 'status_changed',
+        payload: { from: 'idea', to: 'planned' },
+        createdAt: daysAgo(30), // outside the 7-day window — must not appear
+      },
+    ]);
+
+    const res = await app.request('/api/ai/digest', { method: 'POST' });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/event-stream');
+    const text = await res.text();
+    expect((text.match(/event: chunk/g) ?? []).length).toBeGreaterThanOrEqual(2);
+    expect(text).toContain('event: done');
+
+    const params = captured.params!;
+    expect(params.model).toBe('claude-sonnet-4-6');
+    expect(params.system).toContain('digest');
+    const user = (params.messages as Array<{ role: string; content: string }>).find(
+      (m) => m.role === 'user',
+    )!.content;
+    expect(user).toContain('horizon_changed');
+    expect(user).toContain('Rich markdown editor');
+    expect(user).toContain('Corban');
+    expect(user).not.toContain('status_changed');
   });
 });

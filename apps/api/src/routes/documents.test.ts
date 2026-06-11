@@ -203,6 +203,28 @@ describe('PATCH /api/documents/:id', () => {
     expect((await r2.json()).status).toBe('final');
   });
 
+  it('cover PATCH sets and clears the gradient cover', async () => {
+    const doc = await (await createDoc()).json();
+    expect(doc.cover).toBeNull();
+    const r1 = await app.request(`/api/documents/${doc.id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ cover: 'dawn' }),
+    });
+    expect(r1.status).toBe(200);
+    expect((await r1.json()).cover).toBe('dawn');
+    // persists on follow-up GET
+    const get = await app.request(`/api/documents/${doc.id}`);
+    expect((await get.json()).cover).toBe('dawn');
+    // null clears it
+    const r2 = await app.request(`/api/documents/${doc.id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ cover: null }),
+    });
+    expect((await r2.json()).cover).toBeNull();
+  });
+
   it('records doc_status_changed and doc_renamed activity with {from,to} payloads', async () => {
     const doc = await (await createDoc()).json();
     await app.request(`/api/documents/${doc.id}`, {

@@ -12,6 +12,8 @@ export interface Feature extends VoteSummary {
 }
 export interface DocumentMeta {
   id: string; featureId: string; type: DocType; title: string; status: DocStatus;
+  /** Curated gradient cover key; null/absent = no cover. Always present in API responses. */
+  cover?: string | null;
   createdBy: string | null; updatedBy: string | null;
   createdAt: string; updatedAt: string;
 }
@@ -21,6 +23,20 @@ export interface DocumentListItem extends DocumentMeta {
 export interface ActivityItem {
   id: string; featureId: string; actorId: string; actorName: string; actorColor: string;
   kind: ActivityKind; payload: Record<string, unknown> | null; createdAt: string;
+}
+/** Workspace-wide activity row (GET /api/activity) — actor + feature joined in. */
+export interface WorkspaceActivityItem extends ActivityItem { featureTitle: string; }
+// Activity payload shapes — enough to replay roadmap state (Time Machine).
+export interface FeatureSnapshot {
+  title: string; horizon: Horizon; status: FeatureStatus;
+  startDate: string | null; endDate: string | null;
+}
+export interface FeatureCreatedPayload { to: string; snapshot: FeatureSnapshot; }
+export interface HorizonChangedPayload { from: Horizon; to: Horizon; }
+export interface StatusChangedPayload { from: FeatureStatus; to: FeatureStatus; }
+export interface DatesChangedPayload {
+  from: { startDate: string | null; endDate: string | null };
+  to: { startDate: string | null; endDate: string | null };
 }
 export interface DocumentFull extends DocumentMeta { contentJson: unknown; contentMd: string; }
 export interface FeatureWithDocs extends Feature { documents: DocumentMeta[]; }

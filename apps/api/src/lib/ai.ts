@@ -79,3 +79,53 @@ export async function* generateDocStream({
     }
   }
 }
+
+const DIGEST_SYSTEM_PROMPT =
+  'You write a short, upbeat weekly product digest in plain markdown. Around 120 words. ' +
+  'Summarize what moved on the roadmap and in the docs this week — group related events, ' +
+  'name features, skip IDs and timestamps. No preamble, no heading — start with the first sentence.';
+
+export interface DigestEvent {
+  kind: string;
+  featureTitle: string;
+  actorName: string;
+  payload: unknown;
+  createdAt: string;
+}
+
+export interface GenerateDigestInput {
+  events: DigestEvent[];
+  client: AiClient;
+}
+
+/** Streams a ~120-word "this week in ProductMap" digest from recent activity. */
+export async function* generateDigestStream({ events, client }: GenerateDigestInput): AsyncGenerator<string> {
+  const lines =
+    events.length === 0
+      ? ['(no activity this week)']
+      : events.map(
+          (e) =>
+            `- ${e.createdAt.slice(0, 10)} ${e.actorName}: ${e.kind} on "${e.featureTitle}"` +
+            (e.payload ? ` ${JSON.stringify(e.payload)}` : ''),
+        );
+  const user = [
+    'Activity from the last 7 days (oldest first):',
+    '',
+    ...lines,
+    '',
+    'Write the "This week in ProductMap" digest.',
+  ].join('\n');
+
+  const stream = client.messages.stream({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 600,
+    system: DIGEST_SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: user }],
+  });
+
+  for await (const event of stream) {
+    if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta' && event.delta.text) {
+      yield event.delta.text;
+    }
+  }
+}

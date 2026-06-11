@@ -55,6 +55,7 @@ export const documentsRoutes = new Hono<CurrentUserEnv>()
           type: documents.type,
           title: documents.title,
           status: documents.status,
+          cover: documents.cover,
           createdBy: documents.createdBy,
           updatedBy: documents.updatedBy,
           createdAt: documents.createdAt,
@@ -133,6 +134,7 @@ export const documentsRoutes = new Hono<CurrentUserEnv>()
     };
     if (body.title !== undefined) set.title = body.title;
     if (body.status !== undefined) set.status = body.status;
+    if (body.cover !== undefined) set.cover = body.cover;
     if (body.contentJson !== undefined) {
       set.contentJson = body.contentJson;
       set.contentMd = tiptapToMarkdown(body.contentJson);

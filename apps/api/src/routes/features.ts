@@ -16,6 +16,7 @@ const docMetaColumns = {
   type: documents.type,
   title: documents.title,
   status: documents.status,
+  cover: documents.cover,
   createdAt: documents.createdAt,
   updatedAt: documents.updatedAt,
 };
@@ -76,7 +77,17 @@ export const featuresRoutes = new Hono<CurrentUserEnv>()
           updatedBy: user?.id ?? null,
         })
         .returning();
-      await recordActivity(row.id, user?.id, 'feature_created', { to: row.title });
+      await recordActivity(row.id, user?.id, 'feature_created', {
+        to: row.title,
+        // Full snapshot so the roadmap Time Machine can replay this feature appearing.
+        snapshot: {
+          title: row.title,
+          horizon: row.horizon,
+          status: row.status,
+          startDate: row.startDate,
+          endDate: row.endDate,
+        },
+      });
       await addCollaborator(row.id, user?.id);
       return c.json(row, 201);
     },

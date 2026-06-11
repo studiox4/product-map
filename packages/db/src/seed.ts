@@ -217,25 +217,62 @@ try {
     { featureId: gantt.id, userId: corban.id },
   ]);
 
-  // A little history on "Rich markdown editor" so the feature page feed isn't empty.
+  // --- 3-month synthetic history so the roadmap Time Machine has a story to replay ---
+  // Every feature is born in Later as an idea; the story promotes, schedules, and
+  // staffs them until replaying all events lands exactly on the rows seeded above.
+  const board = byTitle.get('Now-next-later board')!;
+  const ai = byTitle.get('AI doc drafting')!;
+  const commentsFeature = byTitle.get('Comments & review')!;
+  const voting = byTitle.get('Up/down voting')!;
+  const realtime = byTitle.get('Realtime collaboration (Yjs)')!;
+  const ecs = byTitle.get('ECS deployment')!;
+
+  const daysAgo = (n: number) => new Date(Date.now() - n * 24 * 60 * 60 * 1000);
+  const created = (f: typeof editor, at: Date) => ({
+    featureId: f.id,
+    actorId: corban.id,
+    kind: 'feature_created',
+    payload: {
+      to: f.title,
+      snapshot: { title: f.title, horizon: 'later', status: 'idea', startDate: null, endDate: null },
+    },
+    createdAt: at,
+  });
+
   await db.insert(activity).values([
-    { featureId: editor.id, actorId: corban.id, kind: 'feature_created', payload: { to: editor.title } },
-    {
-      featureId: editor.id,
-      actorId: corban.id,
-      kind: 'doc_created',
-      payload: { to: 'Rich markdown editor — PRD' },
-    },
-    { featureId: editor.id, actorId: corban.id, kind: 'status_changed', payload: { from: 'planned', to: 'in_progress' } },
-    {
-      featureId: editor.id,
-      actorId: corban.id,
-      kind: 'dates_changed',
-      payload: {
-        from: { startDate: null, endDate: null },
-        to: { startDate: editor.startDate, endDate: editor.endDate },
-      },
-    },
+    // ~12 weeks ago: the first ideas land.
+    created(editor, daysAgo(85)),
+    created(board, daysAgo(83)),
+    // The editor gets serious: promoted, scheduled (roughly), then rescheduled.
+    { featureId: editor.id, actorId: corban.id, kind: 'horizon_changed', payload: { from: 'later', to: 'next' }, createdAt: daysAgo(78) },
+    created(gantt, daysAgo(74)),
+    { featureId: editor.id, actorId: corban.id, kind: 'dates_changed', payload: { from: { startDate: null, endDate: null }, to: { startDate: thisMonth(5), endDate: thisMonth(25) } }, createdAt: daysAgo(70) },
+    { featureId: editor.id, actorId: corban.id, kind: 'doc_created', payload: { to: 'Rich markdown editor — PRD' }, createdAt: daysAgo(62) },
+    { featureId: editor.id, actorId: corban.id, kind: 'status_changed', payload: { from: 'idea', to: 'planned' }, createdAt: daysAgo(60) },
+    { featureId: editor.id, actorId: corban.id, kind: 'horizon_changed', payload: { from: 'next', to: 'now' }, createdAt: daysAgo(58) },
+    { featureId: board.id, actorId: corban.id, kind: 'horizon_changed', payload: { from: 'later', to: 'next' }, createdAt: daysAgo(55) },
+    created(ai, daysAgo(50)),
+    // Editor dates pulled earlier — a visible bar move in the Time Machine.
+    { featureId: editor.id, actorId: corban.id, kind: 'dates_changed', payload: { from: { startDate: thisMonth(5), endDate: thisMonth(25) }, to: { startDate: editor.startDate, endDate: editor.endDate } }, createdAt: daysAgo(46) },
+    created(commentsFeature, daysAgo(42)),
+    { featureId: editor.id, actorId: corban.id, kind: 'status_changed', payload: { from: 'planned', to: 'in_progress' }, createdAt: daysAgo(40) },
+    { featureId: gantt.id, actorId: corban.id, kind: 'horizon_changed', payload: { from: 'later', to: 'next' }, createdAt: daysAgo(36) },
+    created(voting, daysAgo(33)),
+    { featureId: board.id, actorId: corban.id, kind: 'status_changed', payload: { from: 'idea', to: 'planned' }, createdAt: daysAgo(30) },
+    { featureId: gantt.id, actorId: corban.id, kind: 'dates_changed', payload: { from: { startDate: null, endDate: null }, to: { startDate: gantt.startDate, endDate: gantt.endDate } }, createdAt: daysAgo(28) },
+    { featureId: board.id, actorId: corban.id, kind: 'horizon_changed', payload: { from: 'next', to: 'now' }, createdAt: daysAgo(24) },
+    created(realtime, daysAgo(18)),
+    { featureId: ai.id, actorId: corban.id, kind: 'horizon_changed', payload: { from: 'later', to: 'next' }, createdAt: daysAgo(15) },
+    { featureId: board.id, actorId: corban.id, kind: 'dates_changed', payload: { from: { startDate: null, endDate: null }, to: { startDate: board.startDate, endDate: board.endDate } }, createdAt: daysAgo(14) },
+    { featureId: board.id, actorId: corban.id, kind: 'status_changed', payload: { from: 'planned', to: 'in_progress' }, createdAt: daysAgo(12) },
+    created(ecs, daysAgo(10)),
+    { featureId: gantt.id, actorId: corban.id, kind: 'status_changed', payload: { from: 'idea', to: 'planned' }, createdAt: daysAgo(9) },
+    { featureId: ai.id, actorId: corban.id, kind: 'dates_changed', payload: { from: { startDate: null, endDate: null }, to: { startDate: ai.startDate, endDate: ai.endDate } }, createdAt: daysAgo(8) },
+    { featureId: gantt.id, actorId: corban.id, kind: 'doc_created', payload: { to: 'Gantt roadmap — Feature brief' }, createdAt: daysAgo(7) },
+    { featureId: ai.id, actorId: corban.id, kind: 'status_changed', payload: { from: 'idea', to: 'planned' }, createdAt: daysAgo(6) },
+    { featureId: commentsFeature.id, actorId: corban.id, kind: 'dates_changed', payload: { from: { startDate: null, endDate: null }, to: { startDate: commentsFeature.startDate, endDate: commentsFeature.endDate } }, createdAt: daysAgo(5) },
+    { featureId: editor.id, actorId: corban.id, kind: 'doc_created', payload: { to: 'Rich markdown editor — Tech spec' }, createdAt: daysAgo(4) },
+    { featureId: voting.id, actorId: corban.id, kind: 'dates_changed', payload: { from: { startDate: null, endDate: null }, to: { startDate: voting.startDate, endDate: voting.endDate } }, createdAt: daysAgo(3) },
   ]);
 
   // --- comments: two unresolved threads (PRD doc + Gantt feature), one resolved ---
@@ -293,7 +330,7 @@ try {
   // --- votes: Rich markdown editor at +1 ---
   await db.insert(votes).values({ userId: corban.id, featureId: editor.id, value: 1 });
 
-  console.log(`seeded: 1 product, ${featureRows.length} features, 3 documents, 1 user, 5 comments, 1 vote`);
+  console.log(`seeded: 1 product, ${featureRows.length} features, 3 documents, 1 user, 5 comments, 1 vote, 3-month activity history`);
 } finally {
   await pool.end();
 }

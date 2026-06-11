@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
+import { activityRoutes } from './routes/activity';
 import { featuresRoutes } from './routes/features';
 import { productsRoutes } from './routes/products';
 import { documentsRoutes, exportRoutes } from './routes/documents';
@@ -13,6 +14,7 @@ export const app = new Hono()
   .get('/api/healthz', (c) => c.json({ ok: true }))
   .route('/api/users', usersRoutes)
   .route('/api/features', featuresRoutes)
+  .route('/api/activity', activityRoutes)
   .route('/api/comments', commentsRoutes)
   .route('/api/products', productsRoutes)
   .route('/api/documents', documentsRoutes)

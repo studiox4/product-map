@@ -62,6 +62,17 @@ describe('POST /api/features', () => {
     expect(body.id).toMatch(/^[0-9a-f-]{36}$/);
   });
 
+  it('feature_created payload carries a replayable snapshot', async () => {
+    const res = await app.request('/api/features', json({ title: 'Gantt', horizon: 'next' }));
+    const body = await res.json();
+    const acts = await activityRows(body.id);
+    expect(acts).toHaveLength(1);
+    expect(acts[0].payload).toEqual({
+      to: 'Gantt',
+      snapshot: { title: 'Gantt', horizon: 'next', status: 'idea', startDate: null, endDate: null },
+    });
+  });
+
   it('attributes creation to the fallback user and records feature_created activity', async () => {
     const res = await app.request('/api/features', json({ title: 'Gantt', horizon: 'next' }));
     const body = await res.json();

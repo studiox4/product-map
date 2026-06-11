@@ -1,0 +1,36 @@
+import { Hono } from 'hono';
+import { asc, eq, gte } from 'drizzle-orm';
+import { activity, features, users } from '@productmap/db';
+import { db } from '../db';
+
+// GET /api/activity?since=ISO → WorkspaceActivityItem[] — workspace-wide,
+// ascending (replay order), actor + feature joined, capped at 1000.
+export const activityRoutes = new Hono().get('/', async (c) => {
+  const since = c.req.query('since');
+  let sinceDate: Date | undefined;
+  if (since !== undefined) {
+    sinceDate = new Date(since);
+    if (Number.isNaN(sinceDate.getTime())) {
+      return c.json({ error: 'validation', message: 'since must be an ISO date' }, 400);
+    }
+  }
+  const rows = await db
+    .select({
+      id: activity.id,
+      featureId: activity.featureId,
+      featureTitle: features.title,
+      actorId: activity.actorId,
+      actorName: users.name,
+      actorColor: users.color,
+      kind: activity.kind,
+      payload: activity.payload,
+      createdAt: activity.createdAt,
+    })
+    .from(activity)
+    .innerJoin(users, eq(activity.actorId, users.id))
+    .innerJoin(features, eq(activity.featureId, features.id))
+    .where(sinceDate ? gte(activity.createdAt, sinceDate) : undefined)
+    .orderBy(asc(activity.createdAt), asc(activity.id))
+    .limit(1000);
+  return c.json(rows);
+});

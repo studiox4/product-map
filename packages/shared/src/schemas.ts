@@ -25,6 +25,7 @@ export const documentUpdate = z.object({
   title: z.string().min(1).max(200).optional(),
   contentJson: z.record(z.unknown()).optional(),  // Tiptap doc JSON
   status: z.enum(DOC_STATUSES).optional(),
+  cover: z.string().min(1).max(120).nullable().optional(),  // curated gradient key
 });
 export const productUpdate = z.object({
   name: z.string().min(1).optional(),

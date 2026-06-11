@@ -55,6 +55,7 @@ export const documents = pgTable('documents', {
   contentJson: jsonb('content_json').notNull().default({ type: 'doc', content: [] }),
   contentMd: text('content_md').notNull().default(''),
   status: docStatusEnum('status').notNull().default('draft'),
+  cover: text('cover'),
   createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
   updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
