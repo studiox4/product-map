@@ -81,7 +81,8 @@ test('AC1: comment on a doc from the editor sheet; toolbar badge counts unresolv
   await page.goto(`/docs/${docId}`);
 
   // Comment pill with no badge yet → opens the non-modal sheet.
-  const toggle = page.getByRole('button', { name: /^Comments/ });
+  // (Anchored regex: the ToC rail also renders heading buttons starting "Comments…".)
+  const toggle = page.getByRole('button', { name: /^Comments( \(\d+ unresolved\))?$/ });
   await expect(toggle).toBeVisible();
   await toggle.click();
 

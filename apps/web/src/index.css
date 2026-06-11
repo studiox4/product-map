@@ -157,6 +157,12 @@
   * {
     @apply border-border;
   }
+  html {
+    /* Backstop behind the fixed field gradient: the `background:` shorthand on
+       body clears its background-color, so overscroll and below-the-fold areas
+       would otherwise flash white in dark mode. */
+    background-color: hsl(var(--background));
+  }
   body {
     @apply font-sans antialiased;
     color: var(--pm-body);
