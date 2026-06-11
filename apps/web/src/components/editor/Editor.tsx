@@ -44,17 +44,17 @@ const PROSE_CLASSES = cn(
   '[&_h3]:mt-7 [&_h3]:font-display [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:text-ink',
   '[&_p]:my-3 [&_p]:leading-[1.7]',
   '[&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6',
-  '[&_blockquote]:my-4 [&_blockquote]:rounded-r-xl [&_blockquote]:border-l-[3px] [&_blockquote]:border-action [&_blockquote]:bg-[#f6f9fd] [&_blockquote]:py-2 [&_blockquote]:pl-4 [&_blockquote]:pr-4 [&_blockquote]:italic [&_blockquote]:text-body-ink',
-  '[&_pre]:my-4 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-[#f3f6f4] [&_pre]:p-4 [&_pre]:font-mono [&_pre]:text-sm',
-  '[&_code]:rounded-md [&_code]:bg-[#f3f6f4] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-sm [&_pre_code]:bg-transparent [&_pre_code]:p-0',
+  '[&_blockquote]:my-4 [&_blockquote]:rounded-r-xl [&_blockquote]:border-l-[3px] [&_blockquote]:border-action [&_blockquote]:bg-[var(--pm-quote)] [&_blockquote]:py-2 [&_blockquote]:pl-4 [&_blockquote]:pr-4 [&_blockquote]:italic [&_blockquote]:text-body-ink',
+  '[&_pre]:my-4 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-[var(--pm-code)] [&_pre]:p-4 [&_pre]:font-mono [&_pre]:text-sm',
+  '[&_code]:rounded-md [&_code]:bg-[var(--pm-code)] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-sm [&_pre_code]:bg-transparent [&_pre_code]:p-0',
   // tables: rounded corners + soft row stripes, hairline separators only
   '[&_table]:my-4 [&_table]:w-full [&_table]:border-separate [&_table]:border-spacing-0 [&_table]:overflow-hidden [&_table]:rounded-xl',
-  '[&_th]:border-b [&_th]:border-[#e3e8ef] [&_th]:bg-[#edf1f7] [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_th]:text-ink',
+  '[&_th]:border-b [&_th]:border-line-strong [&_th]:bg-wash [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_th]:text-ink',
   '[&_th:first-child]:rounded-tl-xl [&_th:last-child]:rounded-tr-xl',
-  '[&_td]:border-b [&_td]:border-[#eef1f5] [&_td]:px-3 [&_td]:py-2',
-  '[&_tbody_tr:nth-child(even)_td]:bg-[#f8fafc]',
+  '[&_td]:border-b [&_td]:border-line [&_td]:px-3 [&_td]:py-2',
+  '[&_tbody_tr:nth-child(even)_td]:bg-[var(--pm-stripe)]',
   '[&_img]:my-4 [&_img]:max-w-full [&_img]:rounded-xl [&_img]:shadow-card',
-  '[&_hr]:my-8 [&_hr]:border-[#e3e8ef]',
+  '[&_hr]:my-8 [&_hr]:border-line-strong',
   '[&_a]:text-action [&_a]:underline [&_a]:decoration-action/40 [&_a]:underline-offset-2',
   // task lists: rounded checkboxes with a sage check
   '[&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:pl-1',
@@ -172,7 +172,7 @@ export const Editor = memo(function Editor({
     aiEnabled && !!aiConfig && !!editor && (isEmpty || aiStreaming);
 
   return (
-    <div className="rounded-2xl border border-transparent bg-white px-6 py-12 shadow-card sm:px-14">
+    <div className="rounded-2xl border border-transparent bg-surface px-6 py-12 shadow-card sm:px-14">
       {showAiCard ? (
         <div className="mb-6">
           <AiDraftCard

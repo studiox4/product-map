@@ -14,6 +14,41 @@
     --pm-sage-soft: #e4f0e4;
     --pm-warm: #9a6428;
     --pm-warm-soft: #fdf0e3;
+    --pm-cool: #0e7490;
+    --pm-cool-soft: #d9f2f0;
+    --pm-grape: #6d3f9e;
+    --pm-grape-soft: #efe3fb;
+    --pm-violet: #4b51a8;
+    --pm-violet-soft: #e8eafb;
+
+    /* Surfaces & fields */
+    --pm-field: linear-gradient(160deg, #eef1ec, #e7ebf2);
+    --pm-surface-rgb: 255 255 255; /* cards */
+    --pm-wash: #edf1f7; /* ghost hover / soft chip fill */
+    --pm-inset: #f0f3f7; /* input inset fill */
+    --pm-panel: #f6f8fb; /* subtle panel background */
+    --pm-selected: #f3f8ff; /* selected option card */
+    --pm-line: #eef1f5; /* hairline borders */
+    --pm-line-strong: #e3e8ef;
+    --pm-dash: #c9d3df; /* dashed empty-state borders */
+    --pm-quote: #f6f9fd; /* prose blockquote tint */
+    --pm-code: #f3f6f4; /* prose code tint */
+    --pm-stripe: #f8fafc; /* table zebra stripe */
+
+    /* Shadows */
+    --pm-shadow-card: 0 10px 28px rgba(60, 75, 95, 0.12);
+    --pm-shadow-card-hover: 0 14px 34px rgba(60, 75, 95, 0.18);
+    --pm-shadow-sm: 0 4px 14px rgba(60, 75, 95, 0.08);
+    --pm-bar-shadow: rgba(60, 75, 95, 0.28);
+    --pm-shimmer: rgba(255, 255, 255, 0.75);
+
+    /* Attention chip tints */
+    --pm-chip-review-bg: #fbeedd;
+    --pm-chip-review-fg: #8a5a22;
+    --pm-chip-dates-bg: #fcebe3;
+    --pm-chip-dates-fg: #9a5a3c;
+    --pm-chip-nodocs-bg: #f7efe2;
+    --pm-chip-nodocs-fg: #86683a;
 
     /* shadcn tokens mapped to the Soft Studio palette */
     --background: 0 0% 100%;
@@ -44,25 +79,72 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    /* Studio Ink palette */
+    --pm-ink: #e6ebf2;
+    --pm-body: #a9b4c2;
+    --pm-muted: #67737f;
+    --pm-action: #7aa7d9;
+    --pm-action-soft: #16283c;
+    --pm-sage: #93c7a1;
+    --pm-sage-soft: #14271a;
+    --pm-warm: #d8a96a;
+    --pm-warm-soft: #2c2113;
+    --pm-cool: #7fd4dc;
+    --pm-cool-soft: #0e2a2e;
+    --pm-grape: #c5a3ea;
+    --pm-grape-soft: #251a33;
+    --pm-violet: #a9aff0;
+    --pm-violet-soft: #1b1e38;
+
+    /* Surfaces & fields */
+    --pm-field: linear-gradient(160deg, #101418, #0d1117);
+    --pm-surface-rgb: 22 27 34; /* #161b22 cards */
+    --pm-wash: #1d242e;
+    --pm-inset: #1a2029;
+    --pm-panel: #11161d;
+    --pm-selected: #15233a;
+    --pm-line: #232b36;
+    --pm-line-strong: #2b3441;
+    --pm-dash: #39444f;
+    --pm-quote: #141d28;
+    --pm-code: #131a1f;
+    --pm-stripe: #121820;
+
+    /* Shadows */
+    --pm-shadow-card: 0 10px 28px rgba(0, 0, 0, 0.45);
+    --pm-shadow-card-hover: 0 14px 34px rgba(0, 0, 0, 0.55);
+    --pm-shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.35);
+    --pm-bar-shadow: rgba(0, 0, 0, 0.5);
+    --pm-shimmer: rgba(255, 255, 255, 0.06);
+
+    /* Attention chip tints */
+    --pm-chip-review-bg: #2a2114;
+    --pm-chip-review-fg: #d3a868;
+    --pm-chip-dates-bg: #2a1d16;
+    --pm-chip-dates-fg: #d99e7d;
+    --pm-chip-nodocs-bg: #262013;
+    --pm-chip-nodocs-fg: #c6ab74;
+
+    /* shadcn tokens mapped to Studio Ink */
+    --background: 216 28% 7%; /* #0d1117 */
+    --foreground: 215 32% 92%; /* #e6ebf2 */
+    --card: 215 21% 11%; /* #161b22 */
+    --card-foreground: 215 32% 92%;
+    --popover: 215 21% 11%;
+    --popover-foreground: 215 32% 92%;
+    --primary: 212 56% 66%; /* #7aa7d9 */
+    --primary-foreground: 213 37% 16%; /* #1a2940 */
+    --secondary: 214 23% 15%; /* #1d242e */
+    --secondary-foreground: 212 56% 66%;
+    --muted: 214 23% 15%;
+    --muted-foreground: 210 10% 45%; /* #67737f */
+    --accent: 214 23% 15%;
+    --accent-foreground: 215 32% 92%;
+    --destructive: 0 50% 55%;
+    --destructive-foreground: 215 32% 92%;
+    --border: 213 21% 17%; /* #232b36 hairline */
+    --input: 213 19% 22%;
+    --ring: 212 56% 66%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
@@ -78,7 +160,7 @@
   body {
     @apply font-sans antialiased;
     color: var(--pm-body);
-    background: linear-gradient(160deg, #eef1ec, #e7ebf2) fixed;
+    background: var(--pm-field) fixed;
     min-height: 100vh;
   }
   h1,
@@ -109,7 +191,7 @@
     animation: fade-up 0.45s ease-out both;
   }
 
-  /* Skeleton shimmer: soft sweep on white cards */
+  /* Skeleton shimmer: soft sweep on cards */
   @keyframes shimmer {
     100% {
       transform: translateX(100%);
@@ -124,7 +206,7 @@
     position: absolute;
     inset: 0;
     transform: translateX(-100%);
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75), transparent);
+    background: linear-gradient(90deg, transparent, var(--pm-shimmer), transparent);
     animation: shimmer 1.6s ease-in-out infinite;
   }
 }

@@ -59,7 +59,7 @@ function PanelBody({ featureId, onClose }: { featureId: string; onClose: () => v
 }
 
 const pillTriggerClass =
-  'rounded-full border-transparent bg-[#f0f3f7] px-4 transition-colors duration-150 ease-out hover:bg-[#edf1f7]';
+  'rounded-full border-transparent bg-inset px-4 transition-colors duration-150 ease-out hover:bg-wash';
 
 function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: () => void }) {
   const navigate = useNavigate();
@@ -102,7 +102,7 @@ function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: 
               );
             }
           }}
-          className="rounded-xl border-transparent bg-[#f0f3f7] font-display text-base font-semibold text-ink transition-colors duration-150 ease-out focus-visible:bg-white"
+          className="rounded-xl border-transparent bg-inset font-display text-base font-semibold text-ink transition-colors duration-150 ease-out focus-visible:bg-surface"
         />
       </SheetHeader>
 
@@ -169,7 +169,7 @@ function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: 
                 setStartDate(e.target.value);
                 saveDates(e.target.value, endDate);
               }}
-              className="rounded-full border-transparent bg-[#f0f3f7] px-4 transition-colors duration-150 ease-out focus-visible:bg-white"
+              className="rounded-full border-transparent bg-inset px-4 transition-colors duration-150 ease-out focus-visible:bg-surface"
             />
           </div>
           <div className="space-y-2">
@@ -184,7 +184,7 @@ function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: 
                 setEndDate(e.target.value);
                 saveDates(startDate, e.target.value);
               }}
-              className="rounded-full border-transparent bg-[#f0f3f7] px-4 transition-colors duration-150 ease-out focus-visible:bg-white"
+              className="rounded-full border-transparent bg-inset px-4 transition-colors duration-150 ease-out focus-visible:bg-surface"
             />
           </div>
         </div>
@@ -209,7 +209,7 @@ function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: 
           </Button>
         </div>
         {feature.documents.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-[#c9d3df] px-3 py-4 text-center text-sm text-muted-ink">
+          <p className="rounded-xl border border-dashed border-line-dash px-3 py-4 text-center text-sm text-muted-ink">
             No docs yet
           </p>
         ) : (
@@ -219,7 +219,7 @@ function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: 
                 <button
                   type="button"
                   onClick={() => navigate(`/docs/${doc.id}`)}
-                  className="flex w-full items-center gap-2 rounded-xl border border-[#eef1f5] bg-white px-3 py-2 text-left text-sm text-body-ink shadow-[0_4px_14px_rgba(60,75,95,.08)] transition-[box-shadow,transform] duration-150 ease-out hover:-translate-y-px hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex w-full items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-left text-sm text-body-ink shadow-sm-card transition-[box-shadow,transform] duration-150 ease-out hover:-translate-y-px hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <DocTypeChip type={doc.type} />
                   <span className="flex-1 truncate">{doc.title}</span>
@@ -230,7 +230,7 @@ function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: 
         )}
       </div>
 
-      <div className="space-y-4 border-t border-[#eef1f5] pt-5">
+      <div className="space-y-4 border-t border-line pt-5">
         <p className="text-xs text-muted-ink">
           {creator ? `Added by ${creator.name} · ${createdOn}` : `Added ${createdOn}`}
         </p>

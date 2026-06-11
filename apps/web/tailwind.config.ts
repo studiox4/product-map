@@ -11,8 +11,9 @@ export default {
         sans: ['"Schibsted Grotesk"', 'sans-serif'],
       },
       boxShadow: {
-        card: '0 10px 28px rgba(60,75,95,.12)',
-        'card-hover': '0 14px 34px rgba(60,75,95,.18)',
+        card: 'var(--pm-shadow-card)',
+        'card-hover': 'var(--pm-shadow-card-hover)',
+        'sm-card': 'var(--pm-shadow-sm)',
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -34,6 +35,19 @@ export default {
         warm: {
           DEFAULT: 'var(--pm-warm)',
           soft: 'var(--pm-warm-soft)',
+        },
+        cool: {
+          DEFAULT: 'var(--pm-cool)',
+          soft: 'var(--pm-cool-soft)',
+        },
+        surface: 'rgb(var(--pm-surface-rgb) / <alpha-value>)',
+        wash: 'var(--pm-wash)',
+        inset: 'var(--pm-inset)',
+        panel: 'var(--pm-panel)',
+        line: {
+          DEFAULT: 'var(--pm-line)',
+          strong: 'var(--pm-line-strong)',
+          dash: 'var(--pm-dash)',
         },
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',

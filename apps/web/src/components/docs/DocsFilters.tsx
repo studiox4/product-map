@@ -26,7 +26,7 @@ interface DocsFiltersProps {
 const pillBase =
   'rounded-full px-3 py-1 text-xs font-medium outline-none transition-all duration-150 ease-out ' +
   'focus-visible:ring-2 focus-visible:ring-ring';
-const pillInactive = 'bg-white/60 text-body-ink hover:bg-white hover:text-ink';
+const pillInactive = 'bg-surface/60 text-body-ink hover:bg-surface hover:text-ink';
 
 /** Toolbar for the docs page: type + status filter pills (multi-toggle), search, and "+ New doc". */
 export function DocsFilters({
@@ -61,7 +61,7 @@ export function DocsFilters({
           );
         })}
       </div>
-      <span aria-hidden className="h-5 w-px bg-[#e3e8ef]" />
+      <span aria-hidden className="h-5 w-px bg-line-strong" />
       <div className="flex items-center gap-1.5" role="group" aria-label="Filter by status">
         {DOC_STATUSES.map((status) => {
           const active = statusFilters.includes(status);
@@ -92,7 +92,7 @@ export function DocsFilters({
           aria-label="Search docs"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="rounded-full bg-white pl-9"
+          className="rounded-full bg-surface pl-9"
         />
       </div>
       <Button onClick={onNewDoc} className="rounded-full">

@@ -7,10 +7,10 @@ const KIND_META: Record<
   { icon: LucideIcon; label: string; chip: string }
 > = {
   open_comments: { icon: MessageCircle, label: 'Open comments', chip: 'bg-warm-soft text-warm' },
-  draft_doc: { icon: FileText, label: 'Draft doc', chip: 'bg-[#fdf0e3] text-[#9a6428]' },
-  in_review_doc: { icon: Eye, label: 'In review', chip: 'bg-[#fbeedd] text-[#8a5a22]' },
-  missing_dates: { icon: CalendarX, label: 'No dates', chip: 'bg-[#fcebe3] text-[#9a5a3c]' },
-  no_docs: { icon: FileQuestion, label: 'No docs', chip: 'bg-[#f7efe2] text-[#86683a]' },
+  draft_doc: { icon: FileText, label: 'Draft doc', chip: 'bg-warm-soft text-warm' },
+  in_review_doc: { icon: Eye, label: 'In review', chip: 'bg-[var(--pm-chip-review-bg)] text-[var(--pm-chip-review-fg)]' },
+  missing_dates: { icon: CalendarX, label: 'No dates', chip: 'bg-[var(--pm-chip-dates-bg)] text-[var(--pm-chip-dates-fg)]' },
+  no_docs: { icon: FileQuestion, label: 'No docs', chip: 'bg-[var(--pm-chip-nodocs-bg)] text-[var(--pm-chip-nodocs-fg)]' },
 };
 
 export function AttentionPanel({ items }: { items: AttentionItem[] }) {
@@ -27,10 +27,10 @@ export function AttentionPanel({ items }: { items: AttentionItem[] }) {
   }
 
   return (
-    <section className="flex flex-col rounded-2xl border border-transparent bg-white shadow-card transition-all duration-150 ease-out hover:-translate-y-px hover:shadow-card-hover">
+    <section className="flex flex-col rounded-2xl border border-transparent bg-surface shadow-card transition-all duration-150 ease-out hover:-translate-y-px hover:shadow-card-hover">
       <div className="flex items-center justify-between px-4 pb-2 pt-4">
         <h2 className="font-display text-sm font-semibold text-ink">Needs attention</h2>
-        <span className="inline-flex items-center rounded-full bg-[#fdf0e3] px-2 py-0.5 text-xs font-medium text-[#9a6428]">
+        <span className="inline-flex items-center rounded-full bg-warm-soft px-2 py-0.5 text-xs font-medium text-warm">
           {items.length}
         </span>
       </div>
@@ -50,7 +50,7 @@ export function AttentionPanel({ items }: { items: AttentionItem[] }) {
               key={`${item.kind}-${i}`}
               type="button"
               onClick={() => open(item)}
-              className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-left text-sm text-body-ink outline-none transition-colors duration-150 ease-out hover:bg-[#edf1f7] focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-left text-sm text-body-ink outline-none transition-colors duration-150 ease-out hover:bg-wash focus-visible:ring-2 focus-visible:ring-ring"
             >
               <span
                 className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${meta.chip}`}

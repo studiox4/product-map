@@ -27,12 +27,12 @@ import { useAutosave } from '@/components/editor/useAutosave';
 function DocSkeleton() {
   return (
     <div className="mx-auto w-full max-w-[860px] px-4 pb-16 pt-6 sm:px-6">
-      <div className="flex items-center gap-3 rounded-full bg-white px-5 py-3 shadow-card">
+      <div className="flex items-center gap-3 rounded-full bg-surface px-5 py-3 shadow-card">
         <Skeleton className="h-6 w-32 rounded-full" />
         <Skeleton className="h-7 flex-1 rounded-full" />
         <Skeleton className="h-8 w-32 rounded-full" />
       </div>
-      <div className="mt-6 space-y-4 rounded-2xl bg-white px-8 py-12 shadow-card sm:px-14">
+      <div className="mt-6 space-y-4 rounded-2xl bg-surface px-8 py-12 shadow-card sm:px-14">
         <Skeleton className="h-8 w-2/3" />
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-5/6" />
@@ -123,7 +123,7 @@ export default function DocPage() {
   if (docQuery.isError || !doc) {
     return (
       <div className="mx-auto max-w-[860px] px-6 py-8">
-        <div className="rounded-2xl border border-transparent bg-white p-6 shadow-card">
+        <div className="rounded-2xl border border-transparent bg-surface p-6 shadow-card">
           <p className="text-sm text-body-ink">
             Couldn't load this document.
           </p>
@@ -170,7 +170,7 @@ export default function DocPage() {
       <Sheet open={commentsOpen} onOpenChange={setCommentsOpen} modal={false}>
         <SheetContent
           side="right"
-          className="w-full overflow-y-auto bg-[#f4f6f9] sm:w-[480px] sm:max-w-[480px]"
+          className="w-full overflow-y-auto bg-panel sm:w-[480px] sm:max-w-[480px]"
           onOpenAutoFocus={(e) => e.preventDefault()}
           onInteractOutside={(e) => e.preventDefault()}
         >

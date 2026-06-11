@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { Map } from 'lucide-react';
 import { Toaster } from '@/components/ui/sonner';
+import ThemeToggle from '@/components/ThemeToggle';
 import WelcomeDialog from '@/components/WelcomeDialog';
 import { cn } from '@/lib/utils';
 
@@ -33,14 +34,17 @@ export function AppShell() {
                   cn(
                     'rounded-full px-4 py-1.5 text-sm font-medium outline-none transition-all duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring',
                     isActive
-                      ? 'bg-white text-ink shadow-card'
-                      : 'text-body-ink hover:bg-white/60 hover:text-ink',
+                      ? 'bg-surface text-ink shadow-card'
+                      : 'text-body-ink hover:bg-surface/60 hover:text-ink',
                   )
                 }
               >
                 {link.label}
               </NavLink>
             ))}
+          </div>
+          <div className="ml-auto">
+            <ThemeToggle />
           </div>
         </nav>
       </header>

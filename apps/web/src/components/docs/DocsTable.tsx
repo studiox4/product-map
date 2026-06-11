@@ -56,10 +56,10 @@ function SortableHeader({
 /** Docs listing table: Title / Type / Status / Feature / Updated, sortable on title + updated. */
 export function DocsTable({ docs, sort, onSortChange, onRowClick }: DocsTableProps) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-transparent bg-white shadow-card">
+    <div className="overflow-hidden rounded-2xl border border-transparent bg-surface shadow-card">
       <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b border-[#eef1f5]">
+          <tr className="border-b border-line">
             <SortableHeader label="Title" sortKey="title" sort={sort} onSortChange={onSortChange} />
             <th scope="col" className={headerCellClass}>Type</th>
             <th scope="col" className={headerCellClass}>Status</th>
@@ -72,7 +72,7 @@ export function DocsTable({ docs, sort, onSortChange, onRowClick }: DocsTablePro
             <tr
               key={doc.id}
               onClick={() => onRowClick(doc.id)}
-              className="cursor-pointer border-b border-[#eef1f5] transition-colors duration-150 ease-out last:border-b-0 hover:bg-[#f6f8fb]"
+              className="cursor-pointer border-b border-line transition-colors duration-150 ease-out last:border-b-0 hover:bg-panel"
             >
               <td className="px-4 py-3 font-medium text-ink">{doc.title}</td>
               <td className="px-4 py-3">

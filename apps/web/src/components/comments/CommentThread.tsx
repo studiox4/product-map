@@ -51,7 +51,7 @@ function CommentItem({
         </p>
         {editing ? (
           <CommentComposer
-            className="mt-1 bg-[#f7f9fb] p-2 shadow-none"
+            className="mt-1 bg-panel p-2 shadow-none"
             initialValue={comment.body}
             placeholder="Edit comment…"
             submitLabel="Save"
@@ -108,7 +108,7 @@ export function CommentThread({
   return (
     <article
       aria-label={`Thread by ${thread.authorName}${resolved ? ' (resolved)' : ''}`}
-      className="rounded-2xl bg-white p-4 shadow-card"
+      className="rounded-2xl bg-surface p-4 shadow-card"
     >
       <CommentItem
         comment={thread}
@@ -157,7 +157,7 @@ export function CommentThread({
       </div>
 
       {thread.replies.length > 0 || replying ? (
-        <div className="ml-2.5 mt-3 space-y-3 border-l-2 border-[#edf1f7] pl-4">
+        <div className="ml-2.5 mt-3 space-y-3 border-l-2 border-wash pl-4">
           {thread.replies.map((reply) => (
             <CommentItem
               key={reply.id}
@@ -169,7 +169,7 @@ export function CommentThread({
           ))}
           {replying ? (
             <CommentComposer
-              className="bg-[#f7f9fb] p-2 shadow-none"
+              className="bg-panel p-2 shadow-none"
               placeholder="Reply…"
               submitLabel="Reply"
               autoFocus

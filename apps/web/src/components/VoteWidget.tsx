@@ -59,8 +59,8 @@ export function VoteWidget({ featureId, summary, size = 'full' }: VoteWidgetProp
         className={cn(
           pill,
           summary.myVote === 1
-            ? 'bg-[#dcebff] text-[#2b557e]'
-            : 'bg-[#f0f3f7] text-muted-ink hover:bg-[#edf1f7]',
+            ? 'bg-action-soft text-action'
+            : 'bg-inset text-muted-ink hover:bg-wash',
           popped === 'boost' && 'scale-[1.15]',
         )}
       >
@@ -85,8 +85,8 @@ export function VoteWidget({ featureId, summary, size = 'full' }: VoteWidgetProp
         className={cn(
           pill,
           summary.myVote === -1
-            ? 'bg-[#d9f2f0] text-[#0e7490]'
-            : 'bg-[#f0f3f7] text-muted-ink hover:bg-[#edf1f7]',
+            ? 'bg-cool-soft text-cool'
+            : 'bg-inset text-muted-ink hover:bg-wash',
           popped === 'cool' && 'scale-[1.15]',
         )}
       >

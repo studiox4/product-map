@@ -51,7 +51,7 @@ function PickFeatureDialog({
               key={feature.id}
               type="button"
               onClick={() => onPick(feature)}
-              className="flex w-full items-center gap-2 rounded-xl border border-[#eef1f5] bg-white px-3 py-2 text-left text-sm text-body-ink shadow-[0_4px_14px_rgba(60,75,95,.08)] transition-[box-shadow,transform] duration-150 ease-out hover:-translate-y-px hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex w-full items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-left text-sm text-body-ink shadow-sm-card transition-[box-shadow,transform] duration-150 ease-out hover:-translate-y-px hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <span className="flex-1 truncate font-medium text-ink">{feature.title}</span>
               <span
@@ -72,8 +72,8 @@ function PickFeatureDialog({
 
 function DocsSkeleton() {
   return (
-    <div className="overflow-hidden rounded-2xl border border-transparent bg-white shadow-card">
-      <div className="divide-y divide-[#eef1f5]">
+    <div className="overflow-hidden rounded-2xl border border-transparent bg-surface shadow-card">
+      <div className="divide-y divide-line">
         {Array.from({ length: 6 }, (_, i) => (
           <div key={i} className="flex items-center gap-4 px-4 py-3.5">
             <Skeleton className="h-4 w-1/3" />
@@ -152,7 +152,7 @@ export default function DocsPage() {
       {docsQuery.isLoading && <DocsSkeleton />}
 
       {docsQuery.isError && (
-        <div className="rounded-2xl border border-transparent bg-white p-6 shadow-card">
+        <div className="rounded-2xl border border-transparent bg-surface p-6 shadow-card">
           <p className="text-sm text-body-ink">Couldn't load docs.</p>
           <Button
             className="mt-4 rounded-full"
@@ -165,7 +165,7 @@ export default function DocsPage() {
       )}
 
       {docs && visibleDocs.length === 0 && (
-        <div className="rounded-2xl border border-transparent bg-white p-10 text-center shadow-card">
+        <div className="rounded-2xl border border-transparent bg-surface p-10 text-center shadow-card">
           <p className="text-sm text-muted-ink">No docs match.</p>
         </div>
       )}

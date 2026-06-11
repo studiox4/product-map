@@ -48,7 +48,7 @@ export function CommentComposer({
 
   return (
     <form
-      className={cn('rounded-2xl bg-white p-3 shadow-card', className)}
+      className={cn('rounded-2xl bg-surface p-3 shadow-card', className)}
       onSubmit={(e) => {
         e.preventDefault();
         submit();

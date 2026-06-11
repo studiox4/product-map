@@ -15,17 +15,17 @@ export function GanttHeader({ viewStart, totalDays, pxPerDay, chartHeight }: Gan
   return (
     <g data-testid="gantt-header">
       {weeks.map((x) => (
-        <line key={`w${x}`} x1={x} y1={HEADER_HEIGHT} x2={x} y2={chartHeight} stroke="#eef1f5" strokeWidth={1} />
+        <line key={`w${x}`} x1={x} y1={HEADER_HEIGHT} x2={x} y2={chartHeight} stroke="var(--pm-line)" strokeWidth={1} />
       ))}
       {months.map((m) => (
         <g key={m.label}>
-          <line x1={m.x} y1={12} x2={m.x} y2={chartHeight} stroke="#e6ebf2" strokeWidth={1} />
-          <text x={m.x + 6} y={24} fontSize={11} fill="#7c8794">
+          <line x1={m.x} y1={12} x2={m.x} y2={chartHeight} stroke="var(--pm-line-strong)" strokeWidth={1} />
+          <text x={m.x + 6} y={24} fontSize={11} fill="var(--pm-muted)">
             {m.label}
           </text>
         </g>
       ))}
-      <line x1={0} y1={HEADER_HEIGHT} x2={totalDays * pxPerDay} y2={HEADER_HEIGHT} stroke="#eef1f5" strokeWidth={1} />
+      <line x1={0} y1={HEADER_HEIGHT} x2={totalDays * pxPerDay} y2={HEADER_HEIGHT} stroke="var(--pm-line)" strokeWidth={1} />
     </g>
   );
 }

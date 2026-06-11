@@ -60,7 +60,7 @@ export default function FeaturePage() {
   if (featureQuery.isError || !featureQuery.data) {
     return (
       <div className="mx-auto max-w-[860px] px-6 py-8">
-        <div className="rounded-2xl bg-white p-6 shadow-card">
+        <div className="rounded-2xl bg-surface p-6 shadow-card">
           <p className="text-sm text-body-ink">Couldn't load this feature.</p>
           <Button className="mt-4" variant="outline" onClick={() => void featureQuery.refetch()}>
             Retry
@@ -74,7 +74,7 @@ export default function FeaturePage() {
 }
 
 const pillTriggerClass =
-  'rounded-full border-transparent bg-[#f0f3f7] px-4 transition-colors duration-150 ease-out hover:bg-[#edf1f7]';
+  'rounded-full border-transparent bg-inset px-4 transition-colors duration-150 ease-out hover:bg-wash';
 
 function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
   const navigate = useNavigate();
@@ -132,7 +132,7 @@ function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
               );
             }
           }}
-          className="h-auto min-w-64 flex-1 rounded-xl border-transparent bg-transparent px-2 py-1 font-display text-[32px] font-bold leading-tight text-ink transition-colors duration-150 ease-out hover:bg-white focus-visible:bg-white md:text-[32px]"
+          className="h-auto min-w-64 flex-1 rounded-xl border-transparent bg-transparent px-2 py-1 font-display text-[32px] font-bold leading-tight text-ink transition-colors duration-150 ease-out hover:bg-surface focus-visible:bg-surface md:text-[32px]"
         />
         <div className="flex items-center gap-2">
           <HorizonBadge horizon={feature.horizon} />
@@ -171,7 +171,7 @@ function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
         <aside className="space-y-4">
           <PeopleRail feature={feature} />
 
-          <section className="space-y-3 rounded-2xl bg-white p-4 shadow-card" aria-label="Dates">
+          <section className="space-y-3 rounded-2xl bg-surface p-4 shadow-card" aria-label="Dates">
             <h2 className="font-display text-sm font-semibold text-ink">Dates</h2>
             <div className="space-y-2">
               <Label htmlFor="feature-page-start-date" className="text-xs font-medium text-muted-ink">
@@ -185,7 +185,7 @@ function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
                   setStartDate(e.target.value);
                   saveDates(e.target.value, endDate);
                 }}
-                className="rounded-full border-transparent bg-[#f0f3f7] px-4 transition-colors duration-150 ease-out focus-visible:bg-white"
+                className="rounded-full border-transparent bg-inset px-4 transition-colors duration-150 ease-out focus-visible:bg-surface"
               />
             </div>
             <div className="space-y-2">
@@ -200,7 +200,7 @@ function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
                   setEndDate(e.target.value);
                   saveDates(startDate, e.target.value);
                 }}
-                className="rounded-full border-transparent bg-[#f0f3f7] px-4 transition-colors duration-150 ease-out focus-visible:bg-white"
+                className="rounded-full border-transparent bg-inset px-4 transition-colors duration-150 ease-out focus-visible:bg-surface"
               />
             </div>
             {datesInverted ? (
@@ -210,7 +210,7 @@ function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
             ) : null}
           </section>
 
-          <section className="space-y-2 rounded-2xl bg-white p-4 shadow-card" aria-label="Horizon">
+          <section className="space-y-2 rounded-2xl bg-surface p-4 shadow-card" aria-label="Horizon">
             <h2 className="font-display text-sm font-semibold text-ink">Horizon</h2>
             <Select
               value={feature.horizon}

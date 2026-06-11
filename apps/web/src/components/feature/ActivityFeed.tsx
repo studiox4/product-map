@@ -60,7 +60,7 @@ export function ActivityFeed({ featureId }: { featureId: string }) {
           <Skeleton className="h-5 w-1/2" />
         </div>
       ) : !items || items.length === 0 ? (
-        <p className="mt-3 rounded-xl border border-dashed border-[#c9d3df] px-3 py-4 text-center text-sm text-muted-ink">
+        <p className="mt-3 rounded-xl border border-dashed border-line-dash px-3 py-4 text-center text-sm text-muted-ink">
           No activity yet
         </p>
       ) : (

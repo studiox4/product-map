@@ -49,7 +49,7 @@ export const SlashMenuList = forwardRef<SlashMenuListHandle, SlashMenuListProps>
       return (
         <div
           role="listbox"
-          className="w-72 rounded-xl border border-transparent bg-white p-3 text-sm text-muted-ink shadow-card-hover"
+          className="w-72 rounded-xl border border-transparent bg-surface p-3 text-sm text-muted-ink shadow-card-hover"
         >
           No matching commands
         </div>
@@ -60,7 +60,7 @@ export const SlashMenuList = forwardRef<SlashMenuListHandle, SlashMenuListProps>
       <div
         role="listbox"
         aria-label="Insert block"
-        className="max-h-80 w-72 overflow-y-auto rounded-xl border border-transparent bg-white p-1.5 shadow-card-hover"
+        className="max-h-80 w-72 overflow-y-auto rounded-xl border border-transparent bg-surface p-1.5 shadow-card-hover"
       >
         {items.map((item, i) => (
           <button
@@ -78,7 +78,7 @@ export const SlashMenuList = forwardRef<SlashMenuListHandle, SlashMenuListProps>
             <span
               className={cn(
                 'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-secondary text-body-ink transition-colors duration-150 ease-out',
-                i === selected && 'bg-white text-action',
+                i === selected && 'bg-surface text-action',
               )}
             >
               <item.icon className="h-4 w-4" aria-hidden />

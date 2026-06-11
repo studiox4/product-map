@@ -6,7 +6,7 @@ function Skeleton({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("shimmer rounded-xl bg-[#eef1f5]", className)}
+      className={cn("shimmer rounded-xl bg-line", className)}
       {...props}
     />
   )

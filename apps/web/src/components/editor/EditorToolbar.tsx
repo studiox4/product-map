@@ -73,7 +73,7 @@ export function EditorToolbar({
 
   return (
     <div className="mb-6">
-      <div className="flex flex-wrap items-center gap-2 rounded-full border border-transparent bg-white px-3 py-2 shadow-card">
+      <div className="flex flex-wrap items-center gap-2 rounded-full border border-transparent bg-surface px-3 py-2 shadow-card">
         <Link
           to={backHref}
           title={backLabel}

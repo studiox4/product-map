@@ -14,12 +14,12 @@ function LandingSkeleton() {
         <Skeleton className="h-9 w-64" />
         <Skeleton className="h-4 w-96" />
       </div>
-      <div className="shimmer rounded-2xl bg-white p-4 shadow-card">
+      <div className="shimmer rounded-2xl bg-surface p-4 shadow-card">
         <Skeleton className="h-44 w-full" />
       </div>
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="shimmer space-y-3 rounded-2xl bg-white p-4 shadow-card">
+          <div key={i} className="shimmer space-y-3 rounded-2xl bg-surface p-4 shadow-card">
             <Skeleton className="h-4 w-20" />
             <Skeleton className="h-6 w-full" />
             <Skeleton className="h-6 w-full" />
@@ -38,7 +38,7 @@ export function Landing() {
 
   if (isError || !data) {
     return (
-      <div className="mx-auto max-w-md rounded-2xl border border-transparent bg-white p-8 text-center shadow-card">
+      <div className="mx-auto max-w-md rounded-2xl border border-transparent bg-surface p-8 text-center shadow-card">
         <p className="text-sm text-muted-foreground">
           Couldn't load the overview. Check that the API is running.
         </p>

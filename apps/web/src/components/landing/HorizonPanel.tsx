@@ -18,7 +18,7 @@ export function HorizonPanel({
   const moreCount = sorted.length - top.length;
 
   return (
-    <section className="flex flex-col rounded-2xl border border-transparent bg-white shadow-card transition-all duration-150 ease-out hover:-translate-y-px hover:shadow-card-hover">
+    <section className="flex flex-col rounded-2xl border border-transparent bg-surface shadow-card transition-all duration-150 ease-out hover:-translate-y-px hover:shadow-card-hover">
       <div className="flex items-center justify-between px-4 pb-2 pt-4">
         <h2 className="flex items-center gap-2 font-display text-sm font-semibold text-ink">
           <span
@@ -28,7 +28,7 @@ export function HorizonPanel({
           />
           {HORIZON_LABELS[horizon]}
         </h2>
-        <span className="inline-flex items-center rounded-full bg-[#edf1f7] px-2 py-0.5 text-xs font-medium text-muted-ink">
+        <span className="inline-flex items-center rounded-full bg-wash px-2 py-0.5 text-xs font-medium text-muted-ink">
           {sorted.length}
         </span>
       </div>
@@ -41,7 +41,7 @@ export function HorizonPanel({
             key={f.id}
             type="button"
             onClick={() => navigate(`/board?feature=${f.id}`)}
-            className="flex items-center justify-between gap-2 rounded-xl px-2 py-1.5 text-left text-sm text-body-ink outline-none transition-colors duration-150 ease-out hover:bg-[#edf1f7] focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex items-center justify-between gap-2 rounded-xl px-2 py-1.5 text-left text-sm text-body-ink outline-none transition-colors duration-150 ease-out hover:bg-wash focus-visible:ring-2 focus-visible:ring-ring"
           >
             <span className="truncate">{f.title}</span>
             <StatusBadge status={f.status} />
@@ -50,7 +50,7 @@ export function HorizonPanel({
         {moreCount > 0 && (
           <Link
             to="/board"
-            className="rounded-xl px-2 py-1.5 text-sm text-muted-foreground outline-none transition-colors duration-150 ease-out hover:bg-[#edf1f7] hover:text-body-ink focus-visible:ring-2 focus-visible:ring-ring"
+            className="rounded-xl px-2 py-1.5 text-sm text-muted-foreground outline-none transition-colors duration-150 ease-out hover:bg-wash hover:text-body-ink focus-visible:ring-2 focus-visible:ring-ring"
           >
             +{moreCount} more
           </Link>

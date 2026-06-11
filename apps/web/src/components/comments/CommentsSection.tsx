@@ -76,7 +76,7 @@ export function CommentsSection({ target, showHeader = true }: CommentsSectionPr
       {showHeader ? (
         <div className="flex items-center gap-2">
           <h2 className="font-display text-sm font-semibold text-ink">Comments</h2>
-          <span className="inline-flex items-center rounded-full bg-[#f0f3f7] px-2 py-0.5 text-xs font-medium text-muted-ink">
+          <span className="inline-flex items-center rounded-full bg-inset px-2 py-0.5 text-xs font-medium text-muted-ink">
             {threads.length}
           </span>
         </div>
@@ -96,7 +96,7 @@ export function CommentsSection({ target, showHeader = true }: CommentsSectionPr
             <Skeleton className="h-20 w-full rounded-2xl" />
           </div>
         ) : threads.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-[#c9d3df] px-3 py-4 text-center text-sm text-muted-ink">
+          <p className="rounded-xl border border-dashed border-line-dash px-3 py-4 text-center text-sm text-muted-ink">
             No comments yet — start the discussion.
           </p>
         ) : (

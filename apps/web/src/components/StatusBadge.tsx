@@ -9,10 +9,10 @@ type AnyStatus = FeatureStatus | DocStatus;
 
 const STATUS_STYLES: Record<AnyStatus, string> = {
   // feature statuses
-  idea: 'bg-[#edf1f7] text-[#46556a]',
-  planned: 'bg-[#dcebff] text-[#2b557e]',
-  in_progress: 'bg-[#fdf0e3] text-[#9a6428]',
-  shipped: 'bg-[#e4f0e4] text-[#3c6b46]',
+  idea: 'bg-wash text-body-ink',
+  planned: 'bg-action-soft text-action',
+  in_progress: 'bg-warm-soft text-warm',
+  shipped: 'bg-sage-soft text-sage',
   // doc statuses — single shared source (@productmap/shared)
   ...DOC_STATUS_COLORS,
 };

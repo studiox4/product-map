@@ -101,7 +101,7 @@ export function GanttChart({
                   y={y}
                   width={GUTTER_WIDTH + plotWidth}
                   height={ROW_HEIGHT}
-                  fill="#dcebff"
+                  fill="var(--pm-action-soft)"
                   className="animate-pulse"
                 />
               )}
@@ -111,21 +111,21 @@ export function GanttChart({
                 y={y}
                 width={GUTTER_WIDTH + plotWidth}
                 height={ROW_HEIGHT}
-                className="fill-transparent transition-[fill] duration-150 ease-out hover:fill-[#f3f6fa]"
+                className="fill-transparent transition-[fill] duration-150 ease-out hover:fill-[var(--pm-panel)]"
               />
               <line
                 x1={0}
                 y1={y + ROW_HEIGHT}
                 x2={GUTTER_WIDTH + plotWidth}
                 y2={y + ROW_HEIGHT}
-                stroke="#eef1f5"
+                stroke="var(--pm-line)"
               />
               <text
                 x={16}
                 y={y + ROW_HEIGHT / 2 + 4}
                 fontSize={12}
                 fontWeight={500}
-                fill="#22303f"
+                fill="var(--pm-ink)"
                 className="pointer-events-none select-none"
               >
                 {f.title.length > 26 ? `${f.title.slice(0, 25)}…` : f.title}
@@ -150,18 +150,18 @@ export function GanttChart({
             y1={16}
             x2={todayX}
             y2={chartHeight}
-            stroke="#2b557e"
+            stroke="var(--pm-action)"
             strokeOpacity={0.45}
             strokeWidth={1.5}
           />
           <g pointerEvents="none">
-            <rect x={todayX - 23} y={1} width={46} height={16} rx={8} fill="#dcebff" />
+            <rect x={todayX - 23} y={1} width={46} height={16} rx={8} fill="var(--pm-action-soft)" />
             <text
               x={todayX}
               y={12}
               fontSize={10}
               fontWeight={600}
-              fill="#2b557e"
+              fill="var(--pm-action)"
               textAnchor="middle"
             >
               Today
@@ -183,7 +183,7 @@ export function GanttChart({
             );
           })}
         </g>
-        <line x1={GUTTER_WIDTH} y1={0} x2={GUTTER_WIDTH} y2={chartHeight} stroke="#eef1f5" />
+        <line x1={GUTTER_WIDTH} y1={0} x2={GUTTER_WIDTH} y2={chartHeight} stroke="var(--pm-line)" />
       </svg>
     </div>
   );

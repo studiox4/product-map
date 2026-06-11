@@ -29,9 +29,9 @@ const TEMPLATE_ICONS: Record<TemplateChoice, typeof FileText> = {
 };
 
 const templateCardClass =
-  'flex cursor-pointer items-start gap-3 rounded-xl border border-[#eef1f5] bg-white p-3 ' +
-  'transition-[box-shadow,background-color] duration-150 ease-out hover:bg-[#f6f8fb] ' +
-  'has-[[data-state=checked]]:border-transparent has-[[data-state=checked]]:bg-[#f3f8ff] ' +
+  'flex cursor-pointer items-start gap-3 rounded-xl border border-line bg-surface p-3 ' +
+  'transition-[box-shadow,background-color] duration-150 ease-out hover:bg-panel ' +
+  'has-[[data-state=checked]]:border-transparent has-[[data-state=checked]]:bg-[var(--pm-selected)] ' +
   'has-[[data-state=checked]]:ring-2 has-[[data-state=checked]]:ring-[#dcebff] ' +
   'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring';
 
@@ -105,7 +105,7 @@ export function NewDocDialog({ feature, open, onOpenChange, returnFocusRef }: Ne
             return (
               <Label key={type} htmlFor={`tpl-${type}`} className={templateCardClass}>
                 <RadioGroupItem id={`tpl-${type}`} value={type} className="sr-only" />
-                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#edf1f7] text-[#2b557e]">
+                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-wash text-action">
                   <Icon className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <span className="space-y-1">
@@ -121,7 +121,7 @@ export function NewDocDialog({ feature, open, onOpenChange, returnFocusRef }: Ne
           })}
           <Label htmlFor="tpl-blank" className={templateCardClass}>
             <RadioGroupItem id="tpl-blank" value="blank" className="sr-only" />
-            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#edf1f7] text-[#2b557e]">
+            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-wash text-action">
               <File className="h-4 w-4" aria-hidden="true" />
             </span>
             <span className="space-y-1">

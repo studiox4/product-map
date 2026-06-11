@@ -12,7 +12,7 @@ describe('DOC_TYPE_COLORS', () => {
     for (const type of DOC_TYPES) {
       const entry = DOC_TYPE_COLORS[type];
       expect(entry).toBeDefined();
-      expect(entry.chip).toMatch(/^bg-\[#[0-9a-f]{6}\] text-\[#[0-9a-f]{6}\]$/);
+      expect(entry.chip).toMatch(/^bg-\S+ text-\S+$/);
       expect(entry.edge).toMatch(/^#[0-9a-f]{6}$/);
     }
   });
@@ -21,7 +21,7 @@ describe('DOC_TYPE_COLORS', () => {
 describe('DOC_STATUS_COLORS', () => {
   it('covers every doc status', () => {
     for (const status of DOC_STATUSES) {
-      expect(DOC_STATUS_COLORS[status]).toMatch(/^bg-\[#[0-9a-f]{6}\] text-\[#[0-9a-f]{6}\]$/);
+      expect(DOC_STATUS_COLORS[status]).toMatch(/^bg-\S+ text-\S+$/);
     }
   });
 });

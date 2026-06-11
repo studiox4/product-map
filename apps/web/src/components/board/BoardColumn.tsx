@@ -36,7 +36,7 @@ export function BoardColumn({
       ref={setNodeRef}
       data-testid={`column-${horizon}`}
       className={cn(
-        'flex flex-col rounded-2xl bg-white/50 transition-shadow duration-150 ease-out',
+        'flex flex-col rounded-2xl bg-surface/50 transition-shadow duration-150 ease-out',
         (isOver || isDropTarget) && 'ring-2 ring-inset ring-[#dcebff]',
       )}
     >
@@ -51,7 +51,7 @@ export function BoardColumn({
         </h2>
         <span
           data-testid={`column-${horizon}-count`}
-          className="rounded-full bg-[#edf1f7] px-2 py-0.5 text-xs font-medium text-muted-ink"
+          className="rounded-full bg-wash px-2 py-0.5 text-xs font-medium text-muted-ink"
         >
           {features.length}
         </span>
@@ -59,7 +59,7 @@ export function BoardColumn({
       <div className="flex flex-1 flex-col gap-3 px-3 pb-3">
         <SortableContext items={features.map((f) => f.id)} strategy={verticalListSortingStrategy}>
           {features.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-[#c9d3df] px-3 py-6 text-center text-sm text-muted-ink">
+            <p className="rounded-xl border border-dashed border-line-dash px-3 py-6 text-center text-sm text-muted-ink">
               Nothing here yet
             </p>
           ) : (
@@ -70,7 +70,7 @@ export function BoardColumn({
         </SortableContext>
         <Button
           variant="ghost"
-          className="justify-start rounded-full text-muted-ink hover:bg-[#edf1f7]"
+          className="justify-start rounded-full text-muted-ink hover:bg-wash"
           onClick={() => setDialogOpen(true)}
         >
           <Plus className="mr-1 h-4 w-4" />

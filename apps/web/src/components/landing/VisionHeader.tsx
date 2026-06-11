@@ -48,7 +48,7 @@ export function VisionHeader({ product }: { product: Product }) {
         <button
           type="button"
           onClick={startEditing}
-          className="group mt-2 -ml-2 flex max-w-2xl items-center gap-2 rounded-full px-2 py-0.5 text-left text-base text-muted-ink outline-none transition-colors duration-150 ease-out hover:bg-[#edf1f7] hover:text-body-ink focus-visible:ring-2 focus-visible:ring-ring"
+          className="group mt-2 -ml-2 flex max-w-2xl items-center gap-2 rounded-full px-2 py-0.5 text-left text-base text-muted-ink outline-none transition-colors duration-150 ease-out hover:bg-wash hover:text-body-ink focus-visible:ring-2 focus-visible:ring-ring"
           title="Click to edit the vision"
         >
           <span>{product.vision || 'Add a product vision…'}</span>

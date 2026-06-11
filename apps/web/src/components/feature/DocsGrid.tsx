@@ -30,7 +30,7 @@ export function DocsGrid({ feature }: { feature: FeatureWithDocs }) {
               key={doc.id}
               type="button"
               onClick={() => navigate(`/docs/${doc.id}`)}
-              className="overflow-hidden rounded-xl bg-white text-left shadow-card transition-[box-shadow,transform] duration-150 ease-out hover:-translate-y-px hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="overflow-hidden rounded-xl bg-surface text-left shadow-card transition-[box-shadow,transform] duration-150 ease-out hover:-translate-y-px hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <span
                 aria-hidden
@@ -57,7 +57,7 @@ export function DocsGrid({ feature }: { feature: FeatureWithDocs }) {
           ref={newDocTriggerRef}
           type="button"
           onClick={() => setNewDocOpen(true)}
-          className="flex min-h-28 items-center justify-center gap-2 rounded-xl border border-dashed border-[#c9d3df] text-sm font-medium text-muted-ink transition-colors duration-150 ease-out hover:bg-white hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex min-h-28 items-center justify-center gap-2 rounded-xl border border-dashed border-line-dash text-sm font-medium text-muted-ink transition-colors duration-150 ease-out hover:bg-surface hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Plus className="h-4 w-4" aria-hidden />
           New doc

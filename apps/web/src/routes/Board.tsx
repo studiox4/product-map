@@ -112,10 +112,10 @@ export default function Board() {
         className="mx-auto grid max-w-[1280px] grid-cols-1 gap-6 px-6 py-8 md:grid-cols-3"
       >
         {HORIZONS.map((h) => (
-          <div key={h} className="space-y-3 rounded-2xl bg-white/50 p-3">
-            <Skeleton className="h-8 w-1/2 rounded-full bg-white" />
-            <Skeleton className="h-24 w-full rounded-xl bg-white shadow-[0_4px_14px_rgba(60,75,95,.08)]" />
-            <Skeleton className="h-24 w-full rounded-xl bg-white shadow-[0_4px_14px_rgba(60,75,95,.08)]" />
+          <div key={h} className="space-y-3 rounded-2xl bg-surface/50 p-3">
+            <Skeleton className="h-8 w-1/2 rounded-full bg-surface" />
+            <Skeleton className="h-24 w-full rounded-xl bg-surface shadow-sm-card" />
+            <Skeleton className="h-24 w-full rounded-xl bg-surface shadow-sm-card" />
           </div>
         ))}
       </div>
@@ -125,7 +125,7 @@ export default function Board() {
   if (isError) {
     return (
       <div className="mx-auto max-w-[1280px] px-6 py-8">
-        <div className="rounded-2xl border border-transparent bg-white p-8 text-center shadow-card">
+        <div className="rounded-2xl border border-transparent bg-surface p-8 text-center shadow-card">
           <p className="text-sm text-muted-ink">Couldn't load the board.</p>
           <Button className="mt-4 rounded-full" onClick={() => refetch()}>
             Retry
@@ -141,7 +141,7 @@ export default function Board() {
         <div
           role="group"
           aria-label="Board order"
-          className="flex items-center gap-1 rounded-full bg-white p-1 shadow-card"
+          className="flex items-center gap-1 rounded-full bg-surface p-1 shadow-card"
         >
           <span className="pl-3 pr-1 text-xs font-medium text-muted-ink">Order ▾</span>
           {(['manual', 'score'] as const).map((option) => (
@@ -155,8 +155,8 @@ export default function Board() {
                 'transition-colors duration-150 ease-out',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 sort === option
-                  ? 'bg-[#dcebff] text-[#2b557e]'
-                  : 'text-muted-ink hover:bg-[#edf1f7]',
+                  ? 'bg-action-soft text-action'
+                  : 'text-muted-ink hover:bg-wash',
               )}
             >
               {option}

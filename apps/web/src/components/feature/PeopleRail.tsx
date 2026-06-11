@@ -38,7 +38,7 @@ export function PeopleRail({ feature }: { feature: FeatureWithDocs }) {
   };
 
   return (
-    <section className="rounded-2xl bg-white p-4 shadow-card" aria-label="People">
+    <section className="rounded-2xl bg-surface p-4 shadow-card" aria-label="People">
       <div className="flex items-center justify-between">
         <h2 className="font-display text-sm font-semibold text-ink">People</h2>
         <Popover open={addOpen} onOpenChange={setAddOpen}>
@@ -63,7 +63,7 @@ export function PeopleRail({ feature }: { feature: FeatureWithDocs }) {
                       save([...collaborators.map((c) => c.id), u.id]);
                       setAddOpen(false);
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-body-ink transition-colors duration-150 ease-out hover:bg-[#f6f8fb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-body-ink transition-colors duration-150 ease-out hover:bg-panel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <UserAvatar user={u} size="sm" />
                     <span className="truncate">{u.name}</span>
@@ -98,7 +98,7 @@ export function PeopleRail({ feature }: { feature: FeatureWithDocs }) {
                   type="button"
                   aria-label={`Remove ${c.name}`}
                   onClick={() => save(collaborators.filter((x) => x.id !== c.id).map((x) => x.id))}
-                  className="rounded-full p-1 text-muted-ink transition-colors duration-150 ease-out hover:bg-[#f6f8fb] hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="rounded-full p-1 text-muted-ink transition-colors duration-150 ease-out hover:bg-panel hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <X className="h-3.5 w-3.5" aria-hidden />
                 </button>
@@ -108,7 +108,7 @@ export function PeopleRail({ feature }: { feature: FeatureWithDocs }) {
       </ul>
 
       {creator ? (
-        <p className="mt-3 border-t border-[#eef1f5] pt-3 text-xs text-muted-ink">
+        <p className="mt-3 border-t border-line pt-3 text-xs text-muted-ink">
           Added by {creator.name} · {format(parseISO(feature.createdAt), 'MMM d')}
         </p>
       ) : null}

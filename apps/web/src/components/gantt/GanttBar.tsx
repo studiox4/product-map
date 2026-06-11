@@ -106,9 +106,9 @@ export function GanttBar({ feature, rect, pxPerDay, onCommit, onClick, highlight
         rx={rect.height / 2}
         fill={color}
         fillOpacity={drag ? 0.6 : 1}
-        stroke={highlighted ? '#2b557e' : 'none'}
+        stroke={highlighted ? 'var(--pm-action)' : 'none'}
         strokeWidth={highlighted ? 2 : 0}
-        style={{ filter: 'drop-shadow(0 2px 4px rgba(60,75,95,0.28))' }}
+        style={{ filter: 'drop-shadow(0 2px 4px var(--pm-bar-shadow))' }}
         className={`cursor-grab transition-opacity duration-150 ease-out hover:opacity-90 focus-visible:outline-none ${
           drag?.mode === 'move' ? 'cursor-grabbing' : ''
         } ${highlighted ? 'animate-pulse' : ''}`}

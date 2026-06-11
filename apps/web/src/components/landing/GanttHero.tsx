@@ -16,7 +16,7 @@ export function GanttHero({ features }: { features: FeatureWithDocs[] }) {
 
   if (dated.length === 0) {
     return (
-      <div className="rounded-2xl border border-transparent bg-white p-6 text-sm text-muted-foreground shadow-card">
+      <div className="rounded-2xl border border-transparent bg-surface p-6 text-sm text-muted-foreground shadow-card">
         No scheduled features yet — add dates on the board to see them here.
       </div>
     );
@@ -39,7 +39,7 @@ export function GanttHero({ features }: { features: FeatureWithDocs[] }) {
   const pillX = Math.min(Math.max(todayX - pillW / 2, GUTTER), WIDTH - pillW);
 
   return (
-    <div className="rounded-2xl border border-transparent bg-white p-5 shadow-card transition-all duration-150 ease-out hover:-translate-y-px hover:shadow-card-hover">
+    <div className="rounded-2xl border border-transparent bg-surface p-5 shadow-card transition-all duration-150 ease-out hover:-translate-y-px hover:shadow-card-hover">
       <svg
         viewBox={`0 0 ${WIDTH} ${height}`}
         className="w-full"
@@ -56,7 +56,7 @@ export function GanttHero({ features }: { features: FeatureWithDocs[] }) {
                 x={0}
                 y={y + ROW_H / 2}
                 dominantBaseline="middle"
-                className="fill-[#46556a] text-[12px]"
+                className="fill-[var(--pm-body)] text-[12px]"
               >
                 {f.title.length > 32 ? `${f.title.slice(0, 31)}…` : f.title}
               </text>
@@ -68,7 +68,7 @@ export function GanttHero({ features }: { features: FeatureWithDocs[] }) {
                 height={BAR_H}
                 rx={BAR_H / 2}
                 fill={HORIZON_COLORS[f.horizon].bar}
-                style={{ filter: 'drop-shadow(0 2px 3px rgba(60,75,95,.22))' }}
+                style={{ filter: 'drop-shadow(0 2px 3px var(--pm-bar-shadow))' }}
                 className="cursor-pointer transition-opacity duration-150 ease-out hover:opacity-80"
                 onClick={() => navigate(`/roadmap?feature=${f.id}`)}
               >
@@ -85,7 +85,7 @@ export function GanttHero({ features }: { features: FeatureWithDocs[] }) {
               y1={LABEL_H - 4}
               x2={todayX}
               y2={height}
-              stroke="#2b557e"
+              stroke="var(--pm-action)"
               strokeOpacity={0.4}
               strokeWidth={1.5}
             />
@@ -95,14 +95,14 @@ export function GanttHero({ features }: { features: FeatureWithDocs[] }) {
               width={pillW}
               height={16}
               rx={8}
-              fill="#dcebff"
+              fill="var(--pm-action-soft)"
             />
             <text
               x={pillX + pillW / 2}
               y={9.5}
               textAnchor="middle"
               dominantBaseline="middle"
-              className="fill-[#2b557e] text-[10px] font-medium"
+              className="fill-[var(--pm-action)] text-[10px] font-medium"
             >
               today
             </text>

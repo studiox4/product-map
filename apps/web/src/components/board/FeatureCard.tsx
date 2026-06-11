@@ -38,7 +38,7 @@ export function FeatureCard({ feature, onOpen }: FeatureCardProps) {
         }
       }}
       className={cn(
-        'cursor-grab rounded-xl border border-transparent bg-white p-3 shadow-[0_4px_14px_rgba(60,75,95,.08)]',
+        'cursor-grab rounded-xl border border-transparent bg-surface p-3 shadow-sm-card',
         'transition-[box-shadow,transform] duration-150 ease-out',
         'hover:-translate-y-px hover:shadow-card-hover',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',

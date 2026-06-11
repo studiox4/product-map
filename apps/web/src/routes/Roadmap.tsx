@@ -82,7 +82,7 @@ export default function RoadmapPage() {
               ))}
             </div>
           </div>
-          <div className="rounded-2xl border-2 border-dashed border-[#d4dce6] bg-white/55 p-5">
+          <div className="rounded-2xl border-2 border-dashed border-line-dash bg-surface/55 p-5">
             <Skeleton className="mb-3 h-4 w-1/4" />
             <div className="flex gap-2">
               <Skeleton className="h-8 w-32 rounded-full" />
