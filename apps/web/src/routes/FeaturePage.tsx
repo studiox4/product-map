@@ -33,6 +33,7 @@ import { DocsGrid } from '@/components/feature/DocsGrid';
 import { ActivityFeed } from '@/components/feature/ActivityFeed';
 import { CommentsSection } from '@/components/comments/CommentsSection';
 import { PeopleRail } from '@/components/feature/PeopleRail';
+import { morphStyle } from '@/lib/transitions';
 import { VoteWidget } from '@/components/VoteWidget';
 
 function FeatureSkeleton() {
@@ -119,7 +120,10 @@ function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
         <span className="text-body-ink">{HORIZON_LABELS[feature.horizon]}</span>
       </nav>
 
-      <header className="mt-4 flex flex-wrap items-center gap-4">
+      <header
+        className="mt-4 flex flex-wrap items-center gap-4"
+        style={morphStyle('feature', feature.id)}
+      >
         <Input
           aria-label="Feature title"
           defaultValue={feature.title}

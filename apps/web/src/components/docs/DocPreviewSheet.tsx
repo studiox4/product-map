@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -20,6 +20,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
+import { navigateWithTransition } from '@/lib/transitions';
 
 interface DocPreviewSheetProps {
   /** List item for the doc being previewed (null closes the sheet). */
@@ -96,6 +97,7 @@ function PreviewBody({ docId }: { docId: string }) {
 
 /** Right-hand 520px preview sheet: doc meta, feature link, sanitized markdown render, open-in-editor. */
 export function DocPreviewSheet({ doc, open, onOpenChange }: DocPreviewSheetProps) {
+  const navigate = useNavigate();
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -128,7 +130,13 @@ export function DocPreviewSheet({ doc, open, onOpenChange }: DocPreviewSheetProp
                   {doc.featureTitle}
                 </Link>
                 <Button asChild size="sm" className="ml-auto rounded-full">
-                  <Link to={`/docs/${doc.id}`}>
+                  <Link
+                    to={`/docs/${doc.id}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      navigateWithTransition(() => navigate(`/docs/${doc.id}`));
+                    }}
+                  >
                     Open in editor
                     <ArrowRight className="h-3.5 w-3.5" aria-hidden />
                   </Link>

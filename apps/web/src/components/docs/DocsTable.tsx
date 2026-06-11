@@ -8,6 +8,7 @@ import {
 } from '@productmap/shared';
 import { StatusBadge } from '@/components/StatusBadge';
 import { cn } from '@/lib/utils';
+import { morphStyle } from '@/lib/transitions';
 
 export type DocsSortKey = 'title' | 'updatedAt';
 
@@ -74,7 +75,11 @@ export function DocsTable({ docs, sort, onSortChange, onRowClick }: DocsTablePro
               onClick={() => onRowClick(doc.id)}
               className="cursor-pointer border-b border-line transition-colors duration-150 ease-out last:border-b-0 hover:bg-panel"
             >
-              <td className="px-4 py-3 font-medium text-ink">{doc.title}</td>
+              <td className="px-4 py-3 font-medium text-ink">
+                <span className="inline-block" style={morphStyle('doc-title', doc.id)}>
+                  {doc.title}
+                </span>
+              </td>
               <td className="px-4 py-3">
                 <span
                   className={cn(

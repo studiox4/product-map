@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { HORIZON_COLORS, type FeatureWithDocs, type Horizon } from '@productmap/shared';
 import { HORIZON_LABELS } from '@/components/HorizonBadge';
 import StatusBadge from '@/components/StatusBadge';
+import { morphStyle, navigateWithTransition } from '@/lib/transitions';
 
 const TOP_N = 3;
 
@@ -40,7 +41,8 @@ export function HorizonPanel({
           <button
             key={f.id}
             type="button"
-            onClick={() => navigate(`/board?feature=${f.id}`)}
+            onClick={() => navigateWithTransition(() => navigate(`/board?feature=${f.id}`))}
+            style={morphStyle('feature-peek', f.id)}
             className="flex items-center justify-between gap-2 rounded-xl px-2 py-1.5 text-left text-sm text-body-ink outline-none transition-colors duration-150 ease-out hover:bg-wash focus-visible:ring-2 focus-visible:ring-ring"
           >
             <span className="truncate">{f.title}</span>

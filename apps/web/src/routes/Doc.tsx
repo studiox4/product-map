@@ -23,6 +23,7 @@ import { CommentsSection } from '@/components/comments/CommentsSection';
 import { Editor } from '@/components/editor/Editor';
 import { EditorToolbar } from '@/components/editor/EditorToolbar';
 import { useAutosave } from '@/components/editor/useAutosave';
+import { morphName } from '@/lib/transitions';
 
 function DocSkeleton() {
   return (
@@ -155,6 +156,7 @@ export default function DocPage() {
         exportHref={`/api/documents/${doc.id}/export.md`}
         commentCount={unresolvedCount}
         onToggleComments={() => setCommentsOpen((open) => !open)}
+        titleTransitionName={morphName('doc-title', doc.id)}
       />
       <Editor
         key={doc.id}

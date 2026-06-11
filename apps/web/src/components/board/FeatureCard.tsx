@@ -2,6 +2,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { FeatureWithDocs } from '@productmap/shared';
 import { cn } from '@/lib/utils';
+import { morphStyle } from '@/lib/transitions';
 import { StatusBadge } from '@/components/StatusBadge';
 import { DocTypeChip } from '@/components/DocTypeChip';
 import { VoteWidget } from '@/components/VoteWidget';
@@ -20,6 +21,7 @@ export function FeatureCard({ feature, onOpen }: FeatureCardProps) {
     <div
       ref={setNodeRef}
       style={{
+        ...morphStyle('feature', feature.id),
         transform: isDragging
           ? `${CSS.Transform.toString(transform) ?? ''} rotate(1deg)`
           : CSS.Transform.toString(transform),

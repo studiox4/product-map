@@ -16,6 +16,7 @@ import { FeatureDetailPanel } from '@/components/board/FeatureDetailPanel';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { navigateWithTransition } from '@/lib/transitions';
 
 export const BOARD_SORT_KEY = 'pmBoardSort';
 type BoardSort = 'manual' | 'score';
@@ -59,10 +60,12 @@ export default function Board() {
 
   const openFeature = useCallback(
     (id: string) => {
-      setSearchParams((prev) => {
-        const next = new URLSearchParams(prev);
-        next.set('feature', id);
-        return next;
+      navigateWithTransition(() => {
+        setSearchParams((prev) => {
+          const next = new URLSearchParams(prev);
+          next.set('feature', id);
+          return next;
+        });
       });
     },
     [setSearchParams],

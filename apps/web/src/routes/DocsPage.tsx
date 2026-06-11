@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { navigateWithTransition } from '@/lib/transitions';
 
 function toggle<T>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
@@ -175,7 +176,7 @@ export default function DocsPage() {
           docs={visibleDocs}
           sort={sort}
           onSortChange={handleSortChange}
-          onRowClick={setPreviewId}
+          onRowClick={(id) => navigateWithTransition(() => setPreviewId(id))}
         />
       )}
 

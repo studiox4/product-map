@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Check, Download, Loader2, MessageCircle, TriangleAlert } from 'lucide-react';
 import { DOC_STATUSES, type DocStatus } from '@productmap/shared';
@@ -33,6 +33,8 @@ export interface EditorToolbarProps {
   /** Unresolved comment thread count for the badge (comments pill renders when onToggleComments is set). */
   commentCount?: number;
   onToggleComments?: () => void;
+  /** view-transition-name for the title (morph pair with the docs table row title). */
+  titleTransitionName?: string;
 }
 
 function SaveIndicator({ state }: { state: AutosaveState }) {
@@ -67,6 +69,7 @@ export function EditorToolbar({
   exportHref,
   commentCount = 0,
   onToggleComments,
+  titleTransitionName,
 }: EditorToolbarProps) {
   const [draftTitle, setDraftTitle] = useState(title);
   useEffect(() => setDraftTitle(title), [title]);
@@ -85,6 +88,11 @@ export function EditorToolbar({
         <input
           aria-label="Document title"
           title={draftTitle}
+          style={
+            titleTransitionName
+              ? ({ viewTransitionName: titleTransitionName } as CSSProperties)
+              : undefined
+          }
           className="min-w-[240px] flex-1 rounded-full border-0 bg-transparent px-3 py-1 font-display text-2xl font-semibold leading-tight text-ink outline-none transition-colors duration-150 ease-out hover:bg-secondary/60 focus-visible:ring-2 focus-visible:ring-ring"
           value={draftTitle}
           onChange={(e) => setDraftTitle(e.target.value)}

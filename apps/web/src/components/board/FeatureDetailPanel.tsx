@@ -24,6 +24,7 @@ import { DocTypeChip } from '@/components/DocTypeChip';
 import { HORIZON_LABELS } from '@/components/HorizonBadge';
 import { STATUS_LABELS } from '@/components/StatusBadge';
 import { NewDocDialog } from '@/components/board/NewDocDialog';
+import { morphStyle } from '@/lib/transitions';
 
 interface FeatureDetailPanelProps {
   featureId: string | null;
@@ -86,7 +87,7 @@ function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: 
 
   return (
     <div className="space-y-8 pt-6">
-      <SheetHeader className="space-y-2 text-left">
+      <SheetHeader className="space-y-2 text-left" style={morphStyle('feature-peek', feature.id)}>
         <Label htmlFor="feature-title" className="text-xs font-medium text-muted-ink">
           Title
         </Label>

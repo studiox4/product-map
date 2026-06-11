@@ -225,3 +225,26 @@
   background: var(--pm-action-soft);
   color: var(--pm-action);
 }
+
+/* ============================================================
+   Morph transitions (Spec 1.3) — View Transitions API
+   Default 180ms ease-out crossfade for navigations run via
+   navigateWithTransition; shared-element morphs come from
+   per-element view-transition-name (see src/lib/transitions.ts).
+   JS already skips transitions for reduced-motion users; the
+   reduce block below is a CSS backstop.
+   ============================================================ */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
+  animation-timing-function: ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-image-pair(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
