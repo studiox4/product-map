@@ -130,7 +130,12 @@ function PaletteContent({
   const contextDocId = matchPath('/docs/:id', location.pathname)?.params.id ?? null;
   const vote = useVote(contextFeatureId ?? '');
 
-  const recents = useMemo(() => getRecents(), []);
+  // Drop recents whose target no longer exists (e.g. ids from before a db reset).
+  const recents = useMemo(() => {
+    const known = new Set([...features.map((f) => f.id), ...docs.map((d) => d.id)]);
+    const live = getRecents().filter((e) => known.has(e.id));
+    return features.length || docs.length ? live : getRecents();
+  }, [features, docs]);
 
   const go = (to: string) => {
     close();
