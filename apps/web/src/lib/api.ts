@@ -80,6 +80,8 @@ export interface DocumentUpdateInput {
   title?: string;
   contentJson?: unknown;
   status?: DocStatus;
+  /** Curated gradient cover key; null clears the cover. */
+  cover?: string | null;
 }
 export interface ProductUpdateInput {
   name?: string;
@@ -641,5 +643,22 @@ export function useDeleteComment() {
       qc.setQueryData(commentsKey(target), snapshot);
     },
     onSettled: (_data, _err, { target }) => invalidateComments(qc, target),
+  });
+}
+
+// ---- workspace activity (Time Machine — Spec 2.1) ----
+// Append-only block: self-contained, including its import (hoisted by ESM).
+
+import type { WorkspaceActivityItem } from '@productmap/shared';
+
+export const workspaceActivityKey = ['activity', 'workspace'] as const;
+
+/** Workspace-wide activity feed, ascending (replay order). Fetched lazily — pass enabled=false until History mode is on. */
+export function useWorkspaceActivity(enabled = true) {
+  return useQuery({
+    queryKey: workspaceActivityKey,
+    queryFn: () => fetchJson<WorkspaceActivityItem[]>('/api/activity'),
+    enabled,
+    staleTime: 30_000,
   });
 }

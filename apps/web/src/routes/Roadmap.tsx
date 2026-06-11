@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
+import { History } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Feature } from '@productmap/shared';
-import { useFeatures, useUpdateFeature } from '@/lib/api';
+import { useFeatures, useUpdateFeature, useWorkspaceActivity } from '@/lib/api';
 import { FeatureDetailPanel } from '@/components/board/FeatureDetailPanel';
 import { GanttChart } from '@/components/gantt/GanttChart';
+import { TimeMachine } from '@/components/gantt/TimeMachine';
+import { reconstructState, timelineRange } from '@/components/gantt/history-replay';
 import { UnscheduledTray } from '@/components/gantt/UnscheduledTray';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,6 +25,28 @@ export default function RoadmapPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [trayDragging, setTrayDragging] = useState(false);
+
+  // Time Machine (Spec 2.1): scrub history client-side from the activity feed.
+  const [historyMode, setHistoryMode] = useState(false);
+  const [scrubTime, setScrubTime] = useState<number | null>(null); // null = now
+  const activityQuery = useWorkspaceActivity(historyMode);
+  const activityEvents = useMemo(() => activityQuery.data ?? [], [activityQuery.data]);
+  const historyRange = useMemo(() => timelineRange(activityEvents), [activityEvents]);
+  const scrubValue = scrubTime ?? historyRange.end;
+
+  /** Features as of the scrub time — replayed backward from now, no writes. */
+  const displayFeatures = useMemo(() => {
+    if (!historyMode || !features || scrubTime === null) return features;
+    const snapshots = new Map(
+      reconstructState(features, activityEvents, scrubTime).map((s) => [s.id, s]),
+    );
+    return features.filter((f) => snapshots.has(f.id)).map((f) => ({ ...f, ...snapshots.get(f.id)! }));
+  }, [historyMode, features, activityEvents, scrubTime]);
+
+  function exitHistory() {
+    setHistoryMode(false);
+    setScrubTime(null);
+  }
 
   const featureParam = searchParams.get('feature');
 
@@ -65,11 +90,29 @@ export default function RoadmapPage() {
   return (
     // AppShell's <main> already provides the centered max-width container and page padding.
     <div>
-      <div className="mb-6">
-        <h1 className="font-display text-2xl font-bold tracking-tight">Roadmap</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Drag a bar to move its dates, drag its right edge to resize, or click it for details.
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl font-bold tracking-tight">Roadmap</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {historyMode
+              ? 'Time travel — scrub to replay how the roadmap evolved. Read-only until you come back to now.'
+              : 'Drag a bar to move its dates, drag its right edge to resize, or click it for details.'}
+          </p>
+        </div>
+        <button
+          type="button"
+          data-testid="history-toggle"
+          aria-pressed={historyMode}
+          onClick={() => (historyMode ? exitHistory() : setHistoryMode(true))}
+          className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium outline-none transition-all duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring ${
+            historyMode
+              ? 'border-transparent bg-action-soft text-action'
+              : 'border-line text-body-ink hover:bg-surface/60 hover:text-ink'
+          }`}
+        >
+          <History className="h-3.5 w-3.5" aria-hidden />
+          History
+        </button>
       </div>
 
       {isLoading && (
@@ -103,18 +146,47 @@ export default function RoadmapPage() {
 
       {features && (
         <div className="space-y-6">
-          <GanttChart
-            features={features}
-            onCommitDates={commitDates}
-            onBarClick={(f) => setSelectedId(f.id)}
-            highlightId={highlightId}
-            trayDropActive={trayDragging}
-          />
-          <UnscheduledTray
-            features={unscheduled}
-            onSchedule={scheduleFeature}
-            onDragChange={setTrayDragging}
-          />
+          {/* History mode: read-only (no pointer interaction) + 300ms ease-out bar
+              transitions on x/width/fill so scrubbing animates instead of snapping.
+              motion-safe keeps the reduced-motion snap behavior from index.css. */}
+          <div
+            aria-disabled={historyMode || undefined}
+            className={
+              historyMode
+                ? 'pointer-events-none motion-safe:[&_.gantt-settle]:[transition:x_300ms_ease-out,width_300ms_ease-out,fill_300ms_ease-out]'
+                : undefined
+            }
+          >
+            <GanttChart
+              features={displayFeatures ?? features}
+              onCommitDates={historyMode ? () => {} : commitDates}
+              onBarClick={historyMode ? () => {} : (f) => setSelectedId(f.id)}
+              highlightId={highlightId}
+              trayDropActive={trayDragging}
+            />
+          </div>
+
+          {historyMode ? (
+            activityQuery.isLoading ? (
+              <div className="rounded-2xl border border-transparent bg-card px-5 py-4 shadow-card">
+                <Skeleton className="h-10 w-full rounded-full" />
+              </div>
+            ) : (
+              <TimeMachine
+                events={activityEvents}
+                value={scrubValue}
+                range={historyRange}
+                onChange={setScrubTime}
+                onBackToNow={exitHistory}
+              />
+            )
+          ) : (
+            <UnscheduledTray
+              features={unscheduled}
+              onSchedule={scheduleFeature}
+              onDragChange={setTrayDragging}
+            />
+          )}
         </div>
       )}
 
