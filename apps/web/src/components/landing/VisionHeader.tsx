@@ -30,7 +30,9 @@ export function VisionHeader({ product }: { product: Product }) {
 
   return (
     <header>
-      <h1 className="font-display text-4xl font-bold tracking-tight text-ink">{product.name}</h1>
+      <h1 className="w-fit bg-gradient-to-r from-[var(--pm-ink)] to-[var(--pm-action)] bg-clip-text font-display text-4xl font-bold tracking-tight text-transparent">
+        {product.name}
+      </h1>
       {editing ? (
         <Input
           aria-label="Product vision"

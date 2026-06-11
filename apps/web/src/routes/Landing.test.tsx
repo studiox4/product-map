@@ -1,12 +1,13 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import type { OverviewResponse } from '@productmap/shared';
+import type { OverviewResponse, WorkspaceActivityItem } from '@productmap/shared';
 import Landing from './Landing';
+import { digestCacheKey } from '@/components/landing/AiDigestCard';
 
 const product = {
   id: 'p1',
@@ -55,13 +56,69 @@ const fixture: OverviewResponse = {
   ],
 };
 
+function daysAgo(n: number): string {
+  return new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString();
+}
+
+function activityItem(id: string, createdAt: string): WorkspaceActivityItem {
+  return {
+    id,
+    featureId: 'f1',
+    featureTitle: 'Rich markdown editor',
+    actorId: 'u1',
+    actorName: 'Mara',
+    actorColor: '#6d3f9e',
+    kind: 'status_changed',
+    payload: { from: 'planned', to: 'in_progress' },
+    createdAt,
+  };
+}
+
+// Three events this week, one ~3 weeks back, one outside the 12-week heatmap window.
+const activityFixture: WorkspaceActivityItem[] = [
+  activityItem('a1', daysAgo(0)),
+  activityItem('a2', daysAgo(1)),
+  activityItem('a3', daysAgo(1)),
+  activityItem('a4', daysAgo(21)),
+  activityItem('a5', daysAgo(120)),
+];
+
 const server = setupServer(
   http.get('/api/overview', () => HttpResponse.json(fixture)),
+  http.get('/api/activity', () => HttpResponse.json(activityFixture)),
+  http.get('/api/ai/status', () => HttpResponse.json({ enabled: false })),
 );
+
+/**
+ * SSE for the digest is mocked at the fetch layer (like AiDraftCard.test) —
+ * jsdom's AbortSignal isn't accepted by undici's Request inside MSW.
+ * Everything else still flows through the MSW server.
+ */
+function mockDigestStream(chunks: string[]): { calls: () => number } {
+  const body =
+    chunks
+      .map((text) => `event: chunk\ndata: ${JSON.stringify({ text })}\n\n`)
+      .join('') + 'event: done\ndata: {}\n\n';
+  let calls = 0;
+  const realFetch = globalThis.fetch;
+  vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    if (url.includes('/api/ai/digest')) {
+      calls += 1;
+      return Promise.resolve(
+        new Response(body, { headers: { 'Content-Type': 'text/event-stream' } }),
+      );
+    }
+    return realFetch(input, init ? { ...init, signal: undefined } : init);
+  });
+  return { calls: () => calls };
+}
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
   server.resetHandlers();
+  vi.restoreAllMocks();
+  sessionStorage.clear();
   cleanup();
 });
 afterAll(() => server.close());
@@ -161,5 +218,67 @@ describe('Landing', () => {
     await userEvent.clear(input);
     await userEvent.type(input, 'New vision{Enter}');
     expect(patched).toEqual({ vision: 'New vision' });
+  });
+});
+
+describe('Landing viz layer', () => {
+  it('renders the velocity sparkline with this week’s event count', async () => {
+    renderLanding();
+    await screen.findByRole('heading', { name: 'ProductMap' });
+    const spark = await screen.findByTestId('velocity-sparkline');
+    expect(spark.getAttribute('aria-label')).toContain('last 8 weeks');
+    // 3 fixture events fall in the current 7-day window
+    expect(screen.getByText('3')).toBeTruthy();
+    expect(screen.getByText('events this week')).toBeTruthy();
+  });
+
+  it('renders the Pulse panel with a 12-week heatmap and intensity levels', async () => {
+    renderLanding();
+    await screen.findByRole('heading', { name: 'Pulse' });
+    const days = await screen.findAllByTestId('pulse-day');
+    // 12 weeks × 7 days minus future days in the trailing week
+    expect(days.length).toBeGreaterThanOrEqual(12 * 7 - 6);
+    expect(days.length).toBeLessThanOrEqual(12 * 7);
+    const active = days.filter((d) => d.getAttribute('data-level') !== '0');
+    // a1 (today), a2+a3 (yesterday), a4 (3 weeks ago) — a5 is outside the window
+    expect(active.length).toBe(3);
+    const levels = active.map((d) => Number(d.getAttribute('data-level')));
+    expect(Math.max(...levels)).toBeGreaterThan(Math.min(...levels)); // 2-event day hotter than 1-event days
+    expect(active[0].getAttribute('title')).toMatch(/event/);
+  });
+
+  it('shows the horizon arc in the Pulse header with the distribution label', async () => {
+    renderLanding();
+    await screen.findByRole('heading', { name: 'Pulse' });
+    const arc = screen.getByTestId('horizon-arc');
+    expect(arc.getAttribute('aria-label')).toBe('Features by horizon: Now 2, Next 2, Later 4');
+  });
+
+  it('hides the AI digest card when AI is disabled', async () => {
+    renderLanding();
+    await screen.findByRole('heading', { name: 'Pulse' });
+    expect(screen.queryByTestId('ai-digest-card')).toBeNull();
+  });
+
+  it('streams the digest when AI is enabled and caches it for the day', async () => {
+    server.use(http.get('/api/ai/status', () => HttpResponse.json({ enabled: true })));
+    const digest = mockDigestStream(['Shipped the **editor**', ' and planned the roadmap.']);
+    renderLanding();
+    expect(await screen.findByTestId('ai-digest-card')).toBeTruthy();
+    expect(await screen.findByText(/and planned the roadmap/)).toBeTruthy();
+    expect(screen.getByText('editor').tagName).toBe('STRONG'); // markdown rendered
+    expect(digest.calls()).toBe(1);
+    expect(sessionStorage.getItem(digestCacheKey())).toBe(
+      'Shipped the **editor** and planned the roadmap.',
+    );
+  });
+
+  it('serves the digest from the sessionStorage day-cache without refetching', async () => {
+    sessionStorage.setItem(digestCacheKey(), 'Cached digest from earlier today.');
+    server.use(http.get('/api/ai/status', () => HttpResponse.json({ enabled: true })));
+    const digest = mockDigestStream(['fresh']);
+    renderLanding();
+    expect(await screen.findByText('Cached digest from earlier today.')).toBeTruthy();
+    expect(digest.calls()).toBe(0);
   });
 });
