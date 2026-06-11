@@ -18,7 +18,7 @@ const BRIEF_TITLE = 'Gantt roadmap — Feature brief';
 const PRD_CHIP_BG = 'rgb(220, 235, 255)'; // #dcebff
 const TECH_SPEC_CHIP_BG = 'rgb(239, 227, 251)'; // #efe3fb
 const BRIEF_CHIP_BG = 'rgb(228, 240, 228)'; // #e4f0e4
-const DRAFT_CHIP_BG = 'rgb(241, 243, 245)'; // #f1f3f5
+const DRAFT_CHIP_BG = 'rgb(237, 241, 247)'; // var(--pm-wash) light value #edf1f7 (theme sweep)
 
 async function chipBg(page: Page, scope: ReturnType<Page['locator']>, label: string) {
   return scope
