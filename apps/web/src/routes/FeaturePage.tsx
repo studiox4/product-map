@@ -34,6 +34,7 @@ import { ActivityFeed } from '@/components/feature/ActivityFeed';
 import { CommentsSection } from '@/components/comments/CommentsSection';
 import { PeopleRail } from '@/components/feature/PeopleRail';
 import { morphStyle } from '@/lib/transitions';
+import { confettiBurst } from '@/lib/delight';
 import { VoteWidget } from '@/components/VoteWidget';
 
 function FeatureSkeleton() {
@@ -142,12 +143,13 @@ function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
           <HorizonBadge horizon={feature.horizon} />
           <Select
             value={feature.status}
-            onValueChange={(status) =>
+            onValueChange={(status) => {
+              if (status === 'shipped' && feature.status !== 'shipped') confettiBurst();
               updateFeature.mutate(
                 { id: feature.id, status: status as FeatureWithDocs['status'] },
                 { onError: () => toast.error(`Couldn't update '${feature.title}' — restored`) },
-              )
-            }
+              );
+            }}
           >
             <SelectTrigger aria-label="Status" className={pillTriggerClass}>
               <SelectValue />

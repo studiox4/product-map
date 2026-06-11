@@ -25,6 +25,7 @@ import { HORIZON_LABELS } from '@/components/HorizonBadge';
 import { STATUS_LABELS } from '@/components/StatusBadge';
 import { NewDocDialog } from '@/components/board/NewDocDialog';
 import { morphStyle } from '@/lib/transitions';
+import { confettiBurst } from '@/lib/delight';
 
 interface FeatureDetailPanelProps {
   featureId: string | null;
@@ -135,12 +136,13 @@ function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: 
           <Label className="text-xs font-medium text-muted-ink">Status</Label>
           <Select
             value={feature.status}
-            onValueChange={(status) =>
+            onValueChange={(status) => {
+              if (status === 'shipped' && feature.status !== 'shipped') confettiBurst();
               updateFeature.mutate(
                 { id: feature.id, status: status as FeatureWithDocs['status'] },
                 { onError: () => toast.error(`Couldn't update '${feature.title}' — restored`) },
-              )
-            }
+              );
+            }}
           >
             <SelectTrigger aria-label="Status" className={pillTriggerClass}>
               <SelectValue />
