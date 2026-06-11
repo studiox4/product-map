@@ -1,29 +1,53 @@
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { zValidator } from '@hono/zod-validator';
-import { asc, eq, gte } from 'drizzle-orm';
+import { and, asc, eq, gte, isNull } from 'drizzle-orm';
+import { z } from 'zod';
 import { generateDoc } from '@productmap/shared';
 import { db } from '../db';
-import { activity, features, users } from '@productmap/db';
-import { createAiClient, generateDocStream, generateDigestStream } from '../lib/ai';
+import { activity, features, templates, users } from '@productmap/db';
+import { createAiModel, generateDocStream, generateDigestStream, isAiEnabled } from '../lib/ai';
+
+const generateDocBody = generateDoc.extend({
+  templateId: z.string().uuid().optional(),
+});
 
 export const aiRoutes = new Hono()
-  .get('/status', (c) => c.json({ enabled: Boolean(process.env.ANTHROPIC_API_KEY) }))
-  .post('/generate-doc', zValidator('json', generateDoc), async (c) => {
-    const client = createAiClient();
-    if (!client) return c.json({ error: 'ai_disabled' }, 503);
+  .get('/status', (c) => c.json({ enabled: isAiEnabled() }))
+  .post('/generate-doc', zValidator('json', generateDocBody), async (c) => {
+    const model = createAiModel();
+    if (!model) return c.json({ error: 'ai_disabled' }, 503);
 
-    const { docType, featureId, brief } = c.req.valid('json');
+    const { docType, featureId, brief, templateId } = c.req.valid('json');
     const [feature] = await db.select().from(features).where(eq(features.id, featureId));
     if (!feature) return c.json({ error: 'not_found' }, 404);
+
+    // Resolve the DB template for prompt hints + skeleton: explicit templateId
+    // wins, otherwise the non-archived default for the doc type.
+    const [template] = templateId
+      ? await db.select().from(templates).where(eq(templates.id, templateId))
+      : await db
+          .select()
+          .from(templates)
+          .where(
+            and(
+              eq(templates.type, docType),
+              eq(templates.isDefault, true),
+              isNull(templates.archivedAt),
+            ),
+          );
+    if (templateId && !template) return c.json({ error: 'template_not_found' }, 404);
 
     return streamSSE(c, async (stream) => {
       try {
         for await (const text of generateDocStream({
-          docType,
           brief,
           feature: { title: feature.title, horizon: feature.horizon, status: feature.status },
-          client,
+          template: {
+            promptHints: template?.promptHints ?? '',
+            bodyMd: template?.bodyMd ?? '',
+          },
+          model,
         })) {
           await stream.writeSSE({ event: 'chunk', data: JSON.stringify({ text }) });
         }
@@ -39,8 +63,8 @@ export const aiRoutes = new Hono()
   })
   // POST /api/ai/digest → SSE stream summarizing the last 7 days of activity.
   .post('/digest', async (c) => {
-    const client = createAiClient();
-    if (!client) return c.json({ error: 'ai_disabled' }, 503);
+    const model = createAiModel();
+    if (!model) return c.json({ error: 'ai_disabled' }, 503);
 
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const rows = await db
@@ -62,7 +86,7 @@ export const aiRoutes = new Hono()
 
     return streamSSE(c, async (stream) => {
       try {
-        for await (const text of generateDigestStream({ events, client })) {
+        for await (const text of generateDigestStream({ events, model })) {
           await stream.writeSSE({ event: 'chunk', data: JSON.stringify({ text }) });
         }
         await stream.writeSSE({ event: 'done', data: '{}' });

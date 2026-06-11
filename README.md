@@ -38,7 +38,7 @@ Browse every document across the workspace: filter by type and status, search, s
 ![Docs page](docs/screenshots/docs-page.png)
 
 ### AI drafting (optional)
-With an `ANTHROPIC_API_KEY` set, an empty doc offers **Draft with AI**: describe the feature in a sentence and a complete, template-structured document streams into the editor. Without a key, the feature hides itself — everything else works fully offline.
+AI drafting runs on **Claude via Amazon Bedrock** (Vercel AI SDK). With AWS credentials available — any of `AWS_REGION`, `AWS_PROFILE`, or `AWS_ACCESS_KEY_ID` set, with the standard AWS credential chain (env vars, shared config/SSO profiles, or an IAM task role when running on ECS) resolving the rest — an empty doc offers **Draft with AI**: describe the feature in a sentence and a complete, template-structured document streams into the editor. Override the model with `BEDROCK_MODEL_ID` (defaults to `us.anthropic.claude-sonnet-4-5-20250929-v1:0`). Without credentials, the feature hides itself — everything else works fully offline.
 
 ### Markdown is always yours
 - Any doc → `Export .md`
@@ -65,7 +65,9 @@ Optional `.env` in `apps/api/`:
 
 ```bash
 DATABASE_URL=postgres://localhost:5432/productmap   # default shown
-ANTHROPIC_API_KEY=sk-ant-...                        # enables AI drafting
+AWS_REGION=us-east-1                                # enables AI drafting (Bedrock)
+AWS_PROFILE=my-profile                              # optional — any credential-chain source works
+BEDROCK_MODEL_ID=...                                # optional model override
 PORT=3411                                           # api port (default shown)
 ```
 
@@ -106,7 +108,7 @@ flowchart LR
     RT --> ACT --> PG
     RT --> MD
     RT --> UP
-    AI -->|"Anthropic API"| RT
+    AI -->|"Amazon Bedrock"| RT
 
     subgraph shared ["packages/"]
         SH["shared — types, zod, colors"]

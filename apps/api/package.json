@@ -9,7 +9,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.39.0",
+    "@ai-sdk/amazon-bedrock": "4.0.116",
+    "@aws-sdk/credential-providers": "3.1067.0",
     "@hono/node-server": "^1.13.7",
     "@hono/zod-validator": "^0.4.2",
     "@joplin/turndown-plugin-gfm": "^1.0.61",
@@ -28,6 +29,7 @@
     "@tiptap/extension-task-list": "^2.10.3",
     "@tiptap/html": "^2.10.3",
     "@tiptap/starter-kit": "^2.10.3",
+    "ai": "6.0.202",
     "archiver": "^7.0.1",
     "drizzle-orm": "^0.38.2",
     "hono": "^4.6.14",

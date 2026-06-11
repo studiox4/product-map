@@ -1,36 +1,38 @@
 import { beforeAll, beforeEach, afterAll, afterEach, describe, expect, it } from 'vitest';
-import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { fileURLToPath } from 'node:url';
-import { TEMPLATES } from '@productmap/templates';
-
-process.env.DATABASE_URL = 'postgres://localhost:5432/productmap_test';
+import { simulateReadableStream } from 'ai';
+import { MockLanguageModelV3 } from 'ai/test';
+import type { LanguageModelV3StreamPart } from '@ai-sdk/provider';
+import { eq } from 'drizzle-orm';
+import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
 
 const { app } = await import('../app');
-const { db, pool } = await import('../db');
-const { products, features, users, activity } = await import('@productmap/db');
-const { setAiClientFactory } = await import('../lib/ai');
-type AiClient = import('../lib/ai').AiClient;
+const { db } = await import('../db');
+const { products, features, users, activity, templates } = await import('@productmap/db');
+const { setAiModelFactory } = await import('../lib/ai');
 
-const migrationsFolder = fileURLToPath(
-  new URL('../../../../packages/db/migrations', import.meta.url),
-);
+const AWS_ENV = ['AWS_REGION', 'AWS_PROFILE', 'AWS_ACCESS_KEY_ID', 'BEDROCK_MODEL_ID'] as const;
+
+function clearAwsEnv() {
+  for (const key of AWS_ENV) delete process.env[key];
+}
 
 beforeAll(async () => {
-  await migrate(db, { migrationsFolder });
+  await setupTestDb();
 });
 
 beforeEach(async () => {
-  delete process.env.ANTHROPIC_API_KEY;
-  await db.execute('truncate table documents, features, products cascade' as never);
+  clearAwsEnv();
+  await truncateAll();
+  await db.execute('truncate table templates cascade' as never);
 });
 
 afterEach(() => {
-  setAiClientFactory(null);
-  delete process.env.ANTHROPIC_API_KEY;
+  setAiModelFactory(null);
+  clearAwsEnv();
 });
 
 afterAll(async () => {
-  await pool.end();
+  await closeTestDb();
 });
 
 async function seedFeature() {
@@ -45,35 +47,88 @@ async function seedFeature() {
   return feature;
 }
 
-function makeMockClient(captured: { params?: Record<string, unknown> }): AiClient {
-  return {
-    messages: {
-      stream(params: Record<string, unknown>) {
-        captured.params = params;
-        return (async function* () {
-          yield {
-            type: 'content_block_delta',
-            delta: { type: 'text_delta', text: '# Rich markdown editor\n\n' },
-          };
-          yield {
-            type: 'content_block_delta',
-            delta: { type: 'text_delta', text: '## Overview\n\nSome generated text.' },
-          };
-        })();
-      },
+const PRD_HINTS = 'Focus on user problems, success metrics, and crisp scope cuts.';
+const PRD_BODY = '# {{title}}\n\n## Overview\n\n## Goals\n\n## Requirements';
+
+async function seedTemplate(
+  overrides: Partial<typeof templates.$inferInsert> = {},
+): Promise<typeof templates.$inferSelect> {
+  const [row] = await db
+    .insert(templates)
+    .values({
+      type: 'prd',
+      name: 'PRD',
+      bodyJson: { type: 'doc', content: [] },
+      bodyMd: PRD_BODY,
+      promptHints: PRD_HINTS,
+      isDefault: true,
+      ...overrides,
+    })
+    .returning();
+  return row;
+}
+
+interface Captured {
+  system?: string;
+  user?: string;
+}
+
+function makeMockModel(captured: Captured) {
+  const deltas = ['# Rich markdown editor\n\n', '## Overview\n\nSome generated text.'];
+  return new MockLanguageModelV3({
+    doStream: async ({ prompt }) => {
+      captured.system = prompt
+        .filter((m) => m.role === 'system')
+        .map((m) => m.content as string)
+        .join('\n');
+      captured.user = prompt
+        .filter((m) => m.role === 'user')
+        .flatMap((m) =>
+          (m.content as Array<{ type: string; text?: string }>)
+            .filter((p) => p.type === 'text')
+            .map((p) => p.text ?? ''),
+        )
+        .join('\n');
+      const chunks: LanguageModelV3StreamPart[] = [
+        { type: 'stream-start', warnings: [] },
+        { type: 'text-start', id: '1' },
+        ...deltas.map(
+          (delta): LanguageModelV3StreamPart => ({ type: 'text-delta', id: '1', delta }),
+        ),
+        { type: 'text-end', id: '1' },
+        {
+          type: 'finish',
+          finishReason: { unified: 'stop', raw: undefined },
+          usage: {
+            inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
+            outputTokens: { total: 2, text: 2, reasoning: 0 },
+          },
+        },
+      ];
+      return { stream: simulateReadableStream({ chunks }) };
     },
-  } as unknown as AiClient;
+  });
+}
+
+function enableAi(captured: Captured = {}) {
+  process.env.AWS_REGION = 'us-east-1';
+  setAiModelFactory(() => makeMockModel(captured));
+  return captured;
 }
 
 describe('GET /api/ai/status', () => {
-  it('returns enabled:false when ANTHROPIC_API_KEY unset', async () => {
+  it('returns enabled:false when no AWS credentials are configured', async () => {
     const res = await app.request('/api/ai/status');
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ enabled: false });
   });
 
-  it('returns enabled:true when ANTHROPIC_API_KEY set', async () => {
-    process.env.ANTHROPIC_API_KEY = 'test';
+  it.each([
+    ['AWS_REGION', 'us-east-1'],
+    ['AWS_PROFILE', 'productmap'],
+    ['AWS_ACCESS_KEY_ID', 'AKIATEST'],
+  ])('returns enabled:true when %s is set', async (key, value) => {
+    process.env[key] = value;
     const res = await app.request('/api/ai/status');
     expect(await res.json()).toEqual({ enabled: true });
   });
@@ -88,11 +143,11 @@ describe('POST /api/ai/generate-doc', () => {
       body: JSON.stringify({ docType: 'prd', featureId: feature.id, brief: 'A great editor' }),
     });
     expect(res.status).toBe(503);
+    expect((await res.json()).error).toBe('ai_disabled');
   });
 
   it('400 on invalid body', async () => {
-    process.env.ANTHROPIC_API_KEY = 'test';
-    setAiClientFactory(() => makeMockClient({}));
+    enableAi();
     const res = await app.request('/api/ai/generate-doc', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -102,8 +157,7 @@ describe('POST /api/ai/generate-doc', () => {
   });
 
   it('404 on unknown feature', async () => {
-    process.env.ANTHROPIC_API_KEY = 'test';
-    setAiClientFactory(() => makeMockClient({}));
+    enableAi();
     const res = await app.request('/api/ai/generate-doc', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -116,11 +170,26 @@ describe('POST /api/ai/generate-doc', () => {
     expect(res.status).toBe(404);
   });
 
-  it('streams SSE chunk events then done, with full prompt passed to client', async () => {
-    process.env.ANTHROPIC_API_KEY = 'test';
-    const captured: { params?: Record<string, unknown> } = {};
-    setAiClientFactory(() => makeMockClient(captured));
+  it('404 on unknown templateId', async () => {
+    enableAi();
+    const feature = await seedFeature();
+    const res = await app.request('/api/ai/generate-doc', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        docType: 'prd',
+        featureId: feature.id,
+        brief: 'x',
+        templateId: '00000000-0000-4000-8000-000000000000',
+      }),
+    });
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toBe('template_not_found');
+  });
 
+  it('streams SSE chunk events then done, prompt assembled from the default DB template', async () => {
+    const captured = enableAi();
+    await seedTemplate();
     const feature = await seedFeature();
     const brief = 'An editor PMs will actually enjoy using';
     const res = await app.request('/api/ai/generate-doc', {
@@ -141,17 +210,58 @@ describe('POST /api/ai/generate-doc', () => {
     const firstData = /event: chunk\ndata: (.*)\n/.exec(text)?.[1];
     expect(JSON.parse(firstData!)).toEqual({ text: '# Rich markdown editor\n\n' });
 
-    // prompt assertions
-    const params = captured.params!;
-    expect(params.model).toBe('claude-sonnet-4-6');
-    expect(params.max_tokens).toBe(4000);
-    expect(params.system).toContain('clean markdown');
-    const messages = params.messages as Array<{ role: string; content: string }>;
-    const user = messages.find((m) => m.role === 'user')!.content;
-    expect(user).toContain(TEMPLATES.prd.promptHints);
-    expect(user).toContain(TEMPLATES.prd.markdownBody);
-    expect(user).toContain(brief);
-    expect(user).toContain('Rich markdown editor');
+    // prompt assertions — DB template prompt_hints + skeleton (AC7)
+    expect(captured.system).toContain('clean markdown');
+    expect(captured.user).toContain(PRD_HINTS);
+    expect(captured.user).toContain(PRD_BODY);
+    expect(captured.user).toContain(brief);
+    expect(captured.user).toContain('Rich markdown editor');
+  });
+
+  it('uses edited prompt_hints from the DB on the next generation (AC7)', async () => {
+    const captured = enableAi();
+    const tpl = await seedTemplate();
+    const feature = await seedFeature();
+    const editedHints = 'Always include an Open Questions section with at least three questions.';
+    await db.update(templates).set({ promptHints: editedHints }).where(eq(templates.id, tpl.id));
+
+    const res = await app.request('/api/ai/generate-doc', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ docType: 'prd', featureId: feature.id, brief: 'x' }),
+    });
+    expect(res.status).toBe(200);
+    await res.text();
+    expect(captured.user).toContain(editedHints);
+    expect(captured.user).not.toContain(PRD_HINTS);
+  });
+
+  it('explicit templateId wins over the default template', async () => {
+    const captured = enableAi();
+    await seedTemplate(); // default PRD
+    const custom = await seedTemplate({
+      name: 'Lightweight PRD',
+      isDefault: false,
+      promptHints: 'Keep it under one page.',
+      bodyMd: '# {{title}}\n\n## TL;DR',
+    });
+    const feature = await seedFeature();
+
+    const res = await app.request('/api/ai/generate-doc', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        docType: 'prd',
+        featureId: feature.id,
+        brief: 'x',
+        templateId: custom.id,
+      }),
+    });
+    expect(res.status).toBe(200);
+    await res.text();
+    expect(captured.user).toContain('Keep it under one page.');
+    expect(captured.user).toContain('## TL;DR');
+    expect(captured.user).not.toContain(PRD_HINTS);
   });
 });
 
@@ -163,10 +273,7 @@ describe('POST /api/ai/digest', () => {
   });
 
   it('streams SSE chunks then done, prompting only with last-7-days activity', async () => {
-    process.env.ANTHROPIC_API_KEY = 'test';
-    const captured: { params?: Record<string, unknown> } = {};
-    setAiClientFactory(() => makeMockClient(captured));
-
+    const captured = enableAi();
     const feature = await seedFeature();
     const [actor] = await db.insert(users).values({ name: 'Corban', color: '#2b557e' }).returning();
     const daysAgo = (n: number) => new Date(Date.now() - n * 24 * 60 * 60 * 1000);
@@ -194,15 +301,10 @@ describe('POST /api/ai/digest', () => {
     expect((text.match(/event: chunk/g) ?? []).length).toBeGreaterThanOrEqual(2);
     expect(text).toContain('event: done');
 
-    const params = captured.params!;
-    expect(params.model).toBe('claude-sonnet-4-6');
-    expect(params.system).toContain('digest');
-    const user = (params.messages as Array<{ role: string; content: string }>).find(
-      (m) => m.role === 'user',
-    )!.content;
-    expect(user).toContain('horizon_changed');
-    expect(user).toContain('Rich markdown editor');
-    expect(user).toContain('Corban');
-    expect(user).not.toContain('status_changed');
+    expect(captured.system).toContain('digest');
+    expect(captured.user).toContain('horizon_changed');
+    expect(captured.user).toContain('Rich markdown editor');
+    expect(captured.user).toContain('Corban');
+    expect(captured.user).not.toContain('status_changed');
   });
 });
