@@ -24,6 +24,8 @@ interface BoardColumnProps {
   isDropPulse?: boolean;
   /** Column position for the first-mount staggered fade-up (40ms steps). */
   staggerIndex?: number;
+  /** Card currently selected via j/k keyboard navigation (board-wide). */
+  activeCardId?: string | null;
 }
 
 export function BoardColumn({
@@ -33,6 +35,7 @@ export function BoardColumn({
   isDropTarget = false,
   isDropPulse = false,
   staggerIndex = 0,
+  activeCardId = null,
 }: BoardColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: horizon });
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -71,7 +74,21 @@ export function BoardColumn({
             </p>
           ) : (
             features.map((feature) => (
-              <FeatureCard key={feature.id} feature={feature} onOpen={onOpenFeature} />
+              <div
+                key={feature.id}
+                data-keynav-active={feature.id === activeCardId || undefined}
+                ref={(el) => {
+                  if (el && feature.id === activeCardId) {
+                    el.scrollIntoView?.({ block: 'nearest' });
+                  }
+                }}
+                className={cn(
+                  'rounded-xl',
+                  feature.id === activeCardId && 'ring-2 ring-ring',
+                )}
+              >
+                <FeatureCard feature={feature} onOpen={onOpenFeature} />
+              </div>
             ))
           )}
         </SortableContext>

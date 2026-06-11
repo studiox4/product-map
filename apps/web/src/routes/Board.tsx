@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   DndContext,
@@ -17,6 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { navigateWithTransition } from '@/lib/transitions';
+import { hasOpenOverlay, isEditableTarget } from '@/components/command/useGlobalShortcuts';
 
 export const BOARD_SORT_KEY = 'pmBoardSort';
 type BoardSort = 'manual' | 'score';
@@ -36,6 +37,15 @@ export default function Board() {
   const selectedId = searchParams.get('feature');
   const [sort, setSort] = useState<BoardSort>(getStoredSort);
   const [dragOverHorizon, setDragOverHorizon] = useState<Horizon | null>(null);
+  // Destination column header dot pulses briefly after a drop.
+  const [droppedHorizon, setDroppedHorizon] = useState<Horizon | null>(null);
+  const dropPulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const pulseDrop = (horizon: Horizon) => {
+    if (dropPulseTimer.current) clearTimeout(dropPulseTimer.current);
+    setDroppedHorizon(horizon);
+    dropPulseTimer.current = setTimeout(() => setDroppedHorizon(null), 500);
+  };
 
   const changeSort = (next: BoardSort) => {
     setSort(next);
@@ -86,6 +96,39 @@ export default function Board() {
     return features?.find((f) => f.id === overId)?.horizon ?? null;
   };
 
+  // j/k keyboard selection across the three columns (Now → Next → Later top
+  // to bottom), Enter opens the peek — quiet while typing or a dialog is open.
+  const [activeCardId, setActiveCardId] = useState<string | null>(null);
+  const keyNavRef = useRef({ ordered: [] as string[], activeCardId, openFeature });
+  keyNavRef.current = {
+    ordered: HORIZONS.flatMap((h) => columnFeatures(h).map((f) => f.id)),
+    activeCardId,
+    openFeature,
+  };
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (isEditableTarget(e.target) || hasOpenOverlay()) return;
+      const { ordered, activeCardId: active, openFeature: open } = keyNavRef.current;
+      if (ordered.length === 0) return;
+      if (e.key === 'j' || e.key === 'k') {
+        e.preventDefault();
+        const index = active ? ordered.indexOf(active) : -1;
+        const next =
+          e.key === 'j'
+            ? Math.min(index + 1, ordered.length - 1)
+            : Math.max(index - 1, 0);
+        setActiveCardId(ordered[next]);
+      } else if (e.key === 'Enter' && active && ordered.includes(active)) {
+        e.preventDefault();
+        open(active);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
   const handleDragOver = (event: DragOverEvent) => {
     setDragOverHorizon(resolveHorizon(event.over?.id));
   };
@@ -97,7 +140,9 @@ export default function Board() {
     const feature = features.find((f) => f.id === active.id);
     if (!feature) return;
     const target = resolveHorizon(over.id);
-    if (!target || target === feature.horizon) return;
+    if (!target) return;
+    pulseDrop(target);
+    if (target === feature.horizon) return;
     updateFeature.mutate(
       { id: feature.id, horizon: target },
       {
@@ -174,13 +219,16 @@ export default function Board() {
         onDragCancel={() => setDragOverHorizon(null)}
       >
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          {HORIZONS.map((horizon) => (
+          {HORIZONS.map((horizon, i) => (
             <BoardColumn
               key={horizon}
               horizon={horizon}
               features={columnFeatures(horizon)}
               onOpenFeature={openFeature}
               isDropTarget={dragOverHorizon === horizon}
+              isDropPulse={droppedHorizon === horizon}
+              staggerIndex={i}
+              activeCardId={activeCardId}
             />
           ))}
         </div>

@@ -1,8 +1,13 @@
+import { useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
-import { Map } from 'lucide-react';
+import { Map, Search } from 'lucide-react';
 import { Toaster } from '@/components/ui/sonner';
 import ThemeToggle from '@/components/ThemeToggle';
 import WelcomeDialog from '@/components/WelcomeDialog';
+import CommandPalette from '@/components/command/CommandPalette';
+import ShortcutsOverlay from '@/components/command/ShortcutsOverlay';
+import { useGlobalShortcuts } from '@/components/command/useGlobalShortcuts';
+import { useTrackRecents } from '@/components/command/recents';
 import { cn } from '@/lib/utils';
 
 const NAV_LINKS = [
@@ -12,7 +17,19 @@ const NAV_LINKS = [
   { to: '/roadmap', label: 'Roadmap', end: false },
 ];
 
+const isMac =
+  typeof navigator !== 'undefined' && /Mac|iP(hone|ad|od)/.test(navigator.platform);
+
 export function AppShell() {
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+
+  useGlobalShortcuts({
+    onTogglePalette: () => setPaletteOpen((o) => !o),
+    onToggleShortcuts: () => setShortcutsOpen((o) => !o),
+  });
+  useTrackRecents();
+
   return (
     <div className="min-h-screen text-foreground">
       <header className="bg-transparent">
@@ -43,7 +60,19 @@ export function AppShell() {
               </NavLink>
             ))}
           </div>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPaletteOpen(true)}
+              className="flex items-center gap-2 rounded-full px-3 py-1.5 text-sm text-muted-ink outline-none transition-colors duration-150 ease-out hover:bg-surface/60 hover:text-ink focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Open command palette"
+            >
+              <Search className="h-3.5 w-3.5" aria-hidden />
+              <span className="hidden sm:inline">Search</span>
+              <kbd className="hidden rounded-md bg-surface px-1.5 py-0.5 text-[11px] font-medium text-muted-ink shadow-sm-card sm:inline">
+                {isMac ? '⌘K' : 'Ctrl K'}
+              </kbd>
+            </button>
             <ThemeToggle />
           </div>
         </nav>
@@ -53,6 +82,8 @@ export function AppShell() {
       </main>
       <Toaster position="bottom-right" />
       <WelcomeDialog />
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+      <ShortcutsOverlay open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </div>
   );
 }

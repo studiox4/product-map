@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { DocStatus } from '@productmap/shared';
@@ -24,6 +24,7 @@ import { Editor } from '@/components/editor/Editor';
 import { EditorToolbar } from '@/components/editor/EditorToolbar';
 import { useAutosave } from '@/components/editor/useAutosave';
 import { morphName } from '@/lib/transitions';
+import { TOGGLE_COMMENTS_EVENT } from '@/components/command/useGlobalShortcuts';
 
 function DocSkeleton() {
   return (
@@ -55,6 +56,14 @@ export default function DocPage() {
     updateDocument;
 
   const [commentsOpen, setCommentsOpen] = useState(false);
+
+  // The ⌘K palette's "Toggle comments" action broadcasts this window event.
+  useEffect(() => {
+    const handler = () => setCommentsOpen((open) => !open);
+    window.addEventListener(TOGGLE_COMMENTS_EVENT, handler);
+    return () => window.removeEventListener(TOGGLE_COMMENTS_EVENT, handler);
+  }, []);
+
   const commentsQuery = useComments({ documentId: id });
   const unresolvedCount =
     commentsQuery.data?.filter((t) => t.resolvedAt === null).length ?? 0;
