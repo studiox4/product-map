@@ -20,6 +20,7 @@ export const documentCreate = z.object({
   type: z.enum(DOC_TYPES),
   title: z.string().min(1).max(200),
   fromTemplate: z.boolean().default(true),
+  templateId: z.string().uuid().optional(),
 });
 export const documentUpdate = z.object({
   title: z.string().min(1).max(200).optional(),
@@ -37,6 +38,7 @@ export const userCreate = z.object({
 });
 export const userUpdate = z.object({
   name: z.string().min(1).max(80).optional(),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
 });
 export const collaboratorsPut = z.object({
   userIds: z.array(z.string().uuid()),
@@ -56,6 +58,22 @@ export const resolveBody = z.object({
 });
 export const voteBody = z.object({
   value: z.union([z.literal(1), z.literal(-1), z.literal(0)]),
+});
+export const templateCreate = z.object({
+  type: z.enum(DOC_TYPES),
+  name: z.string().min(1).max(120),
+  description: z.string().max(500).optional(),
+  bodyJson: z.record(z.unknown()).optional(),  // Tiptap doc JSON; empty body allowed
+  promptHints: z.string().max(4000).optional(),
+});
+export const templateUpdate = z.object({
+  name: z.string().min(1).max(120).optional(),
+  description: z.string().max(500).optional(),
+  bodyJson: z.record(z.unknown()).optional(),  // server derives body_md
+  promptHints: z.string().max(4000).optional(),
+});
+export const archiveBody = z.object({
+  archived: z.boolean(),
 });
 export const generateDoc = z.object({
   docType: z.enum(DOC_TYPES),

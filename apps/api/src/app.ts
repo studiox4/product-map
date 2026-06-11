@@ -9,6 +9,8 @@ import { overviewRoutes } from './routes/overview';
 import { aiRoutes } from './routes/ai';
 import { usersRoutes } from './routes/users';
 import { commentsRoutes } from './routes/comments';
+import { templatesRoutes } from './routes/templates';
+import { adminRoutes } from './routes/admin';
 
 export const app = new Hono()
   .get('/api/healthz', (c) => c.json({ ok: true }))
@@ -21,7 +23,9 @@ export const app = new Hono()
   .route('/api', exportRoutes)
   .route('/api/uploads', uploadsRoutes)
   .route('/api/overview', overviewRoutes)
-  .route('/api/ai', aiRoutes);
+  .route('/api/ai', aiRoutes)
+  .route('/api/templates', templatesRoutes)
+  .route('/api/admin', adminRoutes);
 
 app.notFound((c) => c.json({ error: 'not_found' }, 404));
 

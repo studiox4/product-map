@@ -1,13 +1,12 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 import archiver from 'archiver';
 import { documentCreate, documentUpdate } from '@productmap/shared';
-import { TEMPLATES } from '@productmap/templates';
-import { documents, features } from '@productmap/db';
+import { documents, features, templates } from '@productmap/db';
 import type { Context } from 'hono';
 import { db } from '../db';
-import { markdownToTiptap, tiptapToMarkdown } from '../lib/markdown';
+import { tiptapToMarkdown } from '../lib/markdown';
 import { currentUser, type CurrentUserEnv } from '../middleware/current-user';
 import { recordActivity, addCollaborator } from '../lib/activity';
 
@@ -83,11 +82,33 @@ export const documentsRoutes = new Hono<CurrentUserEnv>()
     const [feature] = await db.select().from(features).where(eq(features.id, body.featureId));
     if (!feature) return c.json({ error: 'not_found' }, 404);
 
+    // Template resolution: explicit templateId → that template; else the
+    // default DB template for the doc type; fromTemplate:false → blank.
+    let template: typeof templates.$inferSelect | undefined;
+    if (body.templateId) {
+      [template] = await db.select().from(templates).where(eq(templates.id, body.templateId));
+      if (!template) return c.json({ error: 'not_found' }, 404);
+    } else if (body.fromTemplate) {
+      [template] = await db
+        .select()
+        .from(templates)
+        .where(
+          and(
+            eq(templates.type, body.type),
+            eq(templates.isDefault, true),
+            isNull(templates.archivedAt),
+          ),
+        );
+    }
     let contentJson: unknown = EMPTY_DOC;
     let contentMd = '';
-    if (body.fromTemplate) {
-      contentMd = TEMPLATES[body.type].markdownBody.replaceAll('{{title}}', body.title);
-      contentJson = markdownToTiptap(contentMd);
+    if (template) {
+      contentMd = template.bodyMd.replaceAll('{{title}}', body.title);
+      // Replace inside JSON text nodes; escape the title for JSON string context.
+      const escapedTitle = JSON.stringify(body.title).slice(1, -1);
+      contentJson = JSON.parse(
+        JSON.stringify(template.bodyJson).replaceAll('{{title}}', escapedTitle),
+      );
     }
     const user = c.get('currentUser');
     const [row] = await db

@@ -35,12 +35,15 @@ export const usersRoutes = new Hono()
     async (c) => {
       const id = c.req.param('id');
       const updates = c.req.valid('json');
-      if (updates.name === undefined) {
+      const set: Partial<typeof users.$inferInsert> = {};
+      if (updates.name !== undefined) set.name = updates.name;
+      if (updates.color !== undefined) set.color = updates.color;
+      if (Object.keys(set).length === 0) {
         const [existing] = await db.select().from(users).where(eq(users.id, id));
         if (!existing) return c.json({ error: 'not_found' }, 404);
         return c.json(existing);
       }
-      const [row] = await db.update(users).set(updates).where(eq(users.id, id)).returning();
+      const [row] = await db.update(users).set(set).where(eq(users.id, id)).returning();
       if (!row) return c.json({ error: 'not_found' }, 404);
       return c.json(row);
     },

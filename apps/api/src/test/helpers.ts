@@ -48,7 +48,7 @@ export async function setupTestDb(): Promise<void> {
 /** Wipe all rows from every table. Call in beforeEach. */
 export async function truncateAll(): Promise<void> {
   await getPool().query(
-    'truncate table comments, votes, activity, feature_collaborators, uploads, documents, features, products, users cascade',
+    'truncate table comments, votes, activity, feature_collaborators, uploads, documents, features, products, templates, users cascade',
   );
 }
 

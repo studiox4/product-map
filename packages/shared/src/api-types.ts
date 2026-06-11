@@ -39,6 +39,12 @@ export interface DatesChangedPayload {
   to: { startDate: string | null; endDate: string | null };
 }
 export interface DocumentFull extends DocumentMeta { contentJson: unknown; contentMd: string; }
+export interface Template {
+  id: string; type: DocType; name: string; description: string;
+  bodyJson: unknown; bodyMd: string; promptHints: string;
+  isDefault: boolean; archivedAt: string | null;
+  createdBy: string | null; createdAt: string; updatedAt: string;
+}
 export interface FeatureWithDocs extends Feature { documents: DocumentMeta[]; }
 export interface Comment {
   id: string; authorId: string; authorName: string; authorColor: string;

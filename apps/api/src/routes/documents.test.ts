@@ -3,7 +3,7 @@
 import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { products, features, users, activity, featureCollaborators } from '@productmap/db';
+import { products, features, users, activity, featureCollaborators, templates } from '@productmap/db';
 import { asc, eq } from 'drizzle-orm';
 import AdmZip from 'adm-zip';
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
@@ -11,6 +11,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 let productId: string;
 let featureId: string;
 let userId: string;
+let defaultTemplateId: string;
 
 beforeAll(async () => {
   await setupTestDb();
@@ -34,6 +35,27 @@ beforeEach(async () => {
   featureId = feature.id;
   const [u] = await db.insert(users).values({ name: 'Corban', color: '#2b557e' }).returning();
   userId = u.id;
+  // Default PRD template in the DB — doc creation resolves templates from here.
+  const [tpl] = await db
+    .insert(templates)
+    .values({
+      type: 'prd',
+      name: 'Product requirements (PRD)',
+      description: 'Built-in PRD skeleton',
+      bodyJson: {
+        type: 'doc',
+        content: [
+          { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: '{{title}}' }] },
+          { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Overview' }] },
+          { type: 'paragraph', content: [{ type: 'text', text: 'What is this and why now?' }] },
+        ],
+      },
+      bodyMd: '# {{title}}\n\n## Overview\n\nWhat is this and why now?',
+      promptHints: 'Write a crisp PRD.',
+      isDefault: true,
+    })
+    .returning();
+  defaultTemplateId = tpl.id;
 });
 
 async function activityRows() {
@@ -87,6 +109,52 @@ describe('POST /api/documents', () => {
     expect(body.contentJson.type).toBe('doc');
     expect(body.contentJson.content ?? []).toHaveLength(0);
     expect(body.contentMd).toBe('');
+  });
+
+  it('uses an explicit templateId over the type default', async () => {
+    const [custom] = await db
+      .insert(templates)
+      .values({
+        type: 'prd',
+        name: 'Lightweight PRD',
+        bodyJson: {
+          type: 'doc',
+          content: [
+            { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: '{{title}}' }] },
+            { type: 'paragraph', content: [{ type: 'text', text: 'Lightweight skeleton body.' }] },
+          ],
+        },
+        bodyMd: '# {{title}}\n\nLightweight skeleton body.',
+        isDefault: false,
+      })
+      .returning();
+    const res = await createDoc({ templateId: custom.id });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.contentMd).toContain('Lightweight skeleton body.');
+    expect(body.contentMd).toContain('Editor PRD');
+    expect(body.contentMd).not.toContain('{{title}}');
+    expect(JSON.stringify(body.contentJson)).toContain('Lightweight skeleton body.');
+    expect(JSON.stringify(body.contentJson)).not.toContain('{{title}}');
+  });
+
+  it('falls back to the DB default template for the type when no templateId is given', async () => {
+    const res = await createDoc();
+    const body = await res.json();
+    expect(body.contentMd).toBe('# Editor PRD\n\n## Overview\n\nWhat is this and why now?');
+  });
+
+  it('skips archived default templates (creates blank)', async () => {
+    // Force-archive the default directly (API forbids it; resolution must still be safe).
+    await db.update(templates).set({ archivedAt: new Date() }).where(eq(templates.id, defaultTemplateId));
+    const res = await createDoc();
+    const body = await res.json();
+    expect(body.contentMd).toBe('');
+  });
+
+  it('404 for unknown templateId', async () => {
+    const res = await createDoc({ templateId: '00000000-0000-0000-0000-000000000000' });
+    expect(res.status).toBe(404);
   });
 
   it('attributes creation, records doc_created activity and adds collaborator', async () => {

@@ -11,6 +11,8 @@ import {
   pgEnum,
   primaryKey,
   check,
+  boolean,
+  uniqueIndex,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 
@@ -108,6 +110,27 @@ export const votes = pgTable(
   (t) => [
     primaryKey({ columns: [t.userId, t.featureId] }),
     check('votes_value_check', sql`${t.value} IN (1, -1)`),
+  ],
+);
+export const templates = pgTable(
+  'templates',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    type: docTypeEnum('type').notNull(),
+    name: text('name').notNull(),
+    description: text('description').notNull().default(''),
+    bodyJson: jsonb('body_json').notNull(),
+    bodyMd: text('body_md').notNull(),
+    promptHints: text('prompt_hints').notNull().default(''),
+    isDefault: boolean('is_default').notNull().default(false),
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // Exactly one default per doc type.
+    uniqueIndex('templates_default_per_type').on(t.type).where(sql`${t.isDefault}`),
   ],
 );
 export const uploads = pgTable('uploads', {

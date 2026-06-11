@@ -75,6 +75,33 @@ describe('PATCH /api/users/:id', () => {
     expect(body.color).toBe(user.color);
   });
 
+  it('changes the avatar color from the palette', async () => {
+    const user = await (await app.request('/api/users', json('POST', { name: 'Ada' }))).json();
+    const color = USER_COLORS[3];
+    const res = await app.request(`/api/users/${user.id}`, json('PATCH', { color }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.color).toBe(color);
+    expect(body.name).toBe('Ada');
+  });
+
+  it('updates name and color together', async () => {
+    const user = await (await app.request('/api/users', json('POST', { name: 'Ada' }))).json();
+    const res = await app.request(
+      `/api/users/${user.id}`,
+      json('PATCH', { name: 'Ada L', color: '#0e7490' }),
+    );
+    const body = await res.json();
+    expect(body.name).toBe('Ada L');
+    expect(body.color).toBe('#0e7490');
+  });
+
+  it('400 on a non-hex color', async () => {
+    const user = await (await app.request('/api/users', json('POST', { name: 'Ada' }))).json();
+    const res = await app.request(`/api/users/${user.id}`, json('PATCH', { color: 'tomato' }));
+    expect(res.status).toBe(400);
+  });
+
   it('404 on unknown id', async () => {
     const res = await app.request(
       '/api/users/00000000-0000-4000-8000-000000000000',
