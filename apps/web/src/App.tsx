@@ -11,6 +11,7 @@ const RoadmapPage = lazy(() => import('@/routes/Roadmap'));
 const DocPage = lazy(() => import('@/routes/Doc'));
 const DocsPage = lazy(() => import('@/routes/DocsPage'));
 const FeaturePage = lazy(() => import('@/routes/FeaturePage'));
+const ReaderView = lazy(() => import('@/components/editor/ReaderView'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -79,6 +80,15 @@ export default function App() {
               }
             />
           </Route>
+          {/* Chrome-free reader view (spec 2.3) — outside AppShell on purpose. */}
+          <Route
+            path="/docs/:id/read"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <ReaderView />
+              </Suspense>
+            }
+          />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>

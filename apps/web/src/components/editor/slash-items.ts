@@ -11,6 +11,8 @@ import {
   Quote,
   Image as ImageIcon,
   Minus,
+  Lightbulb,
+  ChevronsDownUp,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -98,6 +100,22 @@ export const SLASH_ITEMS: SlashItem[] = [
     icon: Code2,
     command: ({ editor, range }) =>
       editor.chain().focus().deleteRange(range).toggleCodeBlock().run(),
+  },
+  {
+    title: 'Callout',
+    description: 'Tinted card with an emoji',
+    keywords: ['callout', 'info', 'note', 'tip', 'warning'],
+    icon: Lightbulb,
+    command: ({ editor, range }) =>
+      editor.chain().focus().deleteRange(range).insertCallout().run(),
+  },
+  {
+    title: 'Toggle',
+    description: 'Collapsible section',
+    keywords: ['toggle', 'collapse', 'details', 'accordion', 'expand'],
+    icon: ChevronsDownUp,
+    command: ({ editor, range }) =>
+      editor.chain().focus().deleteRange(range).insertToggle().run(),
   },
   {
     title: 'Quote',

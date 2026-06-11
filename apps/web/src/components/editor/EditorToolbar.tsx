@@ -1,6 +1,15 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Check, Download, Loader2, MessageCircle, TriangleAlert } from 'lucide-react';
+import {
+  ArrowLeft,
+  BookOpen,
+  Check,
+  Download,
+  Loader2,
+  MessageCircle,
+  MoreHorizontal,
+  TriangleAlert,
+} from 'lucide-react';
 import { DOC_STATUSES, type DocStatus } from '@productmap/shared';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,7 +19,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import type { AutosaveState } from './useAutosave';
+import { CoverPicker } from './CoverPicker';
 
 const STATUS_LABELS: Record<DocStatus, string> = {
   draft: 'Draft',
@@ -35,6 +53,21 @@ export interface EditorToolbarProps {
   onToggleComments?: () => void;
   /** view-transition-name for the title (morph pair with the docs table row title). */
   titleTransitionName?: string;
+  /** Word count for the meta line (reading time derived at ~200wpm). */
+  wordCount?: number;
+  /** Current cover gradient key (null = none). */
+  cover?: string | null;
+  onCoverChange?: (cover: string | null) => void;
+  /** Reader view route for this doc (renders the ⋯ menu entry). */
+  readerHref?: string;
+}
+
+/** "1,240 words · 6 min read" at ~200 wpm; minimum 1 min when non-empty. */
+export function formatReadingMeta(wordCount: number): string {
+  const words = `${wordCount.toLocaleString()} word${wordCount === 1 ? '' : 's'}`;
+  if (wordCount === 0) return words;
+  const minutes = Math.max(1, Math.round(wordCount / 200));
+  return `${words} · ${minutes} min read`;
 }
 
 function SaveIndicator({ state }: { state: AutosaveState }) {
@@ -70,6 +103,10 @@ export function EditorToolbar({
   commentCount = 0,
   onToggleComments,
   titleTransitionName,
+  wordCount,
+  cover,
+  onCoverChange,
+  readerHref,
 }: EditorToolbarProps) {
   const [draftTitle, setDraftTitle] = useState(title);
   useEffect(() => setDraftTitle(title), [title]);
@@ -147,7 +184,45 @@ export function EditorToolbar({
             Export .md
           </a>
         </Button>
+        {readerHref || onCoverChange ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="More options"
+                className="shrink-0 rounded-full text-body-ink"
+              >
+                <MoreHorizontal className="h-4 w-4" aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              {readerHref ? (
+                <DropdownMenuItem asChild>
+                  <Link to={readerHref}>
+                    <BookOpen className="mr-2 h-4 w-4" aria-hidden />
+                    Reader view
+                  </Link>
+                </DropdownMenuItem>
+              ) : null}
+              {readerHref && onCoverChange ? <DropdownMenuSeparator /> : null}
+              {onCoverChange ? (
+                <>
+                  <DropdownMenuLabel className="text-xs font-medium text-muted-ink">
+                    Cover
+                  </DropdownMenuLabel>
+                  <CoverPicker value={cover ?? null} onChange={onCoverChange} />
+                </>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
       </div>
+      {typeof wordCount === 'number' ? (
+        <p className="mt-2 px-4 text-xs text-muted-ink">
+          {formatReadingMeta(wordCount)}
+        </p>
+      ) : null}
       {saveState === 'error' ? (
         <div
           role="alert"

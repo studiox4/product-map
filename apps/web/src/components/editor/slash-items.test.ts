@@ -13,6 +13,8 @@ describe('slash-items', () => {
       'Task list',
       'Table',
       'Code block',
+      'Callout',
+      'Toggle',
       'Quote',
       'Image',
       'Divider',

@@ -22,6 +22,8 @@ import {
 import { CommentsSection } from '@/components/comments/CommentsSection';
 import { Editor } from '@/components/editor/Editor';
 import { EditorToolbar } from '@/components/editor/EditorToolbar';
+import { coverCss } from '@/components/editor/CoverPicker';
+import { countWords } from '@/components/editor/word-count';
 import { useAutosave } from '@/components/editor/useAutosave';
 import { morphName } from '@/lib/transitions';
 import { TOGGLE_COMMENTS_EVENT } from '@/components/command/useGlobalShortcuts';
@@ -56,6 +58,11 @@ export default function DocPage() {
     updateDocument;
 
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [wordCount, setWordCount] = useState<number | null>(null);
+
+  // Seed the word count from the loaded doc; live updates come from editor changes.
+  const liveWordCount =
+    wordCount ?? (doc ? countWords(doc.contentJson) : 0);
 
   // The ⌘K palette's "Toggle comments" action broadcasts this window event.
   useEffect(() => {
@@ -78,7 +85,10 @@ export default function DocPage() {
   const { schedule, flush } = autosave;
 
   const handleEditorChange = useCallback(
-    (json: Record<string, unknown>) => schedule(json),
+    (json: Record<string, unknown>) => {
+      setWordCount(countWords(json));
+      schedule(json);
+    },
     [schedule],
   );
 
@@ -123,6 +133,16 @@ export default function DocPage() {
     [id, patchDocumentFireAndForget],
   );
 
+  const handleCoverChange = useCallback(
+    (cover: string | null) => {
+      patchDocumentFireAndForget(
+        { id, cover },
+        { onError: () => toast.error("Couldn't update the cover") },
+      );
+    },
+    [id, patchDocumentFireAndForget],
+  );
+
   const aiConfig = useMemo(
     () => (doc ? { featureId: doc.featureId, docType: doc.type } : undefined),
     [doc],
@@ -150,9 +170,18 @@ export default function DocPage() {
   }
 
   const feature = featureQuery.data;
+  const cover = coverCss(doc.cover);
 
   return (
     <div className="mx-auto w-full max-w-[860px] px-4 pb-16 pt-6 sm:px-6">
+      {cover ? (
+        <div
+          aria-hidden
+          data-testid="doc-cover"
+          className="mb-4 h-28 w-full rounded-2xl shadow-card sm:h-32"
+          style={{ background: cover }}
+        />
+      ) : null}
       <EditorToolbar
         backHref={`/board?feature=${doc.featureId}`}
         backLabel={feature?.title ?? 'Back to board'}
@@ -166,6 +195,10 @@ export default function DocPage() {
         commentCount={unresolvedCount}
         onToggleComments={() => setCommentsOpen((open) => !open)}
         titleTransitionName={morphName('doc-title', doc.id)}
+        wordCount={liveWordCount}
+        cover={doc.cover ?? null}
+        onCoverChange={handleCoverChange}
+        readerHref={`/docs/${doc.id}/read`}
       />
       <Editor
         key={doc.id}

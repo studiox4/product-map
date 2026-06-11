@@ -16,6 +16,10 @@ import type { DocType } from '@productmap/shared';
 import { cn } from '@/lib/utils';
 import { SlashCommand } from './SlashMenu';
 import { AiDraftCard } from './AiDraftCard';
+import { CalloutNode } from './CalloutNode';
+import { TOGGLE_EXTENSIONS } from './ToggleNode';
+import { BlockDragHandle } from './BlockDragHandle';
+import { TocRail } from './TocRail';
 
 export interface EditorProps {
   /** Tiptap doc JSON — read once on mount. */
@@ -35,8 +39,24 @@ function docHasText(editor: TiptapEditor): boolean {
   return editor.state.doc.textContent.trim().length > 0;
 }
 
+/** Tiptap content extensions shared with the read-only ReaderView.
+ *  Schema must stay in sync with apps/api/src/lib/tiptap-extensions.ts. */
+export const CONTENT_EXTENSIONS = [
+  StarterKit,
+  Table.configure({ resizable: true }),
+  TableRow,
+  TableCell,
+  TableHeader,
+  TaskList,
+  TaskItem.configure({ nested: true }),
+  Image,
+  Link.configure({ openOnClick: false }),
+  CalloutNode,
+  ...TOGGLE_EXTENSIONS,
+];
+
 /** Typography for ProseMirror content — scoped here since the app has no tailwind typography plugin. */
-const PROSE_CLASSES = cn(
+export const PROSE_CLASSES = cn(
   'min-h-[60vh] text-[16px] leading-[1.7] text-body-ink focus:outline-none',
   '[&_.ProseMirror]:min-h-[60vh] [&_.ProseMirror]:outline-none',
   '[&_h1]:mt-10 [&_h1]:font-display [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:tracking-tight [&_h1]:text-ink [&_h1:first-child]:mt-0',
@@ -74,6 +94,7 @@ export const Editor = memo(function Editor({
   onAiDone,
 }: EditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const surfaceRef = useRef<HTMLDivElement>(null);
   const [isEmpty, setIsEmpty] = useState(false);
   const [aiStreaming, setAiStreaming] = useState(false);
 
@@ -92,15 +113,7 @@ export const Editor = memo(function Editor({
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
-      Table.configure({ resizable: true }),
-      TableRow,
-      TableCell,
-      TableHeader,
-      TaskList,
-      TaskItem.configure({ nested: true }),
-      Image,
-      Link.configure({ openOnClick: false }),
+      ...CONTENT_EXTENSIONS,
       Placeholder.configure({ placeholder: "Type '/' for commands…" }),
       SlashCommand.configure({
         pickImage: () => fileInputRef.current?.click(),
@@ -172,7 +185,12 @@ export const Editor = memo(function Editor({
     aiEnabled && !!aiConfig && !!editor && (isEmpty || aiStreaming);
 
   return (
-    <div className="rounded-2xl border border-transparent bg-surface px-6 py-12 shadow-card sm:px-14">
+    <div
+      ref={surfaceRef}
+      className="relative rounded-2xl border border-transparent bg-surface px-6 py-12 shadow-card sm:px-14"
+    >
+      <BlockDragHandle editor={editor} containerRef={surfaceRef} />
+      <TocRail editor={editor} />
       {showAiCard ? (
         <div className="mb-6">
           <AiDraftCard

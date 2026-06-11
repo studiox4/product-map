@@ -92,6 +92,75 @@ describe('markdown <-> tiptap round trip', () => {
     expect(normalize(roundTrip(md))).toBe(normalize(md));
   });
 
+  it('callout round-trips as an emoji-leading blockquote', () => {
+    const md = '> 💡 Remember to ship the cover band.';
+    const doc = markdownToTiptap(md) as { content: Array<{ type: string; attrs?: { emoji?: string } }> };
+    expect(doc.content[0].type).toBe('callout');
+    expect(doc.content[0].attrs?.emoji).toBe('💡');
+    const out = normalize(roundTrip(md));
+    expect(out).toBe(normalize(md));
+  });
+
+  it('callout with a non-default emoji and multiple paragraphs round-trips', () => {
+    const md = ['> ⚠️ Heads up about the migration.', '>', '> It renames a column.'].join('\n');
+    const doc = markdownToTiptap(md) as { content: Array<{ type: string; attrs?: { emoji?: string }; content?: unknown[] }> };
+    expect(doc.content[0].type).toBe('callout');
+    expect(doc.content[0].attrs?.emoji).toBe('⚠️');
+    expect(doc.content[0].content).toHaveLength(2);
+    const out = normalize(roundTrip(md));
+    expect(out).toContain('> ⚠️ Heads up about the migration.');
+    expect(out).toContain('> It renames a column.');
+    expect(normalize(tiptapToMarkdown(markdownToTiptap(out)))).toBe(out);
+  });
+
+  it('plain blockquote (no emoji) stays a blockquote', () => {
+    const md = '> wisdom lives here';
+    const doc = markdownToTiptap(md) as { content: Array<{ type: string }> };
+    expect(doc.content[0].type).toBe('blockquote');
+    expect(normalize(roundTrip(md))).toBe(normalize(md));
+  });
+
+  it('toggle round-trips via details/summary HTML passthrough', () => {
+    const doc = {
+      type: 'doc',
+      content: [
+        {
+          type: 'toggle',
+          attrs: { open: true },
+          content: [
+            { type: 'toggleSummary', content: [{ type: 'text', text: 'Rollout plan' }] },
+            {
+              type: 'toggleContent',
+              content: [
+                { type: 'paragraph', content: [{ type: 'text', text: 'Phase one is internal.' }] },
+                { type: 'paragraph', content: [{ type: 'text', text: 'Phase two is everyone.' }] },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const md = tiptapToMarkdown(doc);
+    expect(md).toContain('<details');
+    expect(md).toContain('<summary>Rollout plan</summary>');
+    const back = markdownToTiptap(md) as { content: Array<{ type: string; content?: Array<{ type: string; content?: Array<{ type: string }> }> }> };
+    expect(back.content[0].type).toBe('toggle');
+    expect(back.content[0].content?.[0].type).toBe('toggleSummary');
+    expect(back.content[0].content?.[1].type).toBe('toggleContent');
+    expect(back.content[0].content?.[1].content).toHaveLength(2);
+    // serializing again is stable
+    expect(normalize(tiptapToMarkdown(back))).toBe(normalize(md));
+  });
+
+  it('hand-authored details/summary markdown parses into a toggle', () => {
+    const md = '<details><summary>FAQ</summary><p>It depends.</p></details>';
+    const doc = markdownToTiptap(md) as { content: Array<{ type: string }> };
+    expect(doc.content[0].type).toBe('toggle');
+    const out = roundTrip(md);
+    expect(out).toContain('<summary>FAQ</summary>');
+    expect(out).toContain('It depends.');
+  });
+
   it('markdownToTiptap("") returns an empty doc node', () => {
     const doc = markdownToTiptap('') as { type: string; content?: unknown[] };
     expect(doc.type).toBe('doc');
