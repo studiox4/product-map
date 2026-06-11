@@ -16,6 +16,7 @@ import {
   Plus,
   Puzzle,
   Download,
+  Settings,
   Sun,
 } from 'lucide-react';
 import {
@@ -59,6 +60,7 @@ const NAV_TARGETS = [
   { to: '/board', label: 'Board', icon: Columns3 },
   { to: '/roadmap', label: 'Roadmap', icon: GanttChart },
   { to: '/docs', label: 'Docs', icon: Library },
+  { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
 const THEME_OPTIONS: { theme: Theme; label: string; icon: typeof Sun }[] = [

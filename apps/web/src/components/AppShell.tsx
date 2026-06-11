@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
-import { Map, Search } from 'lucide-react';
+import { Map, Search, Settings } from 'lucide-react';
 import { Toaster } from '@/components/ui/sonner';
 import ThemeToggle from '@/components/ThemeToggle';
 import WelcomeDialog from '@/components/WelcomeDialog';
@@ -74,6 +74,21 @@ export function AppShell() {
               </kbd>
             </button>
             <ThemeToggle />
+            <NavLink
+              to="/settings"
+              aria-label="Settings"
+              title="Settings"
+              className={({ isActive }) =>
+                cn(
+                  'flex h-8 w-8 items-center justify-center rounded-full outline-none transition-all duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring',
+                  isActive
+                    ? 'bg-surface text-ink shadow-card'
+                    : 'text-body-ink hover:bg-surface/60 hover:text-ink',
+                )
+              }
+            >
+              <Settings className="h-4 w-4" aria-hidden />
+            </NavLink>
           </div>
         </nav>
       </header>

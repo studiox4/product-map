@@ -75,6 +75,8 @@ export interface DocumentCreateInput {
   type: DocType;
   title: string;
   fromTemplate?: boolean;
+  /** Explicit DB template; omitted → the type's default (when fromTemplate). */
+  templateId?: string;
 }
 export interface DocumentUpdateInput {
   title?: string;
@@ -661,4 +663,175 @@ export function useWorkspaceActivity(enabled = true) {
     enabled,
     staleTime: 30_000,
   });
+}
+
+// ---- settings (Settings spec — Workspace & Profile tabs) ----
+// Append-only block: self-contained.
+
+export interface UpdateUserVars {
+  id: string;
+  name?: string;
+  color?: string;
+}
+
+/**
+ * PATCH /api/users/:id — rename and/or recolor a user. Avatars appear on the
+ * board, comments and activity, so refresh the whole cache (cheap, rare op).
+ */
+export function useUpdateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...patch }: UpdateUserVars) =>
+      fetchJson<User>(`/api/users/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(patch),
+      }),
+    onSettled: () => {
+      qc.invalidateQueries();
+    },
+  });
+}
+
+/**
+ * POST /api/admin/reset-demo — truncate + reseed (dev-only convenience;
+ * the server 403s in production). Invalidates everything on success.
+ */
+export function useResetDemo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      fetchJson<{ ok: boolean }>('/api/admin/reset-demo', { method: 'POST' }),
+    onSuccess: () => {
+      qc.invalidateQueries();
+    },
+  });
+}
+
+// ---- templates (Settings spec — template manager) ----
+// Append-only block: self-contained, including its import (hoisted by ESM).
+
+import type { Template } from '@productmap/shared';
+
+export interface TemplateCreateInput {
+  type: DocType;
+  name: string;
+  description?: string;
+  bodyJson?: Record<string, unknown>;
+  promptHints?: string;
+}
+
+export interface TemplateUpdateInput {
+  name?: string;
+  description?: string;
+  bodyJson?: Record<string, unknown>;
+  promptHints?: string;
+}
+
+export const templatesRootKey = ['templates'] as const;
+
+export function templatesKey(includeArchived = false) {
+  return ['templates', { includeArchived }] as const;
+}
+
+/** Templates, defaults first then name (server order). includeArchived for the manager view. */
+export function useTemplates(options: { includeArchived?: boolean } = {}) {
+  const includeArchived = options.includeArchived ?? false;
+  return useQuery({
+    queryKey: templatesKey(includeArchived),
+    queryFn: () =>
+      fetchJson<Template[]>(
+        `/api/templates${includeArchived ? '?includeArchived=true' : ''}`,
+      ),
+  });
+}
+
+function invalidateTemplates(qc: QueryClient) {
+  qc.invalidateQueries({ queryKey: templatesRootKey });
+}
+
+export function useCreateTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: TemplateCreateInput) =>
+      fetchJson<Template>('/api/templates', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    onSettled: () => invalidateTemplates(qc),
+  });
+}
+
+export interface UpdateTemplateVars extends TemplateUpdateInput {
+  id: string;
+}
+
+export function useUpdateTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...patch }: UpdateTemplateVars) =>
+      fetchJson<Template>(`/api/templates/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(patch),
+      }),
+    onSuccess: (tpl, { bodyJson }) => {
+      // Merge server row into both list caches without clobbering the
+      // template editor's local bodyJson (mirrors useUpdateDocument).
+      for (const includeArchived of [false, true]) {
+        qc.setQueryData<Template[]>(templatesKey(includeArchived), (old) =>
+          old?.map((t) =>
+            t.id === tpl.id
+              ? { ...t, ...tpl, ...(bodyJson !== undefined ? { bodyJson } : {}) }
+              : t,
+          ),
+        );
+      }
+    },
+  });
+}
+
+export function useDuplicateTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      fetchJson<Template>(`/api/templates/${id}/duplicate`, { method: 'POST' }),
+    onSettled: () => invalidateTemplates(qc),
+  });
+}
+
+/** POST /api/templates/:id/default — swaps the default within the template's type. */
+export function useSetDefaultTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      fetchJson<void>(`/api/templates/${id}/default`, { method: 'POST' }),
+    onSettled: () => invalidateTemplates(qc),
+  });
+}
+
+export interface ArchiveTemplateVars {
+  id: string;
+  archived: boolean;
+}
+
+/** Archive / restore. Archiving the current default 400s — surface the server message. */
+export function useArchiveTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, archived }: ArchiveTemplateVars) =>
+      fetchJson<Template>(`/api/templates/${id}/archive`, {
+        method: 'POST',
+        body: JSON.stringify({ archived }),
+      }),
+    onSettled: () => invalidateTemplates(qc),
+  });
+}
+
+/** Best-effort human message from an ApiError body ({ message } | { error }). */
+export function apiErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError && err.body && typeof err.body === 'object') {
+    const body = err.body as { message?: unknown; error?: unknown };
+    if (typeof body.message === 'string' && body.message) return body.message;
+    if (typeof body.error === 'string' && body.error) return body.error;
+  }
+  return fallback;
 }

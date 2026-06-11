@@ -1,0 +1,62 @@
+import { Suspense } from 'react';
+import { NavLink, Outlet } from 'react-router-dom';
+import { LayoutTemplate, Settings as SettingsIcon, UserRound, Wrench } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+
+const TABS = [
+  { to: '/settings/templates', label: 'Templates', icon: LayoutTemplate },
+  { to: '/settings/workspace', label: 'Workspace', icon: Wrench },
+  { to: '/settings/profile', label: 'Profile', icon: UserRound },
+];
+
+/**
+ * Settings section shell (settings spec): left pill tab rail
+ * (Templates / Workspace / Profile), content card to the right.
+ * Tab content renders through the nested routes in App.tsx.
+ */
+export function SettingsPage() {
+  return (
+    <div className="space-y-6">
+      <header className="flex items-center gap-2">
+        <SettingsIcon className="h-5 w-5 text-action" aria-hidden />
+        <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Settings</h1>
+      </header>
+      <div className="flex flex-col gap-8 md:flex-row">
+        <nav aria-label="Settings sections" className="flex shrink-0 gap-1.5 md:w-44 md:flex-col">
+          {TABS.map(({ to, label, icon: Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium outline-none transition-all duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring',
+                  isActive
+                    ? 'bg-surface text-ink shadow-card'
+                    : 'text-body-ink hover:bg-surface/60 hover:text-ink',
+                )
+              }
+            >
+              <Icon className="h-3.5 w-3.5" aria-hidden />
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="min-w-0 flex-1">
+          <Suspense
+            fallback={
+              <div className="space-y-6">
+                <Skeleton className="h-48 rounded-2xl" />
+                <Skeleton className="h-32 rounded-2xl" />
+              </div>
+            }
+          >
+            <Outlet />
+          </Suspense>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default SettingsPage;
