@@ -273,6 +273,7 @@ test('AC4: reset-demo is confirm-gated and restores the seed', async ({ page, re
   const templates = (await (
     await request.get('/api/templates?includeArchived=true')
   ).json()) as { name: string }[];
-  expect(templates).toHaveLength(4);
+  // Seed ships 6 templates: the 4 feature doc types + Idea pitch + Release notes.
+  expect(templates).toHaveLength(6);
   expect(templates.some((t) => t.name === 'Lightweight PRD')).toBe(false);
 });

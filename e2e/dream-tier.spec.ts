@@ -35,14 +35,16 @@ test('AC1: idea lifecycle — create, vote, promote to Later, feature linked', a
 
   // Capture a new idea.
   await page.getByRole('button', { name: 'New idea' }).first().click();
-  await page.getByLabel('Title').fill('Public API for roadmap data');
+  // The detail pane's inline idea-title input also matches /Title/ — target the form field.
+  await page.locator('#new-idea-title').fill('Public API for roadmap data');
   await page.getByLabel('Details').fill('Partners keep asking for **JSON** access.');
-  await page.getByLabel('Source').fill('partner call');
+  await page.locator('#new-idea-source').fill('partner call');
   await page.getByRole('button', { name: 'Capture' }).click();
 
   const detail = page.getByRole('region', { name: 'Idea detail' });
-  await expect(detail.getByRole('heading', { name: 'Public API for roadmap data' })).toBeVisible();
-  await expect(detail.getByText('Source: partner call')).toBeVisible();
+  // Title and source are editable inputs since dream-tier-2.
+  await expect(detail.getByLabel('Idea title')).toHaveValue('Public API for roadmap data');
+  await expect(detail.locator('#idea-source')).toHaveValue('partner call');
 
   // Vote it up from the detail pane.
   await detail.getByRole('group', { name: 'Idea votes' }).getByLabel('Boost').click();
@@ -453,7 +455,8 @@ test('AC9c: all AI affordances hidden when AI is disabled', async ({ page, reque
 
   // No "Draft AI brief" checkbox in the promote dialog (pick a known inbox idea).
   await page.goto('/inbox');
-  await page.getByText('SSO via OIDC').click();
+  // The pitch-doc link also contains the idea title — click the list row button.
+  await page.getByRole('button', { name: /SSO via OIDC/ }).click();
   await page
     .getByRole('region', { name: 'Idea detail' })
     .getByRole('button', { name: 'Promote to feature' })

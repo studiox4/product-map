@@ -1,7 +1,7 @@
 import { useMemo, useState, type RefObject } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { File, FileText, Briefcase, Wrench, Sparkles } from 'lucide-react';
+import { File, FileText, Briefcase, Wrench, Sparkles, Lightbulb, Megaphone } from 'lucide-react';
 import {
   DOC_TYPES,
   DOC_TYPE_LABELS,
@@ -29,7 +29,16 @@ const TYPE_ICONS: Record<DocType, typeof FileText> = {
   brd: Briefcase,
   tech_spec: Wrench,
   feature_brief: Sparkles,
+  idea_pitch: Lightbulb,
+  release_notes: Megaphone,
 };
+
+/**
+ * idea_pitch and release_notes docs are created from their owning surfaces
+ * (idea detail / release detail), never from the feature new-doc dialog.
+ */
+const isFeatureDocType = (t: DocType) => t !== 'idea_pitch' && t !== 'release_notes';
+const FEATURE_DOC_TYPES = DOC_TYPES.filter(isFeatureDocType);
 
 const templateCardClass =
   'flex cursor-pointer items-start gap-3 rounded-xl border border-line bg-surface p-3 ' +
@@ -62,7 +71,7 @@ export function NewDocDialog({ feature, open, onOpenChange, returnFocusRef }: Ne
   // Grouped per type in canonical doc-type order (spec: per-type list).
   const groups = useMemo(
     () =>
-      DOC_TYPES.map((type) => ({
+      FEATURE_DOC_TYPES.map((type) => ({
         type,
         templates: (templates ?? []).filter((t) => t.type === type),
       })).filter((g) => g.templates.length > 0),
@@ -71,9 +80,12 @@ export function NewDocDialog({ feature, open, onOpenChange, returnFocusRef }: Ne
 
   // Default selection: the PRD default template, else the first default, else first template, else Blank.
   const initialChoice = useMemo(() => {
-    if (!templates?.length) return 'blank';
-    const prdDefault = templates.find((t) => t.type === 'prd' && t.isDefault);
-    return (prdDefault ?? templates.find((t) => t.isDefault) ?? templates[0]).id;
+    const eligible = (templates ?? []).filter((t) =>
+      isFeatureDocType(t.type),
+    );
+    if (!eligible.length) return 'blank';
+    const prdDefault = eligible.find((t) => t.type === 'prd' && t.isDefault);
+    return (prdDefault ?? eligible.find((t) => t.isDefault) ?? eligible[0]).id;
   }, [templates]);
 
   const [choice, setChoice] = useState<string | null>(null);
