@@ -15,6 +15,8 @@ const NAV_LINKS = [
   { to: '/board', label: 'Board', end: false },
   { to: '/docs', label: 'Docs', end: true },
   { to: '/roadmap', label: 'Roadmap', end: false },
+  { to: '/releases', label: 'Releases', end: false },
+  { to: '/outcomes', label: 'Outcomes', end: false },
 ];
 
 const isMac =

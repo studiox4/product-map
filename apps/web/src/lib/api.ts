@@ -1332,10 +1332,10 @@ export function usePromoteIdea() {
 // ---- gantt upgrades (Dream Tier — releases + dependency arrows + capacity) ----
 // Append-only block: self-contained, including its imports (hoisted by ESM).
 
-import type { FeatureDependencies } from '@productmap/shared';
 import type { DependencyEdge } from '@/components/gantt/DependencyArrows';
 
-// releasesKey / useReleases live in the releases & objectives block above.
+// releasesKey / useReleases live in the releases & objectives block above;
+// FeatureDependencies is already imported by the feature-page block.
 
 export function allDependenciesKey(featureIds: string[]) {
   return ['dependencies', 'all', [...featureIds].sort().join(',')] as const;

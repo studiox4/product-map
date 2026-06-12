@@ -29,6 +29,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { HorizonBadge, HORIZON_LABELS } from '@/components/HorizonBadge';
 import { STATUS_LABELS } from '@/components/StatusBadge';
 import { DescriptionBlock } from '@/components/feature/DescriptionBlock';
+import { EvidenceSection } from '@/components/feature/EvidenceSection';
+import { DecisionsSection } from '@/components/feature/DecisionsSection';
+import { DependenciesRail } from '@/components/feature/DependenciesRail';
+import { SizeRiskRail } from '@/components/feature/SizeRiskRail';
 import { DocsGrid } from '@/components/feature/DocsGrid';
 import { ActivityFeed } from '@/components/feature/ActivityFeed';
 import { CommentsSection } from '@/components/comments/CommentsSection';
@@ -169,13 +173,17 @@ function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
       <div className="mt-8 grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div className="min-w-0 space-y-8">
           <DescriptionBlock feature={feature} />
+          <EvidenceSection featureId={feature.id} />
           <DocsGrid feature={feature} />
           <CommentsSection target={{ featureId: feature.id }} />
+          <DecisionsSection featureId={feature.id} />
           <ActivityFeed featureId={feature.id} />
         </div>
 
         <aside className="space-y-4">
           <PeopleRail feature={feature} />
+          <DependenciesRail feature={feature} />
+          <SizeRiskRail feature={feature} />
 
           <section className="space-y-3 rounded-2xl bg-surface p-4 shadow-card" aria-label="Dates">
             <h2 className="font-display text-sm font-semibold text-ink">Dates</h2>

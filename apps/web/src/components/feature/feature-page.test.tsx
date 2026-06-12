@@ -100,6 +100,13 @@ const server = setupServer(
   http.get('/api/features/f1/collaborators', () => HttpResponse.json([corban, ada])),
   http.get('/api/documents', () => HttpResponse.json(allDocs)),
   http.get('/api/comments', () => HttpResponse.json([])),
+  // Dream tier (D2/D3/D4) feature-page sections
+  http.get('/api/features/f1/evidence', () => HttpResponse.json([])),
+  http.get('/api/decisions', () => HttpResponse.json([])),
+  http.get('/api/features/f1/dependencies', () =>
+    HttpResponse.json({ blockers: [], blocked: [] }),
+  ),
+  http.get('/api/features', () => HttpResponse.json([feature])),
   http.patch('/api/features/f1', async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
     return HttpResponse.json({ ...feature, ...body, documents: undefined });

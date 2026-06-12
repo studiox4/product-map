@@ -16,8 +16,10 @@ import {
   Plus,
   Puzzle,
   Download,
+  Rocket,
   Settings,
   Sun,
+  Target,
 } from 'lucide-react';
 import {
   DOC_TYPE_LABELS,
@@ -59,6 +61,8 @@ const NAV_TARGETS = [
   { to: '/', label: 'Overview', icon: LayoutDashboard },
   { to: '/board', label: 'Board', icon: Columns3 },
   { to: '/roadmap', label: 'Roadmap', icon: GanttChart },
+  { to: '/releases', label: 'Releases', icon: Rocket },
+  { to: '/outcomes', label: 'Outcomes', icon: Target },
   { to: '/docs', label: 'Docs', icon: Library },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
