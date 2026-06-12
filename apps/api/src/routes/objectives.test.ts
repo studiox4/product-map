@@ -2,7 +2,9 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { users, objectives } from '@productmap/db';
+import { users, objectives, products, features } from '@productmap/db';
+
+let userId: string;
 
 beforeAll(async () => {
   await setupTestDb();
@@ -14,7 +16,8 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await truncateAll();
-  await db.insert(users).values({ name: 'Corban', color: '#2b557e' });
+  const [u] = await db.insert(users).values({ name: 'Corban', color: '#2b557e' }).returning();
+  userId = u.id;
 });
 
 const json = (method: string, body: unknown) => ({
@@ -49,7 +52,9 @@ describe('objectives CRUD', () => {
   });
 
   it('lists objectives in creation order', async () => {
-    await db.insert(objectives).values([{ title: 'First' }, { title: 'Second' }]);
+    // distinct created_at values — a bulk insert stamps one shared now()
+    await db.insert(objectives).values({ title: 'First', createdAt: new Date('2026-06-01T00:00:00Z') });
+    await db.insert(objectives).values({ title: 'Second', createdAt: new Date('2026-06-02T00:00:00Z') });
     const res = await app.request('/api/objectives');
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -77,5 +82,91 @@ describe('objectives CRUD', () => {
     expect((await app.request(`/api/objectives/${missing}`)).status).toBe(404);
     expect((await app.request(`/api/objectives/${missing}`, json('PATCH', { title: 'x' }))).status).toBe(404);
     expect((await app.request(`/api/objectives/${missing}`, { method: 'DELETE' })).status).toBe(404);
+  });
+});
+
+describe('objectives dream-tier-2 properties + joins', () => {
+  it('creates an objective with all new properties', async () => {
+    const res = await app.request(
+      '/api/objectives',
+      json('POST', {
+        title: 'Grow weekly actives',
+        descriptionMd: 'Why this matters.',
+        metric: 'WAU',
+        target: '500',
+        current: '320',
+        status: 'at_risk',
+        ownerId: userId,
+        quarter: 'Q3 2026',
+      }),
+    );
+    expect(res.status).toBe(201);
+    expect(await res.json()).toMatchObject({
+      title: 'Grow weekly actives',
+      descriptionMd: 'Why this matters.',
+      metric: 'WAU',
+      target: '500',
+      current: '320',
+      status: 'at_risk',
+      ownerId: userId,
+      quarter: 'Q3 2026',
+    });
+  });
+
+  it('defaults status on_track and empty description/current', async () => {
+    const res = await app.request('/api/objectives', json('POST', { title: 'Ship faster' }));
+    expect(res.status).toBe(201);
+    expect(await res.json()).toMatchObject({
+      status: 'on_track',
+      descriptionMd: '',
+      current: '',
+      ownerId: null,
+    });
+  });
+
+  it('patches status, current and ownerId (incl. clearing owner)', async () => {
+    const [o] = await db.insert(objectives).values({ title: 'Retention', ownerId: userId }).returning();
+    const patched = await app.request(
+      `/api/objectives/${o.id}`,
+      json('PATCH', { status: 'achieved', current: '42%', descriptionMd: 'done' }),
+    );
+    expect(patched.status).toBe(200);
+    expect(await patched.json()).toMatchObject({ status: 'achieved', current: '42%', descriptionMd: 'done' });
+
+    const cleared = await app.request(`/api/objectives/${o.id}`, json('PATCH', { ownerId: null }));
+    expect(cleared.status).toBe(200);
+    expect((await cleared.json()).ownerId).toBeNull();
+  });
+
+  it('400s on invalid status', async () => {
+    const res = await app.request('/api/objectives', json('POST', { title: 'x', status: 'blocked' }));
+    expect(res.status).toBe(400);
+  });
+
+  it('GET / joins owner {name,color} and featureCount', async () => {
+    const [p] = await db.insert(products).values({ name: 'ProductMap', vision: 'v', aboutMd: '' }).returning();
+    const [owned] = await db
+      .insert(objectives)
+      .values({ title: 'Owned', ownerId: userId, metric: 'WAU', target: '500', current: '320' })
+      .returning();
+    const [bare] = await db.insert(objectives).values({ title: 'Bare' }).returning();
+    await db.insert(features).values([
+      { productId: p.id, title: 'F1', horizon: 'now', objectiveId: owned.id },
+      { productId: p.id, title: 'F2', horizon: 'next', objectiveId: owned.id },
+      { productId: p.id, title: 'F3', horizon: 'later' },
+    ]);
+
+    const res = await app.request('/api/objectives');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toHaveLength(2);
+    const ownedRow = body.find((o: { id: string }) => o.id === owned.id);
+    expect(ownedRow).toMatchObject({
+      title: 'Owned',
+      owner: { name: 'Corban', color: '#2b557e' },
+      featureCount: 2,
+    });
+    const bareRow = body.find((o: { id: string }) => o.id === bare.id);
+    expect(bareRow).toMatchObject({ owner: null, featureCount: 0 });
   });
 });

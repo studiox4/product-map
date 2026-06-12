@@ -1,17 +1,45 @@
 // Mounted at /api/objectives (app.ts).
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { asc, eq } from 'drizzle-orm';
+import { asc, count, eq } from 'drizzle-orm';
 import { objectiveCreate, objectiveUpdate } from '@productmap/shared';
-import { objectives } from '@productmap/db';
+import { objectives, users, features } from '@productmap/db';
 import { db } from '../db';
 import { currentUser, type CurrentUserEnv } from '../middleware/current-user';
 
 export const objectivesRoutes = new Hono<CurrentUserEnv>()
   .use('*', currentUser)
+  // GET / → Objective[] with joined owner {name,color} + featureCount.
   .get('/', async (c) => {
-    const rows = await db.select().from(objectives).orderBy(asc(objectives.createdAt));
-    return c.json(rows);
+    const rows = await db
+      .select({
+        id: objectives.id,
+        title: objectives.title,
+        descriptionMd: objectives.descriptionMd,
+        metric: objectives.metric,
+        target: objectives.target,
+        current: objectives.current,
+        status: objectives.status,
+        ownerId: objectives.ownerId,
+        quarter: objectives.quarter,
+        createdAt: objectives.createdAt,
+        ownerName: users.name,
+        ownerColor: users.color,
+        featureCount: count(features.id),
+      })
+      .from(objectives)
+      .leftJoin(users, eq(objectives.ownerId, users.id))
+      .leftJoin(features, eq(features.objectiveId, objectives.id))
+      .groupBy(objectives.id, users.id)
+      // id tiebreaker: bulk-seeded rows share one created_at and the GROUP BY
+      // plan otherwise returns them in nondeterministic order.
+      .orderBy(asc(objectives.createdAt), asc(objectives.id));
+    return c.json(
+      rows.map(({ ownerName, ownerColor, ...o }) => ({
+        ...o,
+        owner: ownerName !== null ? { name: ownerName, color: ownerColor } : null,
+      })),
+    );
   })
   .post(
     '/',

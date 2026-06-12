@@ -2,7 +2,8 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { products, features, users, documents, releases, activity } from '@productmap/db';
+import { products, features, users, documents, releases, activity, templates } from '@productmap/db';
+import { markdownToTiptap } from '../lib/markdown';
 import { asc, eq } from 'drizzle-orm';
 
 let productId: string;
@@ -102,8 +103,71 @@ describe('releases CRUD', () => {
   });
 });
 
-describe('POST /api/releases/:id/ship', () => {
-  it('ships the release and records release_shipped activity on each feature', async () => {
+// dream-tier-2: status moves both ways via PATCH; activity kind is now
+// release_status_changed (from,to) — the old release_shipped expectations here
+// were updated intentionally per the dream-tier-2 spec.
+describe('PATCH /api/releases/:id status transitions', () => {
+  it('planned→shipped sets shippedAt and records release_status_changed on each feature', async () => {
+    const res = await app.request(`/api/releases/${releaseId}`, json('PATCH', { status: 'shipped' }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe('shipped');
+    expect(body.shippedAt).not.toBeNull();
+
+    const acts = await db.select().from(activity).orderBy(asc(activity.createdAt));
+    expect(acts).toHaveLength(2);
+    expect(acts.map((a) => a.featureId).sort()).toEqual([featureA, featureB].sort());
+    for (const act of acts) {
+      expect(act.kind).toBe('release_status_changed');
+      expect(act.actorId).toBe(userId);
+      expect(act.payload).toMatchObject({
+        releaseId,
+        releaseName: 'v0.2 — Team ready',
+        from: 'planned',
+        to: 'shipped',
+      });
+    }
+  });
+
+  it('round-trips: shipped→planned clears shippedAt and records the reverse transition', async () => {
+    await app.request(`/api/releases/${releaseId}`, json('PATCH', { status: 'shipped' }));
+    const res = await app.request(`/api/releases/${releaseId}`, json('PATCH', { status: 'planned' }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe('planned');
+    expect(body.shippedAt).toBeNull();
+
+    const acts = await db.select().from(activity).orderBy(asc(activity.createdAt));
+    expect(acts).toHaveLength(4);
+    const reverse = acts.slice(2);
+    for (const act of reverse) {
+      expect(act.kind).toBe('release_status_changed');
+      expect(act.payload).toMatchObject({ from: 'shipped', to: 'planned' });
+    }
+  });
+
+  it('same-status PATCH is a no-op for shippedAt and activity', async () => {
+    await app.request(`/api/releases/${releaseId}`, json('PATCH', { status: 'shipped' }));
+    const [before] = await db.select().from(releases).where(eq(releases.id, releaseId));
+    const res = await app.request(`/api/releases/${releaseId}`, json('PATCH', { status: 'shipped' }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe('shipped');
+    expect(new Date(body.shippedAt).getTime()).toBe(before.shippedAt!.getTime());
+    expect(await db.select().from(activity)).toHaveLength(2);
+  });
+
+  it('renaming alongside a status change applies both', async () => {
+    const res = await app.request(`/api/releases/${releaseId}`, json('PATCH', { name: 'v0.2 GA', status: 'shipped' }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ name: 'v0.2 GA', status: 'shipped' });
+    const acts = await db.select().from(activity);
+    expect(acts[0]!.payload).toMatchObject({ releaseName: 'v0.2 GA' });
+  });
+});
+
+describe('POST /api/releases/:id/ship (alias of PATCH status)', () => {
+  it('ships the release and records release_status_changed activity on each feature', async () => {
     const res = await app.request(`/api/releases/${releaseId}/ship`, { method: 'POST' });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -114,9 +178,9 @@ describe('POST /api/releases/:id/ship', () => {
     expect(acts).toHaveLength(2);
     expect(acts.map((a) => a.featureId).sort()).toEqual([featureA, featureB].sort());
     for (const act of acts) {
-      expect(act.kind).toBe('release_shipped');
+      expect(act.kind).toBe('release_status_changed');
       expect(act.actorId).toBe(userId);
-      expect(act.payload).toMatchObject({ releaseId, releaseName: 'v0.2 — Team ready' });
+      expect(act.payload).toMatchObject({ releaseId, releaseName: 'v0.2 — Team ready', from: 'planned', to: 'shipped' });
     }
   });
 
@@ -132,6 +196,193 @@ describe('POST /api/releases/:id/ship', () => {
   it('404s on unknown release', async () => {
     const res = await app.request('/api/releases/00000000-0000-4000-8000-000000000000/ship', { method: 'POST' });
     expect(res.status).toBe(404);
+  });
+});
+
+describe('POST /api/releases/:id/notes-doc', () => {
+  beforeEach(async () => {
+    await db.insert(templates).values({
+      type: 'release_notes',
+      name: 'Release notes',
+      bodyMd: '# {{title}}\n\n## Highlights\n\n## What’s new\n\n## Improvements\n\n## Fixes\n\n## Thanks',
+      bodyJson: markdownToTiptap('# {{title}}\n\n## Highlights\n\n## What’s new\n\n## Improvements\n\n## Fixes\n\n## Thanks'),
+      isDefault: true,
+    });
+  });
+
+  it('creates a release_notes doc from the default template and links notesDocId', async () => {
+    const res = await app.request(`/api/releases/${releaseId}/notes-doc`, { method: 'POST' });
+    expect(res.status).toBe(201);
+    const doc = await res.json();
+    expect(doc).toMatchObject({
+      type: 'release_notes',
+      title: 'v0.2 — Team ready',
+      featureId: null,
+      ideaId: null,
+      status: 'draft',
+    });
+    expect(doc.contentMd).toContain('# v0.2 — Team ready');
+    expect(doc.contentMd).toContain('## Highlights');
+    expect(doc.contentJson.content.length).toBeGreaterThan(0);
+
+    const [release] = await db.select().from(releases).where(eq(releases.id, releaseId));
+    expect(release.notesDocId).toBe(doc.id);
+  });
+
+  it('returns the existing doc (200) when one is already linked', async () => {
+    const first = await (await app.request(`/api/releases/${releaseId}/notes-doc`, { method: 'POST' })).json();
+    const res = await app.request(`/api/releases/${releaseId}/notes-doc`, { method: 'POST' });
+    expect(res.status).toBe(200);
+    expect((await res.json()).id).toBe(first.id);
+    const docs = await db.select().from(documents);
+    expect(docs).toHaveLength(1);
+  });
+
+  it('creates a blank doc when no default template exists', async () => {
+    await db.delete(templates);
+    const res = await app.request(`/api/releases/${releaseId}/notes-doc`, { method: 'POST' });
+    expect(res.status).toBe(201);
+    const doc = await res.json();
+    expect(doc.contentMd).toBe('');
+    expect(doc.contentJson).toEqual({ type: 'doc', content: [] });
+  });
+
+  it('404s on unknown release', async () => {
+    const res = await app.request('/api/releases/00000000-0000-4000-8000-000000000000/notes-doc', { method: 'POST' });
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('POST /api/releases/:id/generate-notes', () => {
+  beforeEach(async () => {
+    await db.insert(documents).values([
+      {
+        featureId: featureA,
+        type: 'prd',
+        title: 'Comments PRD',
+        status: 'final',
+        contentMd: 'Threaded comments on features and docs.\n\nSecond paragraph that must not appear.',
+      },
+      {
+        featureId: featureA,
+        type: 'brd',
+        title: 'Draft note',
+        status: 'draft',
+        contentMd: 'Draft content must be excluded.',
+      },
+      {
+        featureId: featureB,
+        type: 'prd',
+        title: 'Voting PRD',
+        status: 'final',
+        contentMd: 'Up/down votes with per-user toggles.',
+      },
+    ]);
+  });
+
+  it('overwrites the notes doc with markdown assembled from member features + final docs', async () => {
+    const created = await (await app.request(`/api/releases/${releaseId}/notes-doc`, { method: 'POST' })).json();
+    const res = await app.request(`/api/releases/${releaseId}/generate-notes`, { method: 'POST' });
+    expect(res.status).toBe(200);
+    const doc = await res.json();
+    expect(doc.id).toBe(created.id);
+    expect(doc.contentMd).toContain('## Comments & review\n\nThreaded comments on features and docs.');
+    expect(doc.contentMd).toContain('## Voting\n\nUp/down votes with per-user toggles.');
+    expect(doc.contentMd).not.toContain('Second paragraph that must not appear');
+    expect(doc.contentMd).not.toContain('Draft content must be excluded');
+    // feature order follows sortOrder
+    expect(doc.contentMd.indexOf('## Comments & review')).toBeLessThan(doc.contentMd.indexOf('## Voting'));
+    // contentJson went through the markdown→tiptap pipeline (headings present)
+    const headings = (doc.contentJson.content as { type: string }[]).filter((n) => n.type === 'heading');
+    expect(headings.length).toBeGreaterThanOrEqual(2);
+    // persisted, not just returned
+    const [row] = await db.select().from(documents).where(eq(documents.id, doc.id));
+    expect(row.contentMd).toBe(doc.contentMd);
+  });
+
+  it('creates the notes doc first when none exists', async () => {
+    const res = await app.request(`/api/releases/${releaseId}/generate-notes`, { method: 'POST' });
+    expect(res.status).toBe(200);
+    const doc = await res.json();
+    expect(doc.type).toBe('release_notes');
+    expect(doc.contentMd).toContain('## Comments & review');
+    const [release] = await db.select().from(releases).where(eq(releases.id, releaseId));
+    expect(release.notesDocId).toBe(doc.id);
+  });
+
+  it('404s on unknown release', async () => {
+    const res = await app.request('/api/releases/00000000-0000-4000-8000-000000000000/generate-notes', {
+      method: 'POST',
+    });
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('PUT /api/releases/:id/features (replace-set membership)', () => {
+  let featureC: string;
+  let otherReleaseId: string;
+
+  beforeEach(async () => {
+    const [r2] = await db.insert(releases).values({ name: 'v0.3' }).returning();
+    otherReleaseId = r2.id;
+    const [cRow] = await db
+      .insert(features)
+      .values({ productId, title: 'Templates', horizon: 'next', releaseId: otherReleaseId, sortOrder: 2 })
+      .returning();
+    featureC = cRow.id;
+  });
+
+  it('replaces the member set: removed features are cleared, new ones assigned', async () => {
+    const res = await app.request(`/api/releases/${releaseId}/features`, json('PUT', { featureIds: [featureA] }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.features.map((f: { id: string }) => f.id)).toEqual([featureA]);
+    const [b] = await db.select().from(features).where(eq(features.id, featureB));
+    expect(b.releaseId).toBeNull();
+  });
+
+  it('steals a feature already assigned to another release', async () => {
+    const res = await app.request(
+      `/api/releases/${releaseId}/features`,
+      json('PUT', { featureIds: [featureA, featureB, featureC] }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.features.map((f: { id: string }) => f.id)).toEqual([featureA, featureB, featureC]);
+    const [c2] = await db.select().from(features).where(eq(features.id, featureC));
+    expect(c2.releaseId).toBe(releaseId);
+    // the other release no longer owns it
+    const other = await db.select().from(features).where(eq(features.releaseId, otherReleaseId));
+    expect(other).toHaveLength(0);
+  });
+
+  it('empty list clears all membership', async () => {
+    const res = await app.request(`/api/releases/${releaseId}/features`, json('PUT', { featureIds: [] }));
+    expect(res.status).toBe(200);
+    expect((await res.json()).features).toEqual([]);
+    const members = await db.select().from(features).where(eq(features.releaseId, releaseId));
+    expect(members).toHaveLength(0);
+  });
+
+  it('404s when a feature id does not exist', async () => {
+    const res = await app.request(
+      `/api/releases/${releaseId}/features`,
+      json('PUT', { featureIds: ['00000000-0000-4000-8000-000000000000'] }),
+    );
+    expect(res.status).toBe(404);
+    // membership untouched on failure
+    const members = await db.select().from(features).where(eq(features.releaseId, releaseId));
+    expect(members).toHaveLength(2);
+  });
+
+  it('404s on unknown release and 400s on invalid body', async () => {
+    const missing = '00000000-0000-4000-8000-000000000000';
+    expect(
+      (await app.request(`/api/releases/${missing}/features`, json('PUT', { featureIds: [] }))).status,
+    ).toBe(404);
+    expect(
+      (await app.request(`/api/releases/${releaseId}/features`, json('PUT', { featureIds: ['nope'] }))).status,
+    ).toBe(400);
   });
 });
 
