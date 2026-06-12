@@ -22,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { SharingBlock } from '@/components/settings/SharingBlock';
 
 /**
  * Settings → Workspace tab (settings spec): product name + vision (PATCH
@@ -120,6 +121,9 @@ function WorkspaceForm({ product }: { product: Product }) {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Sharing block owned by the share/settings task (dream tier D8). */}
+      <SharingBlock />
 
       <DangerZone />
     </div>

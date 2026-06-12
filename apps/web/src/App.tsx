@@ -7,6 +7,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 // Lazy routes owned by parallel tasks (3B-D); stubs render "coming soon" until they land.
 const BoardPage = lazy(() => import('@/routes/Board'));
+// Idea Inbox (Dream tier D1 — inbox agent route line).
+const InboxPage = lazy(() => import('@/routes/Inbox'));
 const RoadmapPage = lazy(() => import('@/routes/Roadmap'));
 const DocPage = lazy(() => import('@/routes/Doc'));
 const DocsPage = lazy(() => import('@/routes/DocsPage'));
@@ -17,6 +19,11 @@ const WorkspaceTab = lazy(() => import('@/components/settings/WorkspaceTab'));
 const ProfileTab = lazy(() => import('@/components/settings/ProfileTab'));
 const TemplatesTab = lazy(() => import('@/components/settings/TemplatesTab'));
 const TemplateEditorPage = lazy(() => import('@/routes/TemplateEditor'));
+const SharePage = lazy(() => import('@/routes/SharePage'));
+// Releases + Outcomes (Dream tier D7/D9 — releases+outcomes agent route lines).
+const ReleasesPage = lazy(() => import('@/routes/Releases'));
+const ReleaseDetailPage = lazy(() => import('@/components/releases/ReleaseDetail'));
+const OutcomesPage = lazy(() => import('@/routes/Outcomes'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -44,6 +51,15 @@ export default function App() {
         <Routes>
           <Route element={<AppShell />}>
             <Route path="/" element={<Landing />} />
+            {/* Idea Inbox (inbox agent route line). */}
+            <Route
+              path="/inbox"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <InboxPage />
+                </Suspense>
+              }
+            />
             <Route
               path="/board"
               element={
@@ -65,6 +81,31 @@ export default function App() {
               element={
                 <Suspense fallback={<RouteFallback />}>
                   <FeaturePage />
+                </Suspense>
+              }
+            />
+            {/* Releases + Outcomes (releases+outcomes agent route lines). */}
+            <Route
+              path="/releases"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <ReleasesPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/releases/:id"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <ReleaseDetailPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/outcomes"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <OutcomesPage />
                 </Suspense>
               }
             />
@@ -110,6 +151,15 @@ export default function App() {
               }
             />
           </Route>
+          {/* Public read-only share page (dream tier D8) — outside AppShell, no auth. */}
+          <Route
+            path="/share/:token"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <SharePage />
+              </Suspense>
+            }
+          />
           {/* Chrome-free reader view (spec 2.3) — outside AppShell on purpose. */}
           <Route
             path="/docs/:id/read"
