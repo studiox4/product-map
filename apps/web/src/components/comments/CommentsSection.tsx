@@ -2,16 +2,23 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Check, ChevronDown } from 'lucide-react';
 import {
+  apiErrorMessage,
   useAddComment,
+  useAiStatus,
   useComments,
   useDeleteComment,
   useEditComment,
   useMe,
   useResolveComment,
+  useSuggestDecision,
   type CommentTarget,
 } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import {
+  DecisionDialog,
+  type DecisionDraft,
+} from '@/components/copilot/DecisionDialog';
 import { CommentComposer } from './CommentComposer';
 import { CommentThread } from './CommentThread';
 
@@ -31,6 +38,38 @@ export function CommentsSection({ target, showHeader = true }: CommentsSectionPr
   const resolveComment = useResolveComment();
   const deleteComment = useDeleteComment();
   const [showResolved, setShowResolved] = useState(false);
+
+  // Decision extraction (AI affordance — hidden when AI is disabled).
+  const aiEnabled = useAiStatus().data?.enabled === true;
+  const suggestDecision = useSuggestDecision();
+  const [decisionDialog, setDecisionDialog] = useState<{
+    sourceCommentId: string;
+    initial: DecisionDraft;
+  } | null>(null);
+  const [suggestingId, setSuggestingId] = useState<string | null>(null);
+
+  const logDecision = (commentId: string) => {
+    if (suggestingId) return;
+    setSuggestingId(commentId);
+    suggestDecision.mutate(commentId, {
+      onSuccess: (s) => {
+        if (!s.suggested) {
+          toast.info('No clear decision found in this thread — edit before saving.');
+        }
+        setDecisionDialog({
+          sourceCommentId: commentId,
+          initial: {
+            title: s.title,
+            decisionMd: s.decisionMd,
+            alternativesMd: s.alternativesMd,
+          },
+        });
+      },
+      onError: (err) =>
+        toast.error(apiErrorMessage(err, "Couldn't suggest a decision — try again.")),
+      onSettled: () => setSuggestingId(null),
+    });
+  };
 
   const threads = data ?? [];
   const unresolved = threads.filter((t) => t.resolvedAt === null);
@@ -67,6 +106,12 @@ export function CommentsSection({ target, showHeader = true }: CommentsSectionPr
             { onError: onError("Couldn't delete comment — restored") },
           )
         }
+        onLogDecision={
+          aiEnabled && thread.resolvedAt !== null
+            ? () => logDecision(thread.id)
+            : undefined
+        }
+        logDecisionPending={suggestingId === thread.id}
       />
     </li>
   );
@@ -130,6 +175,18 @@ export function CommentsSection({ target, showHeader = true }: CommentsSectionPr
           </>
         )}
       </div>
+
+      {decisionDialog ? (
+        <DecisionDialog
+          open
+          onOpenChange={(o) => {
+            if (!o) setDecisionDialog(null);
+          }}
+          initial={decisionDialog.initial}
+          featureId={target.featureId}
+          sourceCommentId={decisionDialog.sourceCommentId}
+        />
+      ) : null}
     </section>
   );
 }

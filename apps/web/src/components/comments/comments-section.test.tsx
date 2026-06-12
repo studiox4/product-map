@@ -112,6 +112,8 @@ let threads: CommentThread[] = [];
 const server = setupServer(
   http.get('/api/users', () => HttpResponse.json([corban, ada])),
   http.get('/api/comments', () => HttpResponse.json(threads)),
+  // Decision extraction gates on AI status; enabled by default in tests.
+  http.get('/api/ai/status', () => HttpResponse.json({ enabled: true })),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -253,6 +255,69 @@ describe('CommentsSection', () => {
     await user().click(within(form).getByRole('button', { name: 'Reply' }));
     await waitFor(() => expect(posted).not.toBeNull());
     expect(posted).toMatchObject({ featureId: 'f1', parentId: 'c3', body: 'Agreed' });
+  });
+
+  it('shows "Log decision" only on resolved roots when AI is enabled', async () => {
+    threads = [adaThread, resolvedThread];
+    renderSection();
+    await screen.findByText('Root by Ada');
+    // unresolved thread: no sparkle affordance
+    expect(screen.queryByRole('button', { name: /Log decision/ })).toBeNull();
+    await user().click(screen.getByRole('button', { name: /1 resolved/i }));
+    expect(await screen.findByRole('button', { name: /Log decision/ })).toBeTruthy();
+  });
+
+  it('hides "Log decision" when AI is disabled', async () => {
+    threads = [resolvedThread];
+    server.use(http.get('/api/ai/status', () => HttpResponse.json({ enabled: false })));
+    renderSection();
+    await user().click(await screen.findByRole('button', { name: /1 resolved/i }));
+    await screen.findByText('Old resolved thread');
+    expect(screen.queryByRole('button', { name: /Log decision/ })).toBeNull();
+  });
+
+  it('Log decision: suggest-decision call → prefilled dialog → POST decision', async () => {
+    threads = [resolvedThread];
+    let suggestBody: unknown = null;
+    let decisionBody: unknown = null;
+    server.use(
+      http.post('/api/ai/suggest-decision', async ({ request }) => {
+        suggestBody = await request.json();
+        return HttpResponse.json({
+          suggested: true,
+          title: 'Adopt SSE for streaming',
+          decisionMd: 'We will stream over SSE.',
+          alternativesMd: '- WebSockets',
+        });
+      }),
+      http.post('/api/decisions', async ({ request }) => {
+        decisionBody = await request.json();
+        return HttpResponse.json({ id: 'dec1' }, { status: 201 });
+      }),
+    );
+    renderSection();
+    await user().click(await screen.findByRole('button', { name: /1 resolved/i }));
+    await user().click(await screen.findByRole('button', { name: /Log decision/ }));
+
+    await waitFor(() => expect(suggestBody).not.toBeNull());
+    expect(suggestBody).toEqual({ commentId: 'c4' });
+
+    // dialog opens prefilled with the AI suggestion
+    const title = (await screen.findByLabelText('Title')) as HTMLInputElement;
+    expect(title.value).toBe('Adopt SSE for streaming');
+    expect((screen.getByLabelText('Decision') as HTMLTextAreaElement).value).toBe(
+      'We will stream over SSE.',
+    );
+
+    await user().click(screen.getByRole('button', { name: 'Save decision' }));
+    await waitFor(() => expect(decisionBody).not.toBeNull());
+    expect(decisionBody).toEqual({
+      featureId: 'f1',
+      title: 'Adopt SSE for streaming',
+      decisionMd: 'We will stream over SSE.',
+      alternativesMd: '- WebSockets',
+      sourceCommentId: 'c4',
+    });
   });
 
   it('deletes my own comment from the actions menu', async () => {

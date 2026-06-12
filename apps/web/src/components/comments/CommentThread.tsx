@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { Check, MoreHorizontal } from 'lucide-react';
+import { Check, Loader2, MoreHorizontal, Sparkles } from 'lucide-react';
 import type { Comment, CommentThread as Thread } from '@productmap/shared';
 import { UserAvatar } from '@/components/UserAvatar';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,9 @@ export interface CommentThreadProps {
   onResolve: (resolved: boolean) => void;
   onEdit: (commentId: string, body: string) => void;
   onDelete: (commentId: string) => void;
+  /** AI decision extraction (resolved roots only); omitted when AI is disabled. */
+  onLogDecision?: () => void;
+  logDecisionPending?: boolean;
 }
 
 function CommentItem({
@@ -101,6 +104,8 @@ export function CommentThread({
   onResolve,
   onEdit,
   onDelete,
+  onLogDecision,
+  logDecisionPending = false,
 }: CommentThreadProps) {
   const [replying, setReplying] = useState(false);
   const resolved = thread.resolvedAt !== null;
@@ -132,6 +137,22 @@ export function CommentThread({
             >
               Reopen
             </Button>
+            {onLogDecision ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={logDecisionPending}
+                className="h-7 rounded-full px-2.5 text-xs text-action hover:bg-action-soft hover:text-action"
+                onClick={onLogDecision}
+              >
+                {logDecisionPending ? (
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" aria-hidden />
+                ) : (
+                  <Sparkles className="mr-1 h-3 w-3" aria-hidden />
+                )}
+                Log decision
+              </Button>
+            ) : null}
           </>
         ) : (
           <>

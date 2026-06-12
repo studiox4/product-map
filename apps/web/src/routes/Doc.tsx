@@ -20,6 +20,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { CommentsSection } from '@/components/comments/CommentsSection';
+import { ReviewSheet } from '@/components/copilot/ReviewSheet';
 import { Editor } from '@/components/editor/Editor';
 import { EditorToolbar } from '@/components/editor/EditorToolbar';
 import { coverCss } from '@/components/editor/CoverPicker';
@@ -58,6 +59,7 @@ export default function DocPage() {
     updateDocument;
 
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const [wordCount, setWordCount] = useState<number | null>(null);
 
   // Seed the word count from the loaded doc; live updates come from editor changes.
@@ -199,6 +201,9 @@ export default function DocPage() {
         cover={doc.cover ?? null}
         onCoverChange={handleCoverChange}
         readerHref={`/docs/${doc.id}/read`}
+        onAiReview={
+          aiStatus.data?.enabled ? () => setReviewOpen(true) : undefined
+        }
       />
       <Editor
         key={doc.id}
@@ -209,6 +214,9 @@ export default function DocPage() {
         aiConfig={aiConfig}
         onAiDone={handleAiDone}
       />
+
+      {/* AI review side sheet — streams the rubric review (AI-gated above). */}
+      <ReviewSheet documentId={id} open={reviewOpen} onOpenChange={setReviewOpen} />
 
       {/* Non-modal right sheet — the editor stays usable underneath. */}
       <Sheet open={commentsOpen} onOpenChange={setCommentsOpen} modal={false}>

@@ -8,6 +8,7 @@ import {
   Loader2,
   MessageCircle,
   MoreHorizontal,
+  Sparkles,
   TriangleAlert,
 } from 'lucide-react';
 import { DOC_STATUSES, type DocStatus } from '@productmap/shared';
@@ -60,6 +61,8 @@ export interface EditorToolbarProps {
   onCoverChange?: (cover: string | null) => void;
   /** Reader view route for this doc (renders the ⋯ menu entry). */
   readerHref?: string;
+  /** Opens the AI review sheet (⋯ menu entry; omit when AI is disabled). */
+  onAiReview?: () => void;
 }
 
 /** "1,240 words · 6 min read" at ~200 wpm; minimum 1 min when non-empty. */
@@ -107,6 +110,7 @@ export function EditorToolbar({
   cover,
   onCoverChange,
   readerHref,
+  onAiReview,
 }: EditorToolbarProps) {
   const [draftTitle, setDraftTitle] = useState(title);
   useEffect(() => setDraftTitle(title), [title]);
@@ -184,7 +188,7 @@ export function EditorToolbar({
             Export .md
           </a>
         </Button>
-        {readerHref || onCoverChange ? (
+        {readerHref || onCoverChange || onAiReview ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -197,6 +201,15 @@ export function EditorToolbar({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
+              {onAiReview ? (
+                <DropdownMenuItem onSelect={onAiReview}>
+                  <Sparkles className="mr-2 h-4 w-4 text-action" aria-hidden />
+                  AI review
+                </DropdownMenuItem>
+              ) : null}
+              {onAiReview && (readerHref || onCoverChange) ? (
+                <DropdownMenuSeparator />
+              ) : null}
               {readerHref ? (
                 <DropdownMenuItem asChild>
                   <Link to={readerHref}>

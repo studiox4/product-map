@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
-import { Lightbulb, Map, Search, Settings } from 'lucide-react';
+import { Lightbulb, Map, Search, Settings, Sparkles } from 'lucide-react';
 import { Toaster } from '@/components/ui/sonner';
 import ThemeToggle from '@/components/ThemeToggle';
 import WelcomeDialog from '@/components/WelcomeDialog';
 import CommandPalette from '@/components/command/CommandPalette';
 import ShortcutsOverlay from '@/components/command/ShortcutsOverlay';
+import CopilotPanel from '@/components/copilot/CopilotPanel';
 import { useGlobalShortcuts } from '@/components/command/useGlobalShortcuts';
 import { useTrackRecents } from '@/components/command/recents';
+import { useAiStatus } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 const NAV_LINKS: { to: string; label: string; end: boolean; icon?: typeof Lightbulb }[] = [
@@ -26,10 +28,13 @@ const isMac =
 export function AppShell() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [copilotOpen, setCopilotOpen] = useState(false);
+  const aiEnabled = useAiStatus().data?.enabled === true;
 
   useGlobalShortcuts({
     onTogglePalette: () => setPaletteOpen((o) => !o),
     onToggleShortcuts: () => setShortcutsOpen((o) => !o),
+    onToggleCopilot: aiEnabled ? () => setCopilotOpen((o) => !o) : undefined,
   });
   useTrackRecents();
 
@@ -77,6 +82,17 @@ export function AppShell() {
                 {isMac ? '⌘K' : 'Ctrl K'}
               </kbd>
             </button>
+            {aiEnabled ? (
+              <button
+                type="button"
+                onClick={() => setCopilotOpen((o) => !o)}
+                aria-label="Open copilot"
+                title={`Copilot (${isMac ? '⌘J' : 'Ctrl J'})`}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-action outline-none transition-all duration-150 ease-out hover:bg-action-soft/60 focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Sparkles className="h-4 w-4" aria-hidden />
+              </button>
+            ) : null}
             <ThemeToggle />
             <NavLink
               to="/settings"
@@ -103,6 +119,9 @@ export function AppShell() {
       <WelcomeDialog />
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       <ShortcutsOverlay open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+      {aiEnabled ? (
+        <CopilotPanel open={copilotOpen} onOpenChange={setCopilotOpen} />
+      ) : null}
     </div>
   );
 }

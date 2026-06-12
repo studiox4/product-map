@@ -21,18 +21,34 @@ interface GlobalShortcutHandlers {
   onTogglePalette: () => void;
   /** `?` when not typing in an input. */
   onToggleShortcuts: () => void;
+  /** ⌘J / Ctrl+J — copilot panel (omitted when AI is disabled). */
+  onToggleCopilot?: () => void;
 }
 
 /**
  * App-wide keyboard listeners for the command palette (⌘K / Ctrl+K) and the
  * shortcuts overlay (`?`). Mounted once in AppShell.
  */
-export function useGlobalShortcuts({ onTogglePalette, onToggleShortcuts }: GlobalShortcutHandlers): void {
+export function useGlobalShortcuts({
+  onTogglePalette,
+  onToggleShortcuts,
+  onToggleCopilot,
+}: GlobalShortcutHandlers): void {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         onTogglePalette();
+        return;
+      }
+      if (
+        onToggleCopilot &&
+        (e.metaKey || e.ctrlKey) &&
+        !e.altKey &&
+        e.key.toLowerCase() === 'j'
+      ) {
+        e.preventDefault();
+        onToggleCopilot();
         return;
       }
       if (e.key === '?' && !e.metaKey && !e.ctrlKey && !e.altKey && !isEditableTarget(e.target)) {
@@ -42,5 +58,5 @@ export function useGlobalShortcuts({ onTogglePalette, onToggleShortcuts }: Globa
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onTogglePalette, onToggleShortcuts]);
+  }, [onTogglePalette, onToggleShortcuts, onToggleCopilot]);
 }
