@@ -32,3 +32,19 @@ Demo shipped (see `docs/superpowers/specs/2026-06-09-product-map-demo-design.md`
 | 14 | Multi-product workspaces | `products` table already plural; add product switcher + scope queries. | M |
 
 Effort: S ≈ a day, M ≈ 2–4 days, L ≈ 1–2 weeks (single dev + agents).
+
+## Dream tier (ideated 2026-06-12 — not yet committed)
+
+| # | Idea | One-liner | Builds on | Effort |
+|---|------|-----------|-----------|--------|
+| D1 | Idea Inbox | Raw-idea intake queue → triage → vote → promote to feature w/ AI brief | votes, templates, AI gen | M |
+| D2 | Evidence layer | Customer quotes/research/ticket counts attached to features — the "why" with receipts | feature hub | M |
+| D3 | Decision log | First-class decisions; AI suggests extraction from comment threads; decision replay | comments, activity, Bedrock | M |
+| D4 | Dependencies & risk | Feature dependency edges, Gantt arrows, blocked-by badges, critical path, risk notes | gantt svg | M |
+| D5 | AI PM copilot | PRD rubric grading, cross-doc contradiction detection, split suggestions, stale nudges, workspace-grounded chat (RAG over content_md) | Bedrock + AI SDK tool calling | L |
+| D6 | Capacity honesty | S/M/L sizing + capacity line on Gantt + overcommit warnings | gantt, features | S/M |
+| D7 | Releases & changelog | Milestones grouping shipped features; auto-assembled release notes; changelog page | templates, statuses | M |
+| D8 | Broadcast | Read-only shareable roadmap link + "what changed" markdown email/export | digest, export | S/M |
+| D9 | Outcomes (OKR-lite) | Objectives w/ target metrics; features ladder up; outcome-grouped views | features | M |
+
+Recommended first three: D1 (completes the funnel), D3 (unique — nobody has it), D5 review-mode slice (scribe → colleague).
