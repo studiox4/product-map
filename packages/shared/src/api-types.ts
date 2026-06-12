@@ -145,6 +145,16 @@ export interface PlanEntry {
   planId: string; featureId: string;
   startDate: string | null; endDate: string | null; horizon: Horizon;
 }
+/** GET /api/plans/:id and POST /api/plans responses carry the snapshot. */
+export interface PlanWithEntries extends Plan { entries: PlanEntry[]; }
+/** POST /api/plans/:id/apply — diff summary of what changed on the real roadmap. */
+export interface PlanApplyResult {
+  plan: Plan;
+  changed: Array<{
+    featureId: string; title: string;
+    fields: Partial<Record<'startDate' | 'endDate' | 'horizon', { from: string | null; to: string | null }>>;
+  }>;
+}
 export interface ShareTokenInfo {
   id: string; token: string; kind: string; createdAt: string; revokedAt: string | null;
 }
