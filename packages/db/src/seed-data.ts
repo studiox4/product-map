@@ -17,8 +17,16 @@ import {
   comments,
   votes,
   templates,
+  ideas,
+  ideaVotes,
+  evidence,
+  decisions,
+  featureDependencies,
+  releases,
+  objectives,
   type Db,
 } from './index';
+import { eq } from 'drizzle-orm';
 
 export type MarkdownToTiptap = (md: string) => unknown;
 
@@ -37,7 +45,7 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
 
   // Idempotent: wipe everything first.
   await db.execute(
-    sql`truncate table comments, votes, activity, feature_collaborators, uploads, documents, features, products, templates, users restart identity cascade`,
+    sql`truncate table comments, votes, activity, feature_collaborators, uploads, documents, idea_votes, ideas, evidence, decisions, feature_dependencies, share_tokens, features, releases, objectives, products, templates, users restart identity cascade`,
   );
 
   // The team, in join order. Corban stays first — several code paths fall back
@@ -801,6 +809,7 @@ Fund the two weeks. Gate GA behind one partner running the module in staging for
         updatedAt: reply.createdAt,
       });
     }
+    return r;
   };
 
   // 1. UNRESOLVED — editor PRD doc (e2e depends on an open thread here).
@@ -895,8 +904,9 @@ Fund the two weeks. Gate GA behind one partner running the module in staging for
     },
   );
 
-  // 6. RESOLVED — voting feature: anonymity decision.
-  await thread(
+  // 6. RESOLVED — voting feature: anonymity decision. Root kept: a seeded
+  // decision links back to it (source_comment_id).
+  const votingAnonRoot = await thread(
     {
       authorId: priya.id,
       featureId: voting.id,
@@ -972,7 +982,193 @@ Fund the two weeks. Gate GA behind one partner running the module in staging for
     { userId: elena.id, featureId: voting.id, value: -1 },
   ]);
 
+  // --- Dream tier (D1–D9) seed additions ---
+
+  // Objectives: two cards for /outcomes; some features stay unassigned (tray).
+  const [objRecord, objSecurity] = await db
+    .insert(objectives)
+    .values([
+      {
+        title: 'Become the roadmap of record',
+        metric: 'Weekly active planners',
+        target: '4 teams planning weekly',
+        quarter: 'Q3 2026',
+      },
+      {
+        title: 'Win security-conscious teams',
+        metric: 'Design partners running in prod',
+        target: '3 partners',
+        quarter: 'Q4 2026',
+      },
+    ])
+    .returning();
+
+  // Release v0.2 — planned, containing the comments/voting features.
+  const [v02] = await db
+    .insert(releases)
+    .values({
+      name: 'v0.2 — Team ready',
+      targetDate: nextMonth(28),
+      status: 'planned',
+      notesMd: '',
+    })
+    .returning();
+
+  // Sizes on all 8 features (+ objectives, release, risk notes where they tell
+  // a story). Capacity heuristic is s=1, m=3, l=6 weeks vs 4 teammates ×
+  // weeks-in-month (≈17 wk): next month carries gantt + ai + comments, all L
+  // → 18 wk, so the roadmap capacity strip shows ≥1 overcommitted month (AC5).
+  const sizeFeature = async (
+    f: typeof editor,
+    size: 's' | 'm' | 'l',
+    extra: { objectiveId?: string; releaseId?: string; riskMd?: string } = {},
+  ) => {
+    await db.update(features).set({ size, ...extra }).where(eq(features.id, f.id));
+  };
+  await sizeFeature(editor, 'l', { objectiveId: objRecord.id });
+  await sizeFeature(board, 'm', { objectiveId: objRecord.id });
+  await sizeFeature(gantt, 'l', {
+    objectiveId: objRecord.id,
+    riskMd: 'SVG hit targets get cramped on dense roadmaps; touch-device drag semantics deferred entirely.',
+  });
+  await sizeFeature(ai, 'l', { objectiveId: objSecurity.id });
+  await sizeFeature(commentsFeature, 'l', { releaseId: v02.id });
+  await sizeFeature(voting, 's', { releaseId: v02.id });
+  await sizeFeature(realtime, 'l', {
+    riskMd: 'Yjs makes the server-derived markdown guarantee eventually-consistent — the editor’s whole moat. Parked pending a >20-seat partner ask.',
+  });
+  await sizeFeature(ecs, 'm', { objectiveId: objSecurity.id });
+
+  // Idea inbox: 5 inbox ideas, 2 with votes.
+  const ideaRows = await db
+    .insert(ideas)
+    .values([
+      {
+        title: 'Slack notifications for resolved threads',
+        bodyMd: 'When a review thread resolves, ping the doc author in Slack. Three partners asked in the same week — review latency is their top complaint.',
+        source: 'support',
+        createdBy: priya.id,
+        createdAt: daysAgo(9),
+        updatedAt: daysAgo(9),
+      },
+      {
+        title: 'CSV export of the roadmap',
+        bodyMd: 'Procurement at Northwind wants a quarterly spreadsheet snapshot. Ugly but it unblocks a contract.',
+        source: 'sales call',
+        createdBy: marcus.id,
+        createdAt: daysAgo(7),
+        updatedAt: daysAgo(7),
+      },
+      {
+        title: 'Doc version history',
+        bodyMd: 'A "what changed since I last reviewed" diff view. Reviewers currently re-read whole specs.',
+        source: 'dogfooding',
+        createdBy: elena.id,
+        createdAt: daysAgo(5),
+        updatedAt: daysAgo(5),
+      },
+      {
+        title: 'Keyboard-first board triage',
+        bodyMd: 'j/k to move between cards, h/l to change horizon. Weekly planning is mouse-bound today.',
+        source: '',
+        createdBy: corban.id,
+        createdAt: daysAgo(3),
+        updatedAt: daysAgo(3),
+      },
+      {
+        title: 'SSO via OIDC',
+        bodyMd: 'Two prospects gate the pilot on Okta login. Self-hosted + local users only gets us through security review, not rollout.',
+        source: 'sales call',
+        createdBy: marcus.id,
+        createdAt: daysAgo(1.5),
+        updatedAt: daysAgo(1.5),
+      },
+    ])
+    .returning();
+  const slackIdea = ideaRows[0];
+  const ssoIdea = ideaRows[4];
+  await db.insert(ideaVotes).values([
+    { userId: priya.id, ideaId: slackIdea.id, value: 1 },
+    { userId: elena.id, ideaId: slackIdea.id, value: 1 },
+    { userId: marcus.id, ideaId: ssoIdea.id, value: 1 },
+    { userId: corban.id, ideaId: ssoIdea.id, value: -1 },
+  ]);
+
+  // Evidence: 4 items on flagship features.
+  await db.insert(evidence).values([
+    {
+      featureId: editor.id,
+      kind: 'quote' as const,
+      title: '“Feels like the tool I’m not allowed to use”',
+      bodyMd: 'Beta partner PM, week one of the editor beta. Came up unprompted twice — it is the pitch, verbatim.',
+      sourceUrl: '',
+      weight: 1,
+      createdBy: priya.id,
+      createdAt: daysAgo(11),
+    },
+    {
+      featureId: editor.id,
+      kind: 'ticket' as const,
+      title: 'Support tickets asking for markdown export',
+      bodyMd: 'Every ticket is some flavor of “can I get my docs out as plain markdown?” — the round-trip guarantee is doing sales work.',
+      sourceUrl: '',
+      weight: 12,
+      createdBy: marcus.id,
+      createdAt: daysAgo(8),
+    },
+    {
+      featureId: board.id,
+      kind: 'metric' as const,
+      title: 'Board is 41% of all page views',
+      bodyMd: 'Most-visited route in the workspace over the last month, ahead of docs at 27%. The board is the front door.',
+      sourceUrl: '',
+      weight: 1,
+      createdBy: corban.id,
+      createdAt: daysAgo(6),
+    },
+    {
+      featureId: ai.id,
+      kind: 'research' as const,
+      title: 'Empty-doc abandonment study',
+      bodyMd: '11 of 19 docs created in partners’ first week had zero content a day later. The blank page is the stall; drafts are the fix.',
+      sourceUrl: '',
+      weight: 1,
+      createdBy: priya.id,
+      createdAt: daysAgo(4),
+    },
+  ]);
+
+  // Decisions: one linked to the resolved voting-anonymity thread, one manual.
+  await db.insert(decisions).values([
+    {
+      featureId: voting.id,
+      title: 'Votes are aggregate-only',
+      decisionMd: 'The API returns counts and your own vote — never who voted which way. The schema stores voters only to enforce one vote per person.',
+      alternativesMd: 'Attributed votes (rejected: nobody would ever 🧊 a teammate’s pet feature); fully anonymous storage (rejected: cannot enforce the one-vote constraint).',
+      sourceCommentId: votingAnonRoot.id,
+      decidedBy: priya.id,
+      decidedAt: daysAgo(4.5),
+      createdAt: daysAgo(4.5),
+    },
+    {
+      featureId: editor.id,
+      title: 'Tiptap JSON is the source of truth; markdown is derived',
+      decisionMd: 'The server derives content_md from contentJson on every save via one shared extension list. The client never serializes markdown itself.',
+      alternativesMd: 'Markdown as source of truth (lossy for tables and node attrs); both written by the client (two writers drift — Marcus measured 14 divergences in a week).',
+      decidedBy: marcus.id,
+      decidedAt: daysAgo(28),
+      createdAt: daysAgo(28),
+    },
+  ]);
+
+  // Dependencies: comments blocks realtime (review before multiplayer),
+  // board blocks voting (score sort needs the board). ECS blocks nothing.
+  await db.insert(featureDependencies).values([
+    { blockerId: commentsFeature.id, blockedId: realtime.id },
+    { blockerId: board.id, blockedId: voting.id },
+  ]);
+
   console.log(
-    `seeded: 1 product, ${featureRows.length} features, ${docRows.length} documents, 4 templates, 4 users, 8 comment threads, 18 votes, 3-month activity history`,
+    `seeded: 1 product, ${featureRows.length} features, ${docRows.length} documents, 4 templates, 4 users, 8 comment threads, 18 votes, 3-month activity history, 5 ideas, 4 evidence, 2 decisions, 2 dependencies, 1 release, 2 objectives`,
   );
 }

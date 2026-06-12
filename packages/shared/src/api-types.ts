@@ -1,4 +1,7 @@
-import type { Horizon, FeatureStatus, DocType, DocStatus, ActivityKind } from './constants';
+import type {
+  Horizon, FeatureStatus, DocType, DocStatus, ActivityKind,
+  IdeaStatus, EvidenceKind, ReleaseStatus, FeatureSize,
+} from './constants';
 
 export interface Product { id: string; name: string; vision: string; aboutMd: string; }
 export interface User { id: string; name: string; color: string; createdAt: string; }
@@ -7,7 +10,13 @@ export interface VoteSummary { score: number; boosts: number; cools: number; myV
 export interface Feature extends VoteSummary {
   id: string; productId: string; title: string; horizon: Horizon; status: FeatureStatus;
   startDate: string | null; endDate: string | null; sortOrder: number;
-  descriptionMd: string; createdBy: string | null; updatedBy: string | null;
+  descriptionMd: string;
+  /** T-shirt size for capacity math (SIZE_WEEKS heuristic); null = unsized. */
+  size: FeatureSize | null;
+  riskMd: string;
+  objectiveId: string | null;
+  releaseId: string | null;
+  createdBy: string | null; updatedBy: string | null;
   createdAt: string; updatedAt: string;
 }
 export interface DocumentMeta {
@@ -45,7 +54,19 @@ export interface Template {
   isDefault: boolean; archivedAt: string | null;
   createdBy: string | null; createdAt: string; updatedAt: string;
 }
-export interface FeatureWithDocs extends Feature { documents: DocumentMeta[]; }
+export interface FeatureWithDocs extends Feature {
+  documents: DocumentMeta[];
+  /**
+   * Dependency choice (board "blocked" badge): we expose `blockerIds` — the ids
+   * of features that block this one — rather than a precomputed blockedCount.
+   * The board already holds every feature in memory, so the client derives the
+   * amber badge by checking whether any blocker in the loaded list is unshipped
+   * (and clears it live when a blocker ships). Populated by GET /api/features
+   * and GET /api/features/:id; optional because other FeatureWithDocs producers
+   * (e.g. /api/overview) don't need it.
+   */
+  blockerIds?: string[];
+}
 export interface Comment {
   id: string; authorId: string; authorName: string; authorColor: string;
   featureId: string | null; documentId: string | null; parentId: string | null;
@@ -62,3 +83,48 @@ export interface OverviewResponse {
   features: FeatureWithDocs[];
   attention: AttentionItem[];
 }
+
+// --- Dream tier (D1–D9) resources ---
+export interface Idea {
+  id: string; title: string; bodyMd: string; source: string; status: IdeaStatus;
+  promotedFeatureId: string | null; createdBy: string | null;
+  createdAt: string; updatedAt: string;
+}
+/** Idea list/detail rows carry their vote summary (same pill UI as the board). */
+export interface IdeaWithVotes extends Idea { score: number; boosts: number; cools: number; myVote: VoteValue | 0; }
+export interface Evidence {
+  id: string; featureId: string; kind: EvidenceKind; title: string;
+  bodyMd: string; sourceUrl: string; weight: number;
+  createdBy: string | null; createdAt: string;
+}
+export interface Decision {
+  id: string; featureId: string | null; title: string; decisionMd: string;
+  alternativesMd: string; sourceCommentId: string | null;
+  decidedBy: string | null; decidedAt: string; createdAt: string;
+  /** Joined from users for the decision card avatar; null when decider deleted. */
+  decidedByName?: string | null; decidedByColor?: string | null;
+}
+/** AI thread → decision suggestion (POST /api/ai/suggest-decision). */
+export interface SuggestDecisionResponse {
+  suggested: boolean; title: string; decisionMd: string; alternativesMd: string;
+}
+/** GET /api/features/:id/dependencies */
+export interface FeatureDependencies { blockers: Feature[]; blocked: Feature[]; }
+export interface Release {
+  id: string; name: string; targetDate: string | null; status: ReleaseStatus;
+  notesMd: string; shippedAt: string | null; createdAt: string;
+}
+export interface Objective {
+  id: string; title: string; metric: string; target: string; quarter: string; createdAt: string;
+}
+export interface ShareTokenInfo {
+  id: string; token: string; kind: string; createdAt: string; revokedAt: string | null;
+}
+/** GET /api/share/:token/data — read-only, no auth. */
+export interface ShareData { product: Product; features: FeatureWithDocs[]; releases: Release[]; }
+/** GET /api/copilot/nudges — derived hygiene prompts, no table behind them. */
+export type CopilotNudge =
+  | { kind: 'stale_draft'; documentId: string; featureId: string; title: string; updatedAt: string }
+  | { kind: 'dateless_now'; featureId: string; title: string }
+  | { kind: 'oversized'; featureId: string; title: string }
+  | { kind: 'stale_thread'; commentId: string; featureId: string | null; documentId: string | null; title: string; createdAt: string };

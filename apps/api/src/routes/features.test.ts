@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { products, features, documents, users, activity, featureCollaborators, votes } from '@productmap/db';
+import { products, features, documents, users, activity, featureCollaborators, votes, objectives, releases, featureDependencies } from '@productmap/db';
 import { asc, eq } from 'drizzle-orm';
 
 let productId: string;
@@ -411,6 +411,63 @@ describe('PUT /api/features/:id/collaborators', () => {
       },
     );
     expect(missing.status).toBe(404);
+  });
+});
+
+describe('PATCH /api/features/:id — dream-tier fields (size/riskMd/objectiveId/releaseId)', () => {
+  it('updates size, riskMd, objectiveId and releaseId; records size_changed activity', async () => {
+    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const [obj] = await db.insert(objectives).values({ title: 'Roadmap of record' }).returning();
+    const [rel] = await db.insert(releases).values({ name: 'v0.2 — Team ready' }).returning();
+
+    const res = await app.request(
+      `/api/features/${f.id}`,
+      patch({ size: 'l', riskMd: 'CRDT risk', objectiveId: obj.id, releaseId: rel.id }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toMatchObject({ size: 'l', riskMd: 'CRDT risk', objectiveId: obj.id, releaseId: rel.id });
+
+    const acts = await activityRows(f.id);
+    const sizeActs = acts.filter((a) => a.kind === 'size_changed');
+    expect(sizeActs).toHaveLength(1);
+    expect(sizeActs[0].payload).toEqual({ from: null, to: 'l' });
+  });
+
+  it('size can be cleared back to null, recording size_changed; no activity when unchanged', async () => {
+    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now', size: 'm' }).returning();
+    const same = await app.request(`/api/features/${f.id}`, patch({ size: 'm' }));
+    expect(same.status).toBe(200);
+    expect((await activityRows(f.id)).filter((a) => a.kind === 'size_changed')).toHaveLength(0);
+
+    const cleared = await app.request(`/api/features/${f.id}`, patch({ size: null }));
+    expect((await cleared.json()).size).toBeNull();
+    const acts = (await activityRows(f.id)).filter((a) => a.kind === 'size_changed');
+    expect(acts).toHaveLength(1);
+    expect(acts[0].payload).toEqual({ from: 'm', to: null });
+  });
+
+  it('400 on invalid size', async () => {
+    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const res = await app.request(`/api/features/${f.id}`, patch({ size: 'xl' }));
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('GET /api/features — blockerIds', () => {
+  it('list and detail include blockerIds from feature_dependencies', async () => {
+    const [blocker] = await db.insert(features).values({ productId, title: 'Auth', horizon: 'now' }).returning();
+    const [blocked] = await db.insert(features).values({ productId, title: 'Realtime', horizon: 'later' }).returning();
+    await db.insert(featureDependencies).values({ blockerId: blocker.id, blockedId: blocked.id });
+
+    const list = await (await app.request('/api/features')).json();
+    const blockedRow = list.find((x: { id: string }) => x.id === blocked.id);
+    expect(blockedRow.blockerIds).toEqual([blocker.id]);
+    const blockerRow = list.find((x: { id: string }) => x.id === blocker.id);
+    expect(blockerRow.blockerIds).toEqual([]);
+
+    const detail = await (await app.request(`/api/features/${blocked.id}`)).json();
+    expect(detail.blockerIds).toEqual([blocker.id]);
   });
 });
 

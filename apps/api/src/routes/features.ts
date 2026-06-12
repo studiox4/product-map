@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { featureCreate, featureUpdate, collaboratorsPut, voteBody } from '@productmap/shared';
-import { features, documents, products, activity, featureCollaborators, users, votes } from '@productmap/db';
+import { features, documents, products, activity, featureCollaborators, users, votes, featureDependencies } from '@productmap/db';
 import { db } from '../db';
 import { currentUser, type CurrentUserEnv } from '../middleware/current-user';
 import { recordActivity, addCollaborator } from '../lib/activity';
@@ -37,6 +37,22 @@ async function docsForFeatures(featureIds: string[]) {
   return byFeature;
 }
 
+/** blocker ids per blocked feature (board "blocked" badge derives from these). */
+async function blockerIdsForFeatures(featureIds: string[]) {
+  const byBlocked = new Map<string, string[]>();
+  if (featureIds.length === 0) return byBlocked;
+  const rows = await db
+    .select()
+    .from(featureDependencies)
+    .where(inArray(featureDependencies.blockedId, featureIds));
+  for (const row of rows) {
+    const list = byBlocked.get(row.blockedId) ?? [];
+    list.push(row.blockerId);
+    byBlocked.set(row.blockedId, list);
+  }
+  return byBlocked;
+}
+
 export const featuresRoutes = new Hono<CurrentUserEnv>()
   .use('*', currentUser)
   .get('/', async (c) => {
@@ -47,11 +63,13 @@ export const featuresRoutes = new Hono<CurrentUserEnv>()
     const ids = rows.map((f) => f.id);
     const docs = await docsForFeatures(ids);
     const voteMap = await voteSummaries(ids, await requestUserId(c));
+    const blockers = await blockerIdsForFeatures(ids);
     return c.json(
       rows.map((f) => ({
         ...f,
         ...(voteMap.get(f.id) ?? EMPTY_VOTE_SUMMARY),
         documents: docs.get(f.id) ?? [],
+        blockerIds: blockers.get(f.id) ?? [],
       })),
     );
   })
@@ -98,7 +116,13 @@ export const featuresRoutes = new Hono<CurrentUserEnv>()
     if (!row) return c.json({ error: 'not_found' }, 404);
     const docs = await docsForFeatures([row.id]);
     const voteSummary = await voteSummaryFor(row.id, await requestUserId(c));
-    return c.json({ ...row, ...voteSummary, documents: docs.get(row.id) ?? [] });
+    const blockers = await blockerIdsForFeatures([row.id]);
+    return c.json({
+      ...row,
+      ...voteSummary,
+      documents: docs.get(row.id) ?? [],
+      blockerIds: blockers.get(row.id) ?? [],
+    });
   })
   .put(
     '/:id/vote',
@@ -161,6 +185,9 @@ export const featuresRoutes = new Hono<CurrentUserEnv>()
       }
       if (updates.descriptionMd !== undefined && row.descriptionMd !== prev.descriptionMd) {
         await recordActivity(id, user?.id, 'description_edited');
+      }
+      if (updates.size !== undefined && row.size !== prev.size) {
+        await recordActivity(id, user?.id, 'size_changed', { from: prev.size, to: row.size });
       }
       await addCollaborator(id, user?.id);
       return c.json(row);

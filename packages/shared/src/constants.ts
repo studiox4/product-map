@@ -6,6 +6,16 @@ export const DOC_TYPES = ['prd', 'brd', 'tech_spec', 'feature_brief'] as const;
 export type DocType = (typeof DOC_TYPES)[number];
 export const DOC_STATUSES = ['draft', 'in_review', 'final'] as const;
 export type DocStatus = (typeof DOC_STATUSES)[number];
+export const IDEA_STATUSES = ['inbox', 'triaged', 'promoted', 'archived'] as const;
+export type IdeaStatus = (typeof IDEA_STATUSES)[number];
+export const EVIDENCE_KINDS = ['quote', 'research', 'ticket', 'metric', 'other'] as const;
+export type EvidenceKind = (typeof EVIDENCE_KINDS)[number];
+export const RELEASE_STATUSES = ['planned', 'shipped'] as const;
+export type ReleaseStatus = (typeof RELEASE_STATUSES)[number];
+export const FEATURE_SIZES = ['s', 'm', 'l'] as const;
+export type FeatureSize = (typeof FEATURE_SIZES)[number];
+// Capacity heuristic (D6): estimated weeks of work per feature size.
+export const SIZE_WEEKS: Record<FeatureSize, number> = { s: 1, m: 3, l: 6 };
 
 // Badge/chip tints are theme-aware CSS variables (see apps/web/src/index.css);
 // bar hexes stay fixed — they read on both light and dark fields.
@@ -22,6 +32,8 @@ export const ACTIVITY_KINDS = [
   'feature_created', 'horizon_changed', 'status_changed', 'dates_changed',
   'description_edited', 'doc_created', 'doc_status_changed', 'doc_renamed',
   'comment_added', 'comment_resolved',
+  'idea_promoted', 'decision_logged', 'dependency_added', 'dependency_removed',
+  'release_shipped', 'size_changed',
 ] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 
