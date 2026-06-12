@@ -255,24 +255,26 @@ test('AC5: capacity toggle shows monthly load and an overcommitted month', async
 });
 
 // ---------------------------------------------------------------------------
-// AC6 — releases: notes.md assembly, ship → confetti/sage + gantt milestone.
+// AC6 — releases: membership table, ship via status select → confetti/sage
+// gantt milestone (dream tier 2 §7 replaced the ship-only button).
 // ---------------------------------------------------------------------------
-test('AC6: ship v0.2 — notes assemble feature names, milestone turns sage', async ({
+test('AC6: ship v0.2 via the status select — milestone turns sage', async ({
   page,
   request,
 }) => {
   await page.goto('/releases');
   await page.getByRole('link', { name: /v0\.2 — Team ready/ }).click();
 
-  // notes.md prefill assembles the bundled feature names.
-  const notes = page.getByLabel('Release notes markdown');
-  await expect(notes).toHaveValue(/Comments & review/);
-  await expect(notes).toHaveValue(/Up\/down voting/);
+  // Membership section lists the bundled features.
+  await expect(page.getByRole('table').getByText(/Comments & review/)).toBeVisible();
 
-  // Ship it.
-  await page.getByRole('button', { name: 'Ship', exact: true }).click();
+  // Ship it via the status select (both-ways transitions, spec §7).
+  const status = page.getByRole('combobox', { name: /Status for v0\.2/ });
+  await expect(status).toContainText('Planned');
+  await status.click();
+  await page.getByRole('option', { name: 'Shipped' }).click();
   await expect(page.getByText(/Shipped v0\.2/)).toBeVisible();
-  await expect(page.getByText('shipped', { exact: true })).toBeVisible();
+  await expect(status).toContainText('Shipped');
 
   // Milestone diamond on the gantt is sage (shipped).
   const releases = (await (await request.get('/api/releases')).json()) as {

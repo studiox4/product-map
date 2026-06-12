@@ -1,114 +1,312 @@
-import { useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
-import { ArrowLeft, CalendarDays, Copy, Rocket, Sparkles } from 'lucide-react';
+import { ArrowLeft, CalendarDays, FileText, Plus, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
-import type { Feature } from '@productmap/shared';
+import { DOC_STATUS_COLORS, type Feature } from '@productmap/shared';
 import {
-  fetchReleaseNotesMd,
+  useCreateReleaseNotesDoc,
+  useDocument,
+  useFeatures,
+  useGenerateReleaseNotes,
   useRelease,
-  useShipRelease,
-  useUpdateRelease,
+  useSetReleaseFeatures,
+  type ReleaseDetail as ReleaseDetailData,
 } from '@/lib/api';
-import { confettiBurst } from '@/lib/delight';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import DocTypeChip from '@/components/DocTypeChip';
 import HorizonBadge from '@/components/HorizonBadge';
 import StatusBadge from '@/components/StatusBadge';
-import { ReleaseStatusPill } from './ReleaseCard';
+import { ReleaseStatusSelect } from './ReleaseStatusSelect';
 
-function FeaturesTable({ features }: { features: Feature[] }) {
-  if (features.length === 0) {
-    return (
-      <p className="rounded-2xl border border-transparent bg-surface p-6 text-sm text-muted-ink shadow-card">
-        No features in this release yet — assign them from a feature's rail.
-      </p>
+function wordCount(md: string): number {
+  const words = md.trim().split(/\s+/).filter(Boolean);
+  return words.length;
+}
+
+/** Member rows + remove ✕ + "Add features" popover checklist (replace-set PUT). */
+function FeaturesSection({ release }: { release: ReleaseDetailData }) {
+  const { data: allFeatures } = useFeatures();
+  const setFeatures = useSetReleaseFeatures();
+
+  const [addOpen, setAddOpen] = useState(false);
+  const [draftIds, setDraftIds] = useState<string[]>([]);
+
+  const memberIds = release.features.map((f) => f.id);
+  // Candidates: features not bundled into any release yet.
+  const candidates = (allFeatures ?? []).filter((f) => f.releaseId === null);
+
+  const openAdd = (open: boolean) => {
+    if (open) setDraftIds([]);
+    setAddOpen(open);
+  };
+
+  const toggleDraft = (id: string) => {
+    setDraftIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
+  };
+
+  const save = (featureIds: string[], onSuccess?: () => void) => {
+    setFeatures.mutate(
+      { releaseId: release.id, featureIds },
+      {
+        onSuccess,
+        onError: () => toast.error(`Couldn't update features for '${release.name}'`),
+      },
     );
-  }
+  };
+
+  const addSelected = () => save([...memberIds, ...draftIds], () => setAddOpen(false));
+  const remove = (feature: Feature) =>
+    save(memberIds.filter((id) => id !== feature.id));
+
   return (
-    <div className="overflow-hidden rounded-2xl border border-transparent bg-surface shadow-card">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-line text-left text-xs font-medium text-muted-ink">
-            <th className="px-4 py-2.5 font-medium">Feature</th>
-            <th className="px-4 py-2.5 font-medium">Horizon</th>
-            <th className="px-4 py-2.5 font-medium">Status</th>
-            <th className="px-4 py-2.5 font-medium">Size</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-line">
-          {features.map((feature) => (
-            <tr key={feature.id} className="transition-colors duration-150 hover:bg-wash/60">
-              <td className="px-4 py-3">
-                <Link
-                  to={`/features/${feature.id}`}
-                  className="font-medium text-ink outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  {feature.title}
-                </Link>
-              </td>
-              <td className="px-4 py-3">
-                <HorizonBadge horizon={feature.horizon} />
-              </td>
-              <td className="px-4 py-3">
-                <StatusBadge status={feature.status} />
-              </td>
-              <td className="px-4 py-3">
-                {feature.size ? (
-                  <span className="inline-flex items-center rounded-full bg-wash px-2 py-0.5 text-xs font-medium uppercase text-body-ink">
-                    {feature.size}
-                  </span>
-                ) : (
-                  <span className="text-xs text-muted-ink">—</span>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <section className="space-y-3" aria-label="Features">
+      <div className="flex items-center gap-2">
+        <h2 className="font-display text-base font-semibold text-ink">Features</h2>
+        <Popover open={addOpen} onOpenChange={openAdd}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="ml-auto rounded-full">
+              <Plus className="h-3.5 w-3.5" aria-hidden />
+              Add features
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-72 rounded-xl p-3">
+            <p className="text-xs font-medium text-muted-ink">Unassigned features</p>
+            <ul className="mt-2 max-h-56 space-y-0.5 overflow-y-auto">
+              {candidates.map((f) => (
+                <li key={f.id}>
+                  <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-body-ink transition-colors duration-150 ease-out hover:bg-panel">
+                    <input
+                      type="checkbox"
+                      checked={draftIds.includes(f.id)}
+                      onChange={() => toggleDraft(f.id)}
+                      className="h-3.5 w-3.5 accent-[var(--pm-action,currentColor)]"
+                    />
+                    <span className="min-w-0 flex-1 truncate">{f.title}</span>
+                    <HorizonBadge horizon={f.horizon} />
+                  </label>
+                </li>
+              ))}
+              {candidates.length === 0 ? (
+                <li className="px-2 py-1.5 text-sm text-muted-ink">
+                  Every feature is already in a release.
+                </li>
+              ) : null}
+            </ul>
+            <div className="mt-2 flex justify-end gap-2 border-t border-line pt-2">
+              <Button variant="outline" size="sm" onClick={() => setAddOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                disabled={draftIds.length === 0 || setFeatures.isPending}
+                onClick={addSelected}
+              >
+                Add
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {release.features.length === 0 ? (
+        <p className="rounded-2xl border border-transparent bg-surface p-6 text-sm text-muted-ink shadow-card">
+          No features in this release yet — add some with the button above.
+        </p>
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-transparent bg-surface shadow-card">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-line text-left text-xs font-medium text-muted-ink">
+                <th className="px-4 py-2.5 font-medium">Feature</th>
+                <th className="px-4 py-2.5 font-medium">Horizon</th>
+                <th className="px-4 py-2.5 font-medium">Status</th>
+                <th className="px-4 py-2.5 font-medium">Size</th>
+                <th className="px-4 py-2.5">
+                  <span className="sr-only">Remove</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {release.features.map((feature) => (
+                <tr key={feature.id} className="transition-colors duration-150 hover:bg-wash/60">
+                  <td className="px-4 py-3">
+                    <Link
+                      to={`/features/${feature.id}`}
+                      className="font-medium text-ink outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      {feature.title}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3">
+                    <HorizonBadge horizon={feature.horizon} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <StatusBadge status={feature.status} />
+                  </td>
+                  <td className="px-4 py-3">
+                    {feature.size ? (
+                      <span className="inline-flex items-center rounded-full bg-wash px-2 py-0.5 text-xs font-medium uppercase text-body-ink">
+                        {feature.size}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-ink">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 rounded-full text-muted-ink hover:text-ink"
+                      aria-label={`Remove ${feature.title} from release`}
+                      disabled={setFeatures.isPending}
+                      onClick={() => remove(feature)}
+                    >
+                      <X className="h-3.5 w-3.5" aria-hidden />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }
 
-/** /releases/:id — features table, notes editor (prefilled from notes.md), copy markdown. */
+/** Notes doc card / create / generate-draft-with-confirm (dream tier 2 §4). */
+function NotesSection({ release }: { release: ReleaseDetailData }) {
+  const navigate = useNavigate();
+  const createNotesDoc = useCreateReleaseNotesDoc();
+  const generateNotes = useGenerateReleaseNotes();
+  const docQuery = useDocument(release.notesDocId ?? '');
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const create = () => {
+    if (createNotesDoc.isPending) return;
+    createNotesDoc.mutate(release.id, {
+      onSuccess: (doc) => navigate(`/docs/${doc.id}`),
+      onError: () => toast.error(`Couldn't create notes for '${release.name}'`),
+    });
+  };
+
+  const generate = () => {
+    if (generateNotes.isPending) return;
+    generateNotes.mutate(release.id, {
+      onSuccess: (doc) => {
+        setConfirmOpen(false);
+        navigate(`/docs/${doc.id}`);
+      },
+      onError: () => toast.error(`Couldn't assemble notes for '${release.name}'`),
+    });
+  };
+
+  const doc = docQuery.data;
+
+  return (
+    <section className="space-y-3" aria-label="Release notes">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="font-display text-base font-semibold text-ink">Release notes</h2>
+        {release.notesDocId ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-auto rounded-full"
+            onClick={() => setConfirmOpen(true)}
+          >
+            <Sparkles className="h-3.5 w-3.5" aria-hidden />
+            Generate draft from features
+          </Button>
+        ) : null}
+      </div>
+
+      {!release.notesDocId ? (
+        <div className="rounded-2xl border border-dashed border-line bg-wash/50 p-6 text-center">
+          <p className="text-sm text-muted-ink">
+            No notes yet — write them as a full doc in the editor.
+          </p>
+          <Button
+            className="mt-4 rounded-full"
+            onClick={create}
+            disabled={createNotesDoc.isPending}
+          >
+            <FileText className="h-3.5 w-3.5" aria-hidden />
+            Create notes doc
+          </Button>
+        </div>
+      ) : doc ? (
+        <Link
+          to={`/docs/${doc.id}`}
+          className="flex items-center gap-3 rounded-2xl border border-transparent bg-surface px-5 py-4 shadow-card outline-none transition-[box-shadow,transform] duration-150 ease-out hover:-translate-y-px hover:shadow-card-hover focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <FileText className="h-4 w-4 shrink-0 text-muted-ink" aria-hidden />
+          <span className="min-w-0 flex-1 truncate font-medium text-ink">{doc.title}</span>
+          <DocTypeChip type={doc.type} />
+          <span
+            className={cn(
+              'inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium capitalize',
+              DOC_STATUS_COLORS[doc.status],
+            )}
+          >
+            {doc.status.replace('_', ' ')}
+          </span>
+          <span className="whitespace-nowrap text-xs text-muted-ink">
+            {wordCount(doc.contentMd)} words
+          </span>
+        </Link>
+      ) : (
+        <Skeleton className="h-[60px] rounded-2xl" />
+      )}
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Generate draft from features?</DialogTitle>
+            <DialogDescription>
+              This assembles a draft from this release's features and their final docs,
+              overwriting the current notes doc body.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="rounded-full"
+              onClick={() => setConfirmOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="rounded-full"
+              onClick={generate}
+              disabled={generateNotes.isPending}
+            >
+              Generate draft
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </section>
+  );
+}
+
+/** /releases/:id — membership management, notes doc, status select (dream tier 2 §4/5/7). */
 export default function ReleaseDetail() {
   const { id = '' } = useParams();
   const releaseQuery = useRelease(id);
-  const updateRelease = useUpdateRelease();
-  const shipRelease = useShipRelease();
-
-  const [notes, setNotes] = useState('');
-  const [notesReady, setNotesReady] = useState(false);
-  const prefetchedFor = useRef<string | null>(null);
-
   const release = releaseQuery.data;
-
-  // Seed the editor once per release: saved notes win; otherwise prefill from
-  // the auto-assembled notes.md endpoint (unsaved until the user hits Save).
-  useEffect(() => {
-    if (!release || prefetchedFor.current === release.id) return;
-    prefetchedFor.current = release.id;
-    if (release.notesMd.trim()) {
-      setNotes(release.notesMd);
-      setNotesReady(true);
-      return;
-    }
-    let cancelled = false;
-    fetchReleaseNotesMd(release.id)
-      .then((md) => {
-        if (!cancelled) setNotes(md);
-      })
-      .catch(() => {
-        // prefill is best-effort; editor stays empty
-      })
-      .finally(() => {
-        if (!cancelled) setNotesReady(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [release]);
 
   if (releaseQuery.isLoading) {
     return (
@@ -131,45 +329,6 @@ export default function ReleaseDetail() {
     );
   }
 
-  const ship = () => {
-    if (shipRelease.isPending) return;
-    shipRelease.mutate(release.id, {
-      onSuccess: () => {
-        confettiBurst();
-        toast.success(`Shipped ${release.name} 🎉`);
-      },
-      onError: () => toast.error(`Couldn't ship '${release.name}'`),
-    });
-  };
-
-  const saveNotes = () => {
-    updateRelease.mutate(
-      { id: release.id, notesMd: notes },
-      {
-        onSuccess: () => toast.success('Notes saved'),
-        onError: () => toast.error("Couldn't save notes"),
-      },
-    );
-  };
-
-  const regenerate = async () => {
-    try {
-      setNotes(await fetchReleaseNotesMd(release.id));
-      toast.success('Notes regenerated from features');
-    } catch {
-      toast.error("Couldn't assemble notes");
-    }
-  };
-
-  const copyMarkdown = async () => {
-    try {
-      await navigator.clipboard.writeText(notes);
-      toast.success('Markdown copied');
-    } catch {
-      toast.error("Couldn't copy to clipboard");
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div>
@@ -184,62 +343,18 @@ export default function ReleaseDetail() {
           <h1 className="font-display text-2xl font-bold tracking-tight text-ink">
             {release.name}
           </h1>
-          <ReleaseStatusPill status={release.status} />
+          <ReleaseStatusSelect release={release} />
           {release.targetDate ? (
             <span className="inline-flex items-center gap-1 text-sm text-muted-ink">
               <CalendarDays className="h-3.5 w-3.5" aria-hidden />
               {format(new Date(`${release.targetDate}T00:00:00`), 'MMM d, yyyy')}
             </span>
           ) : null}
-          {release.status === 'planned' ? (
-            <Button
-              size="sm"
-              className="ml-auto rounded-full"
-              onClick={ship}
-              disabled={shipRelease.isPending}
-            >
-              <Rocket className="h-3.5 w-3.5" aria-hidden />
-              Ship
-            </Button>
-          ) : null}
         </div>
       </div>
 
-      <section className="space-y-3">
-        <h2 className="font-display text-base font-semibold text-ink">Features</h2>
-        <FeaturesTable features={release.features} />
-      </section>
-
-      <section className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="font-display text-base font-semibold text-ink">Release notes</h2>
-          <div className="ml-auto flex items-center gap-2">
-            <Button variant="outline" size="sm" className="rounded-full" onClick={regenerate}>
-              <Sparkles className="h-3.5 w-3.5" aria-hidden />
-              Regenerate
-            </Button>
-            <Button variant="outline" size="sm" className="rounded-full" onClick={copyMarkdown}>
-              <Copy className="h-3.5 w-3.5" aria-hidden />
-              Copy markdown
-            </Button>
-            <Button
-              size="sm"
-              className="rounded-full"
-              onClick={saveNotes}
-              disabled={updateRelease.isPending || !notesReady}
-            >
-              Save notes
-            </Button>
-          </div>
-        </div>
-        <Textarea
-          aria-label="Release notes markdown"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder={notesReady ? 'Write release notes in markdown…' : 'Assembling notes…'}
-          className="min-h-[280px] rounded-2xl bg-surface font-mono text-sm shadow-card"
-        />
-      </section>
+      <FeaturesSection release={release} />
+      <NotesSection release={release} />
     </div>
   );
 }

@@ -1,18 +1,33 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest';
 import { render, screen, within, waitFor, cleanup } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import userEvent, { PointerEventsCheckLevel } from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import type { Feature } from '@productmap/shared';
+import type { DocumentFull, Feature } from '@productmap/shared';
 import type { ReleaseListItem } from '@/lib/api';
 import ReleasesPage from '@/routes/Releases';
 import ReleaseDetail from '@/components/releases/ReleaseDetail';
 
-// Ship triggers confetti — assert the call, skip the canvas.
+// Shipping triggers confetti — assert the call, skip the canvas.
 vi.mock('@/lib/delight', () => ({ confettiBurst: vi.fn() }));
 import { confettiBurst } from '@/lib/delight';
+
+// jsdom polyfills for Radix Select
+beforeAll(() => {
+  window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  window.HTMLElement.prototype.hasPointerCapture = vi.fn();
+  window.HTMLElement.prototype.releasePointerCapture = vi.fn();
+  if (!('ResizeObserver' in window)) {
+    // @ts-expect-error test polyfill
+    window.ResizeObserver = class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+  }
+});
 
 function makeFeature(overrides: Partial<Feature> & { id: string; title: string }): Feature {
   return {
@@ -40,33 +55,77 @@ function makeFeature(overrides: Partial<Feature> & { id: string; title: string }
 }
 
 const baseRelease = {
-  notesMd: '',
+  notesDocId: null,
   shippedAt: null,
   createdAt: '2026-06-01T00:00:00.000Z',
 };
 
-let releaseList: ReleaseListItem[];
-let shipCalls: string[];
-let savedNotes: string | null;
+const notesDoc: DocumentFull = {
+  id: 'd1',
+  featureId: null,
+  ideaId: null,
+  type: 'release_notes',
+  title: 'v0.2 — Team ready',
+  status: 'draft',
+  cover: null,
+  createdBy: null,
+  updatedBy: null,
+  createdAt: '2026-06-01T00:00:00.000Z',
+  updatedAt: '2026-06-01T00:00:00.000Z',
+  contentJson: { type: 'doc', content: [] },
+  contentMd: '## Highlights\n\nThreaded comments shipped.',
+};
 
-const detailFeatures = [
+let releaseList: ReleaseListItem[];
+let patchCalls: Array<{ id: string; body: Record<string, unknown> }>;
+let putFeatureIds: string[][];
+let notesDocCreated: number;
+let generateCalls: number;
+
+const memberFeatures = [
   makeFeature({ id: 'f1', title: 'Comments & review', status: 'shipped', size: 'm' }),
   makeFeature({ id: 'f2', title: 'Voting', horizon: 'next', size: 's' }),
+];
+const unassignedFeatures = [
+  makeFeature({ id: 'f3', title: 'Realtime collaboration', releaseId: null }),
+  makeFeature({ id: 'f4', title: 'Public API', releaseId: null, horizon: 'later' }),
 ];
 
 const server = setupServer(
   http.get('/api/releases', () => HttpResponse.json(releaseList)),
   http.get('/api/releases/r1', () =>
-    HttpResponse.json({ ...releaseList[0], features: detailFeatures }),
+    HttpResponse.json({ ...releaseList[0], features: memberFeatures }),
   ),
-  http.get('/api/releases/r1/notes.md', () =>
-    HttpResponse.text('# v0.2 — Team ready\n\n## Comments & review\n\nThreaded comments.\n'),
-  ),
-  http.post('/api/releases/:id/ship', ({ params }) => {
-    shipCalls.push(params.id as string);
+  http.get('/api/features', () => HttpResponse.json([...memberFeatures, ...unassignedFeatures])),
+  http.get('/api/documents/d1', () => HttpResponse.json(notesDoc)),
+  http.patch('/api/releases/:id', async ({ params, request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    patchCalls.push({ id: params.id as string, body });
     const release = releaseList.find((r) => r.id === params.id)!;
-    release.status = 'shipped';
-    return HttpResponse.json({ ...release, shippedAt: '2026-06-10T00:00:00.000Z' });
+    if (typeof body.status === 'string') {
+      release.status = body.status as ReleaseListItem['status'];
+      release.shippedAt = body.status === 'shipped' ? '2026-06-10T00:00:00.000Z' : null;
+    }
+    return HttpResponse.json(release);
+  }),
+  http.put('/api/releases/r1/features', async ({ request }) => {
+    const { featureIds } = (await request.json()) as { featureIds: string[] };
+    putFeatureIds.push(featureIds);
+    return HttpResponse.json({
+      ...releaseList[0],
+      features: [...memberFeatures, ...unassignedFeatures].filter((f) =>
+        featureIds.includes(f.id),
+      ),
+    });
+  }),
+  http.post('/api/releases/r1/notes-doc', () => {
+    notesDocCreated += 1;
+    releaseList[0].notesDocId = 'd1';
+    return HttpResponse.json(notesDoc, { status: 201 });
+  }),
+  http.post('/api/releases/r1/generate-notes', () => {
+    generateCalls += 1;
+    return HttpResponse.json(notesDoc);
   }),
   http.post('/api/releases', async ({ request }) => {
     const body = (await request.json()) as { name: string; targetDate: string | null };
@@ -81,11 +140,6 @@ const server = setupServer(
     releaseList = [...releaseList, row];
     return HttpResponse.json(row, { status: 201 });
   }),
-  http.patch('/api/releases/r1', async ({ request }) => {
-    const body = (await request.json()) as { notesMd?: string };
-    savedNotes = body.notesMd ?? null;
-    return HttpResponse.json({ ...releaseList[0], notesMd: body.notesMd ?? '' });
-  }),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -96,7 +150,7 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-function resetFixtures() {
+function resetFixtures({ withNotesDoc = false } = {}) {
   releaseList = [
     {
       ...baseRelease,
@@ -104,6 +158,7 @@ function resetFixtures() {
       name: 'v0.2 — Team ready',
       targetDate: '2026-07-15',
       status: 'planned',
+      notesDocId: withNotesDoc ? 'd1' : null,
       featureCount: 2,
     },
     {
@@ -112,15 +167,20 @@ function resetFixtures() {
       name: 'v0.1 — Foundations',
       targetDate: null,
       status: 'shipped',
+      shippedAt: '2026-05-01T00:00:00.000Z',
       featureCount: 3,
     },
   ];
-  shipCalls = [];
-  savedNotes = null;
+  patchCalls = [];
+  putFeatureIds = [];
+  notesDocCreated = 0;
+  generateCalls = 0;
 }
 
-function renderAt(initialEntry: string) {
-  resetFixtures();
+const user = () => userEvent.setup({ pointerEventsCheck: PointerEventsCheckLevel.Never });
+
+function renderAt(initialEntry: string, options: { withNotesDoc?: boolean } = {}) {
+  resetFixtures(options);
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -131,6 +191,7 @@ function renderAt(initialEntry: string) {
           <Route path="/releases" element={<ReleasesPage />} />
           <Route path="/releases/:id" element={<ReleaseDetail />} />
           <Route path="/features/:id" element={<div>feature route</div>} />
+          <Route path="/docs/:id" element={<div>doc editor route</div>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -138,38 +199,50 @@ function renderAt(initialEntry: string) {
 }
 
 describe('Releases list', () => {
-  it('shows status, target date, and feature count; ship button only while planned', async () => {
+  it('shows target date, feature count, and a status select per row', async () => {
     renderAt('/releases');
     await screen.findByText('v0.2 — Team ready');
 
     expect(screen.getByText('2 features')).toBeTruthy();
     expect(screen.getByText('3 features')).toBeTruthy();
     expect(screen.getByText('Jul 15, 2026')).toBeTruthy();
-    expect(screen.getByText('planned')).toBeTruthy();
-    expect(screen.getByText('shipped')).toBeTruthy();
-
-    // Only the planned release gets a ship affordance.
-    expect(screen.getAllByRole('button', { name: /^Ship / })).toHaveLength(1);
-    expect(screen.getByRole('button', { name: 'Ship v0.2 — Team ready' })).toBeTruthy();
+    const planned = screen.getByRole('combobox', { name: 'Status for v0.2 — Team ready' });
+    expect(planned.textContent).toContain('Planned');
+    const shipped = screen.getByRole('combobox', { name: 'Status for v0.1 — Foundations' });
+    expect(shipped.textContent).toContain('Shipped');
   });
 
-  it('ships a release with confetti and flips its status pill', async () => {
+  it('planned→shipped via the status select fires confetti', async () => {
     renderAt('/releases');
-    const u = userEvent.setup();
+    const u = user();
     await screen.findByText('v0.2 — Team ready');
 
-    await u.click(screen.getByRole('button', { name: 'Ship v0.2 — Team ready' }));
+    await u.click(screen.getByRole('combobox', { name: 'Status for v0.2 — Team ready' }));
+    await u.click(await screen.findByRole('option', { name: 'Shipped' }));
 
-    await waitFor(() => expect(shipCalls).toEqual(['r1']));
+    await waitFor(() =>
+      expect(patchCalls).toEqual([{ id: 'r1', body: { status: 'shipped' } }]),
+    );
     expect(confettiBurst).toHaveBeenCalledTimes(1);
-    // After invalidation the list refetches and both rows read shipped.
-    await waitFor(() => expect(screen.getAllByText('shipped')).toHaveLength(2));
-    expect(screen.queryByRole('button', { name: /^Ship / })).toBeNull();
+  });
+
+  it('shipped→planned via the status select reverts WITHOUT confetti', async () => {
+    renderAt('/releases');
+    const u = user();
+    await screen.findByText('v0.1 — Foundations');
+
+    await u.click(screen.getByRole('combobox', { name: 'Status for v0.1 — Foundations' }));
+    await u.click(await screen.findByRole('option', { name: 'Planned' }));
+
+    await waitFor(() =>
+      expect(patchCalls).toEqual([{ id: 'r0', body: { status: 'planned' } }]),
+    );
+    expect(confettiBurst).not.toHaveBeenCalled();
   });
 
   it('creates a release from the dialog', async () => {
     renderAt('/releases');
-    const u = userEvent.setup();
+    const u = user();
     await screen.findByText('v0.2 — Team ready');
 
     await u.click(screen.getByRole('button', { name: /New release/ }));
@@ -182,8 +255,8 @@ describe('Releases list', () => {
   });
 });
 
-describe('Release detail', () => {
-  it('renders the features table with horizon, status, and size', async () => {
+describe('Release detail — features membership', () => {
+  it('renders the member table with horizon, status, and size', async () => {
     renderAt('/releases/r1');
     await screen.findByRole('heading', { name: 'v0.2 — Team ready' });
 
@@ -199,32 +272,66 @@ describe('Release detail', () => {
     expect(within(rows[1]).getByText('Next')).toBeTruthy();
   });
 
-  it('prefills the notes editor from notes.md when no notes are saved, then saves', async () => {
+  it('removes a member via the row ✕ (replace-set PUT without it)', async () => {
     renderAt('/releases/r1');
-    const u = userEvent.setup();
+    const u = user();
+    await screen.findByRole('heading', { name: 'v0.2 — Team ready' });
 
-    const editor = await screen.findByLabelText('Release notes markdown');
-    await waitFor(() =>
-      expect((editor as HTMLTextAreaElement).value).toContain('# v0.2 — Team ready'),
-    );
-    expect((editor as HTMLTextAreaElement).value).toContain('## Comments & review');
-
-    await u.type(editor, '\nEdited.');
-    await u.click(screen.getByRole('button', { name: 'Save notes' }));
-    await waitFor(() => expect(savedNotes).toContain('Edited.'));
+    await u.click(screen.getByRole('button', { name: 'Remove Voting from release' }));
+    await waitFor(() => expect(putFeatureIds).toEqual([['f1']]));
   });
 
-  it('copies the notes markdown to the clipboard', async () => {
+  it('adds unassigned features via the popover checklist', async () => {
     renderAt('/releases/r1');
-    const u = userEvent.setup();
+    const u = user();
+    await screen.findByRole('heading', { name: 'v0.2 — Team ready' });
 
-    const editor = await screen.findByLabelText('Release notes markdown');
-    await waitFor(() =>
-      expect((editor as HTMLTextAreaElement).value).toContain('# v0.2 — Team ready'),
-    );
+    await u.click(screen.getByRole('button', { name: /Add features/ }));
+    // Checklist holds only the two unassigned features (members excluded).
+    expect(await screen.findByLabelText(/Realtime collaboration/)).toBeTruthy();
+    expect(screen.getAllByRole('checkbox')).toHaveLength(2);
 
-    await u.click(screen.getByRole('button', { name: /Copy markdown/ }));
-    const copied = await window.navigator.clipboard.readText();
-    expect(copied).toContain('## Comments & review');
+    await u.click(screen.getByLabelText(/Realtime collaboration/));
+    await u.click(screen.getByLabelText(/Public API/));
+    await u.click(screen.getByRole('button', { name: 'Add' }));
+
+    await waitFor(() => expect(putFeatureIds).toEqual([['f1', 'f2', 'f3', 'f4']]));
+  });
+});
+
+describe('Release detail — notes doc', () => {
+  it('creates the notes doc and navigates to the editor', async () => {
+    renderAt('/releases/r1');
+    const u = user();
+    await screen.findByRole('heading', { name: 'v0.2 — Team ready' });
+
+    await u.click(screen.getByRole('button', { name: /Create notes doc/ }));
+    await waitFor(() => expect(notesDocCreated).toBe(1));
+    await screen.findByText('doc editor route');
+  });
+
+  it('shows the doc card with chip, status, and word count when notes exist', async () => {
+    renderAt('/releases/r1', { withNotesDoc: true });
+    await screen.findByRole('heading', { name: 'v0.2 — Team ready' });
+
+    const card = await screen.findByRole('link', { name: /Release notes/ });
+    expect(card).toHaveProperty('pathname', '/docs/d1');
+    expect(within(card).getByText('Release notes')).toBeTruthy();
+    expect(within(card).getByText('draft')).toBeTruthy();
+    expect(within(card).getByText('5 words')).toBeTruthy();
+  });
+
+  it('generates a draft from features behind an overwrite confirm', async () => {
+    renderAt('/releases/r1', { withNotesDoc: true });
+    const u = user();
+    await screen.findByRole('heading', { name: 'v0.2 — Team ready' });
+
+    await u.click(screen.getByRole('button', { name: /Generate draft from features/ }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/overwriting the current notes doc/)).toBeTruthy();
+    await u.click(within(dialog).getByRole('button', { name: 'Generate draft' }));
+
+    await waitFor(() => expect(generateCalls).toBe(1));
+    await screen.findByText('doc editor route');
   });
 });

@@ -1,8 +1,47 @@
 import { Link } from 'react-router-dom';
-import { Target } from 'lucide-react';
-import { HORIZONS, type Feature, type Horizon, type Objective } from '@productmap/shared';
+import { MoreHorizontal, Pencil, Target, XCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import {
+  HORIZONS,
+  type Feature,
+  type Horizon,
+  type Objective,
+  type ObjectiveStatus,
+} from '@productmap/shared';
+import { useUpdateObjective } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import { HORIZON_LABELS } from '@/components/HorizonBadge';
 import StatusBadge from '@/components/StatusBadge';
+import UserAvatar from '@/components/UserAvatar';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { OBJECTIVE_STATUS_LABELS } from './ObjectiveDialog';
+
+/** on_track sage / at_risk warm / achieved action / dropped slate (spec §3). */
+const OBJECTIVE_STATUS_CLASSES: Record<ObjectiveStatus, string> = {
+  on_track: 'bg-sage-soft text-sage',
+  at_risk: 'bg-warm-soft text-warm',
+  achieved: 'bg-action-soft text-action',
+  dropped: 'bg-[#e2e8f0] text-[#475569]',
+};
+
+export function ObjectiveStatusPill({ status }: { status: ObjectiveStatus }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium',
+        OBJECTIVE_STATUS_CLASSES[status],
+      )}
+    >
+      {OBJECTIVE_STATUS_LABELS[status]}
+    </span>
+  );
+}
 
 /** Compact read-only feature row inside an objective card / the unassigned tray. */
 export function FeatureMiniRow({ feature }: { feature: Feature }) {
@@ -25,20 +64,35 @@ export function FeatureMiniRow({ feature }: { feature: Feature }) {
 }
 
 /**
- * Objective card (Dream tier D9): metric/target/quarter header + this
- * objective's features as mini-rows grouped by horizon. Read-only —
- * assignment happens on the feature rail.
+ * Objective card (Dream tier D9 + tier 2 §3): owner avatar, status pill,
+ * metric → target → current progress line, ⋯ edit/drop menu, and this
+ * objective's features as mini-rows grouped by horizon.
  */
 export function ObjectiveCard({
   objective,
   features,
+  onEdit,
 }: {
   objective: Objective;
   features: Feature[];
+  onEdit?: (objective: Objective) => void;
 }) {
+  const updateObjective = useUpdateObjective();
+
   const byHorizon = new Map<Horizon, Feature[]>(
     HORIZONS.map((h) => [h, features.filter((f) => f.horizon === h)]),
   );
+
+  const drop = () => {
+    if (updateObjective.isPending) return;
+    updateObjective.mutate(
+      { id: objective.id, status: 'dropped' },
+      {
+        onSuccess: () => toast.success(`Dropped '${objective.title}'`),
+        onError: () => toast.error(`Couldn't drop '${objective.title}'`),
+      },
+    );
+  };
 
   return (
     <article className="rounded-2xl border border-transparent bg-surface p-5 shadow-card">
@@ -47,11 +101,44 @@ export function ObjectiveCard({
           <Target className="h-4 w-4" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="font-display text-base font-semibold text-ink">{objective.title}</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="min-w-0 flex-1 truncate font-display text-base font-semibold text-ink">
+              {objective.title}
+            </h2>
+            <ObjectiveStatusPill status={objective.status} />
+            {objective.owner ? <UserAvatar user={objective.owner} size="sm" /> : null}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 rounded-full"
+                  aria-label={`Objective actions for ${objective.title}`}
+                >
+                  <MoreHorizontal className="h-4 w-4" aria-hidden />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => onEdit?.(objective)}>
+                  <Pencil className="h-3.5 w-3.5" aria-hidden />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={drop} disabled={objective.status === 'dropped'}>
+                  <XCircle className="h-3.5 w-3.5" aria-hidden />
+                  Drop
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-ink">
             {objective.metric ? <span>{objective.metric}</span> : null}
             {objective.target ? (
               <span className="font-medium text-body-ink">→ {objective.target}</span>
+            ) : null}
+            {objective.current ? (
+              <span>
+                now <span className="font-medium text-body-ink">{objective.current}</span>
+              </span>
             ) : null}
             {objective.quarter ? (
               <span className="inline-flex items-center rounded-full bg-wash px-2 py-0.5 font-medium text-body-ink">
@@ -59,6 +146,9 @@ export function ObjectiveCard({
               </span>
             ) : null}
           </div>
+          {objective.descriptionMd ? (
+            <p className="mt-1.5 line-clamp-2 text-sm text-body-ink">{objective.descriptionMd}</p>
+          ) : null}
         </div>
       </div>
 

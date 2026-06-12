@@ -1,17 +1,23 @@
-import { Inbox } from 'lucide-react';
+import { useState } from 'react';
+import { Inbox, Plus } from 'lucide-react';
+import type { Objective } from '@productmap/shared';
 import { useFeatures, useObjectives } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ObjectiveCard, FeatureMiniRow } from '@/components/outcomes/ObjectiveCard';
+import { ObjectiveDialog } from '@/components/outcomes/ObjectiveDialog';
 
 /**
- * /outcomes (Dream tier D9): objectives as cards with their features grouped
- * by horizon, plus an unassigned-features tray. Read-only — assignment lives
- * on the feature rail's objective dropdown.
+ * /outcomes (Dream tier D9 + tier 2 §3): objectives as cards with their
+ * features grouped by horizon, plus an unassigned-features tray. Objectives
+ * are created/edited here; feature assignment lives on the feature page rail.
  */
 export default function Outcomes() {
   const objectivesQuery = useObjectives();
   const featuresQuery = useFeatures();
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<Objective | null>(null);
 
   const objectives = objectivesQuery.data;
   const features = featuresQuery.data;
@@ -20,13 +26,28 @@ export default function Outcomes() {
 
   const unassigned = (features ?? []).filter((f) => f.objectiveId === null);
 
+  const openCreate = () => {
+    setEditing(null);
+    setDialogOpen(true);
+  };
+  const openEdit = (objective: Objective) => {
+    setEditing(objective);
+    setDialogOpen(true);
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Outcomes</h1>
-        <p className="mt-1 text-sm text-muted-ink">
-          Objectives and the features driving them. Assign features from their page rail.
-        </p>
+      <div className="flex items-start gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Outcomes</h1>
+          <p className="mt-1 text-sm text-muted-ink">
+            Objectives and the features driving them. Assign features from their page rail.
+          </p>
+        </div>
+        <Button size="sm" className="ml-auto rounded-full" onClick={openCreate}>
+          <Plus className="h-3.5 w-3.5" aria-hidden />
+          New objective
+        </Button>
       </div>
 
       {isLoading && (
@@ -58,6 +79,10 @@ export default function Outcomes() {
           {objectives.length === 0 ? (
             <div className="rounded-2xl border border-transparent bg-surface p-10 text-center shadow-card">
               <p className="text-sm text-muted-ink">No objectives yet.</p>
+              <Button className="mt-4 rounded-full" onClick={openCreate}>
+                <Plus className="h-3.5 w-3.5" aria-hidden />
+                New objective
+              </Button>
             </div>
           ) : (
             <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
@@ -66,6 +91,7 @@ export default function Outcomes() {
                   key={objective.id}
                   objective={objective}
                   features={features.filter((f) => f.objectiveId === objective.id)}
+                  onEdit={openEdit}
                 />
               ))}
             </div>
@@ -96,6 +122,8 @@ export default function Outcomes() {
           </section>
         </>
       )}
+
+      <ObjectiveDialog open={dialogOpen} onOpenChange={setDialogOpen} objective={editing} />
     </div>
   );
 }

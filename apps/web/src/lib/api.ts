@@ -844,13 +844,13 @@ export interface ReleaseDetail extends Release {
 export interface ReleaseCreateInput {
   name: string;
   targetDate?: string | null;
-  notesMd?: string;
 }
 
+/** Status moves BOTH ways server-side (shipped→planned clears shippedAt). */
 export interface ReleaseUpdateInput {
   name?: string;
   targetDate?: string | null;
-  notesMd?: string;
+  status?: Release['status'];
 }
 
 export const releasesKey = ['releases'] as const;
@@ -901,7 +901,14 @@ export function useUpdateRelease() {
         method: 'PATCH',
         body: JSON.stringify(patch),
       }),
-    onSettled: (_data, _err, { id }) => invalidateReleases(qc, id),
+    onSettled: (_data, _err, { id, status }) => {
+      invalidateReleases(qc, id);
+      if (status !== undefined) {
+        // Status flips ride on features too (gantt milestone, share changelog).
+        qc.invalidateQueries({ queryKey: queryKeys.features });
+        qc.invalidateQueries({ queryKey: queryKeys.overview });
+      }
+    },
   });
 }
 
@@ -911,30 +918,6 @@ export function useDeleteRelease() {
     mutationFn: (id: string) => fetchJson<void>(`/api/releases/${id}`, { method: 'DELETE' }),
     onSettled: () => invalidateReleases(qc),
   });
-}
-
-/**
- * POST /api/releases/:id/ship — marks shipped + logs release_shipped activity
- * on every feature in the release, so feature caches refresh too.
- */
-export function useShipRelease() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) =>
-      fetchJson<Release>(`/api/releases/${id}/ship`, { method: 'POST' }),
-    onSettled: (_data, _err, id) => {
-      invalidateReleases(qc, id);
-      qc.invalidateQueries({ queryKey: queryKeys.features });
-      qc.invalidateQueries({ queryKey: queryKeys.overview });
-    },
-  });
-}
-
-/** GET /api/releases/:id/notes.md — auto-assembled markdown (text, not JSON). */
-export async function fetchReleaseNotesMd(id: string): Promise<string> {
-  const res = await fetch(`/api/releases/${id}/notes.md`, { headers: userIdHeaders() });
-  if (!res.ok) throw new ApiError(res.status, null);
-  return res.text();
 }
 
 export function useObjectives() {
@@ -1400,3 +1383,128 @@ export function useAllDependencies(featureIds: string[]) {
     },
   });
 }
+
+// ============================================================================
+// APPEND BLOCK — outcomes & release detail (dream tier 2, spec §3–5/7).
+// Owned by the outcomes+release-detail task; keep additions inside this block.
+// Imports hoisted by ESM.
+// ============================================================================
+
+import type { ObjectiveStatus } from '@productmap/shared';
+
+export interface ObjectiveCreateInput {
+  title: string;
+  descriptionMd?: string;
+  metric?: string;
+  target?: string;
+  current?: string;
+  status?: ObjectiveStatus;
+  ownerId?: string | null;
+  quarter?: string;
+}
+
+export type ObjectiveUpdateInput = Partial<ObjectiveCreateInput>;
+
+export function useCreateObjective() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ObjectiveCreateInput) =>
+      fetchJson<Objective>('/api/objectives', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: objectivesKey });
+    },
+  });
+}
+
+export interface UpdateObjectiveVars extends ObjectiveUpdateInput {
+  id: string;
+}
+
+export function useUpdateObjective() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...patch }: UpdateObjectiveVars) =>
+      fetchJson<Objective>(`/api/objectives/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(patch),
+      }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: objectivesKey });
+    },
+  });
+}
+
+/**
+ * POST /api/releases/:id/notes-doc — the release's notes doc, created from the
+ * default release_notes template when none is linked yet. Seeds the document
+ * cache so navigating straight to /docs/:id renders without a refetch.
+ */
+export function useCreateReleaseNotesDoc() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (releaseId: string) =>
+      fetchJson<DocumentFull>(`/api/releases/${releaseId}/notes-doc`, { method: 'POST' }),
+    onSuccess: (doc) => {
+      qc.setQueryData(queryKeys.document(doc.id), doc);
+    },
+    onSettled: (_data, _err, releaseId) => {
+      qc.invalidateQueries({ queryKey: releasesKey });
+      qc.invalidateQueries({ queryKey: releaseKey(releaseId) });
+      qc.invalidateQueries({ queryKey: queryKeys.allDocuments });
+    },
+  });
+}
+
+/**
+ * POST /api/releases/:id/generate-notes — pure assembly from member features'
+ * final docs, OVERWRITING the notes doc body (creates the doc first if needed).
+ */
+export function useGenerateReleaseNotes() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (releaseId: string) =>
+      fetchJson<DocumentFull>(`/api/releases/${releaseId}/generate-notes`, { method: 'POST' }),
+    onSuccess: (doc) => {
+      qc.setQueryData(queryKeys.document(doc.id), doc);
+    },
+    onSettled: (_data, _err, releaseId) => {
+      qc.invalidateQueries({ queryKey: releasesKey });
+      qc.invalidateQueries({ queryKey: releaseKey(releaseId) });
+      qc.invalidateQueries({ queryKey: queryKeys.allDocuments });
+    },
+  });
+}
+
+export interface SetReleaseFeaturesVars {
+  releaseId: string;
+  featureIds: string[];
+}
+
+/**
+ * PUT /api/releases/:id/features — replace-set membership (sets/clears
+ * features.release_id), so feature caches refresh alongside the release.
+ */
+export function useSetReleaseFeatures() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ releaseId, featureIds }: SetReleaseFeaturesVars) =>
+      fetchJson<ReleaseDetail>(`/api/releases/${releaseId}/features`, {
+        method: 'PUT',
+        body: JSON.stringify({ featureIds }),
+      }),
+    onSuccess: (detail, { releaseId }) => {
+      qc.setQueryData(releaseKey(releaseId), detail);
+    },
+    onSettled: (_data, _err, { releaseId }) => {
+      qc.invalidateQueries({ queryKey: releasesKey });
+      qc.invalidateQueries({ queryKey: releaseKey(releaseId) });
+      qc.invalidateQueries({ queryKey: queryKeys.features });
+      qc.invalidateQueries({ queryKey: queryKeys.overview });
+    },
+  });
+}
+
+// ============== END APPEND BLOCK (outcomes & release detail) ===============
