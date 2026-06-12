@@ -2,10 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { TEMPLATES } from './index';
 
 // Local copy so this test does not depend on Task 1A landing first.
-const DOC_TYPES = ['prd', 'brd', 'tech_spec', 'feature_brief'] as const;
+const DOC_TYPES = ['prd', 'brd', 'tech_spec', 'feature_brief', 'idea_pitch', 'release_notes'] as const;
 
 describe('TEMPLATES', () => {
-  it('has an entry for all 4 doc types', () => {
+  it('has an entry for all 6 doc types', () => {
     for (const type of DOC_TYPES) {
       expect(TEMPLATES[type], `missing template for ${type}`).toBeDefined();
       expect(TEMPLATES[type].type).toBe(type);
@@ -51,5 +51,24 @@ describe('TEMPLATES', () => {
 
   it('feature_brief body contains "## Success metric"', () => {
     expect(TEMPLATES.feature_brief.markdownBody).toContain('## Success metric');
+  });
+
+  it('idea_pitch body has the spec sections', () => {
+    for (const section of [
+      '## Problem',
+      "## Who's asking (evidence)",
+      '## Proposed direction',
+      '## Why now',
+      '## Open questions',
+      '## Effort gut-check',
+    ]) {
+      expect(TEMPLATES.idea_pitch.markdownBody).toContain(section);
+    }
+  });
+
+  it('release_notes body has the spec sections', () => {
+    for (const section of ['## Highlights', "## What's new", '## Improvements', '## Fixes', '## Thanks']) {
+      expect(TEMPLATES.release_notes.markdownBody).toContain(section);
+    }
   });
 });

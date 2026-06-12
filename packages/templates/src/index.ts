@@ -237,6 +237,72 @@ const FEATURE_BRIEF_BODY = `# {{title}}
 - …
 `;
 
+const IDEA_PITCH_BODY = `# {{title}}
+
+## Problem
+
+*What hurts, for whom, and how badly? Two or three sentences — if you can't state the problem without mentioning your solution, keep digging.*
+
+## Who's asking (evidence)
+
+*Name names: customers, calls, tickets, dogfooding moments. Weak evidence is fine; pretending it's strong is not.*
+
+- Source: … — What they said/did: …
+- Source: … — What they said/did: …
+
+## Proposed direction
+
+*One paragraph sketching the smallest credible answer. Direction, not design — no screens, no schemas.*
+
+## Why now
+
+*What makes this cheaper, more valuable, or more urgent today than six months ago or six months from now?*
+
+## Open questions
+
+*The things that would change your mind, with whoever can answer them.*
+
+- [ ] …
+
+## Effort gut-check
+
+*S / M / L from gut feel — one line on what makes it that size, and what would make it smaller.*
+
+- Size: …
+- Why: …
+`;
+
+const RELEASE_NOTES_BODY = `# {{title}}
+
+## Highlights
+
+*Two or three sentences a customer actually reads: the headline changes and why they matter.*
+
+## What's new
+
+*The features. One bullet each — lead with the user benefit, not the implementation.*
+
+- …
+
+## Improvements
+
+*Smaller upgrades to existing behavior: faster, clearer, fewer clicks.*
+
+- …
+
+## Fixes
+
+*Bugs squashed. Be specific enough that the person who reported it recognizes their bug.*
+
+- …
+
+## Thanks
+
+*Customers, beta testers, and teammates who shaped this release.*
+
+- …
+`;
+
 export const TEMPLATES: Record<DocType, DocTemplate> = {
   prd: {
     type: 'prd',
@@ -269,5 +335,21 @@ export const TEMPLATES: Record<DocType, DocTemplate> = {
     markdownBody: FEATURE_BRIEF_BODY,
     promptHints:
       'Write a one-page feature brief. Be ruthless about brevity: one falsifiable hypothesis, one paragraph of solution, one success metric with a baseline and target. Give an S/M/L effort guess with one line of reasoning. Keep it under 300 words.',
+  },
+  idea_pitch: {
+    type: 'idea_pitch',
+    name: 'Idea pitch',
+    description: 'Sell an idea: problem, evidence, direction, why now, effort gut-check.',
+    markdownBody: IDEA_PITCH_BODY,
+    promptHints:
+      'Write an idea pitch that earns a slot on the roadmap. State the problem without referencing the solution, cite concrete evidence (who asked, where), and argue why now. Keep the proposed direction to one paragraph and close with an S/M/L gut-check. Keep it under 400 words.',
+  },
+  release_notes: {
+    type: 'release_notes',
+    name: 'Release notes',
+    description: 'Customer-facing notes: highlights, what’s new, improvements, fixes, thanks.',
+    markdownBody: RELEASE_NOTES_BODY,
+    promptHints:
+      'Write customer-facing release notes. Lead every bullet with the user benefit, never the implementation. Keep the highlights to three sentences, group changes under What’s new / Improvements / Fixes, and thank the people who helped. Keep it under 400 words.',
   },
 };

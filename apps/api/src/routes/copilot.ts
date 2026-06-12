@@ -4,7 +4,7 @@
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { zValidator } from '@hono/zod-validator';
-import { and, asc, eq, isNull, lt, notExists, or, sql } from 'drizzle-orm';
+import { and, asc, eq, isNotNull, isNull, lt, notExists, or, sql } from 'drizzle-orm';
 import { streamText } from 'ai';
 import { reviewDocBody, copilotChatBody } from '@productmap/shared';
 import type { CopilotNudge } from '@productmap/shared';
@@ -154,12 +154,13 @@ export const copilotRoutes = new Hono()
     const staleDrafts = await db
       .select({
         documentId: documents.id,
-        featureId: documents.featureId,
+        // Feature-owned docs only: idea pitches / release notes have no feature page to nudge into.
+        featureId: sql<string>`${documents.featureId}`,
         title: documents.title,
         updatedAt: documents.updatedAt,
       })
       .from(documents)
-      .where(and(eq(documents.status, 'draft'), lt(documents.updatedAt, staleDraftCutoff)))
+      .where(and(eq(documents.status, 'draft'), lt(documents.updatedAt, staleDraftCutoff), isNotNull(documents.featureId)))
       .orderBy(asc(documents.updatedAt));
 
     // 2) Now-horizon features missing a start or end date.

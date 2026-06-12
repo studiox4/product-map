@@ -24,6 +24,8 @@ import {
   featureDependencies,
   releases,
   objectives,
+  plans,
+  planEntries,
   type Db,
 } from './index';
 import { eq } from 'drizzle-orm';
@@ -45,7 +47,7 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
 
   // Idempotent: wipe everything first.
   await db.execute(
-    sql`truncate table comments, votes, activity, feature_collaborators, uploads, documents, idea_votes, ideas, evidence, decisions, feature_dependencies, share_tokens, features, releases, objectives, products, templates, users restart identity cascade`,
+    sql`truncate table comments, votes, activity, feature_collaborators, uploads, documents, idea_votes, ideas, evidence, decisions, feature_dependencies, share_tokens, plan_entries, plans, features, releases, objectives, products, templates, users restart identity cascade`,
   );
 
   // The team, in join order. Corban stays first — several code paths fall back
@@ -991,27 +993,80 @@ Fund the two weeks. Gate GA behind one partner running the module in staging for
     .values([
       {
         title: 'Become the roadmap of record',
+        descriptionMd:
+          'The board, the Gantt and the docs replace the slide deck as the place stakeholders look first. We win when the question "what are we doing and when?" is answered by a link, not a meeting.',
         metric: 'Weekly active planners',
         target: '4 teams planning weekly',
+        current: '2 teams planning weekly',
+        status: 'on_track' as const,
+        ownerId: priya.id,
         quarter: 'Q3 2026',
       },
       {
         title: 'Win security-conscious teams',
+        descriptionMd:
+          'Self-hosted is the wedge: pass security review at shops where Notion and Google Docs are blocked, then convert the pilot. ECS module and SSO asks both hang off this.',
         metric: 'Design partners running in prod',
         target: '3 partners',
+        current: '1 partner (staging)',
+        status: 'at_risk' as const,
+        ownerId: marcus.id,
         quarter: 'Q4 2026',
       },
     ])
     .returning();
 
-  // Release v0.2 — planned, containing the comments/voting features.
+  // Release v0.2 — planned, containing the comments/voting features. Its notes
+  // live in a full release_notes document (no feature/idea owner — linked via
+  // notes_doc_id), created from the Release notes template sections.
+  const v02NotesMd = `# v0.2 — Team ready
+
+## Highlights
+
+ProductMap learns to argue with itself: threaded comments bring spec review into the tool, and 🚀/🧊 voting puts prioritization signal on every card. This is the release that makes ProductMap a team sport.
+
+## What's new
+
+- **Threaded comments on features and docs** — review feedback lives next to the work, with resolve/reopen so settled arguments stay auditable.
+- **Up/down voting** — one Boost or Cool per person per feature, feeding an optional score sort on the board.
+
+## Improvements
+
+- Board cards surface open-thread counts so unresolved review work is visible at a glance.
+- Resolved threads collapse out of the way but stay one click from the record.
+
+## Fixes
+
+- Doubled line breaks on paste from Google Docs.
+- Cmd+K now opens the link dialog when text is selected, instead of the command palette.
+
+## Thanks
+
+Our design partners who pasted screenshots into chat for three months so we didn't have to imagine the problem.
+`;
+  const [v02NotesDoc] = await db
+    .insert(documents)
+    .values({
+      featureId: null,
+      ideaId: null,
+      type: 'release_notes' as const,
+      title: 'v0.2 — Team ready — Release notes',
+      status: 'draft' as const,
+      contentJson: markdownToTiptap(v02NotesMd),
+      contentMd: v02NotesMd,
+      createdBy: priya.id,
+      updatedBy: priya.id,
+      createdAt: daysAgo(2),
+      updatedAt: daysAgo(0.8),
+    })
+    .returning();
   const [v02] = await db
     .insert(releases)
     .values({
       name: 'v0.2 — Team ready',
       targetDate: nextMonth(28),
       status: 'planned',
-      notesMd: '',
+      notesDocId: v02NotesDoc.id,
     })
     .returning();
 
@@ -1095,6 +1150,75 @@ Fund the two weeks. Gate GA behind one partner running the module in staging for
     { userId: corban.id, ideaId: ssoIdea.id, value: -1 },
   ]);
 
+  // The SSO idea has been pitched properly — an idea_pitch doc owned by the
+  // idea (feature_id stays NULL until promotion).
+  const ssoPitchMd = `# SSO via OIDC
+
+## Problem
+
+Two prospects gate their pilot on Okta login. Self-hosted plus local users gets us through security review, but rollout stalls the moment IT asks "how do 40 people log in?" — manual accounts are a non-answer at that size.
+
+## Who's asking (evidence)
+
+- Source: Northwind pilot call (May 28) — "no Okta, no rollout" from their IT lead, verbatim.
+- Source: Meridian security questionnaire — SSO is a hard requirement on the vendor checklist, not a nice-to-have.
+
+## Proposed direction
+
+Generic OIDC, not Okta-specific: a single redirect flow with discovery, mapping the email claim to a workspace user. Okta, Entra and Google all speak it, so one integration covers every prospect we have. Local users stay for self-hosters who want zero external dependencies.
+
+## Why now
+
+Both asks are attached to contracts in flight this quarter. Six months ago we had no prospects this size; six months from now they will have picked the tool that logged them in.
+
+## Open questions
+
+- [ ] Just-in-time user provisioning on first login, or admin pre-creates? (Marcus)
+- [ ] Does session handling change for the share-link surface? (Elena)
+
+## Effort gut-check
+
+- Size: M
+- Why: one well-trodden protocol, but auth touches every request path — testing is the cost, not the code.
+`;
+  await db.insert(documents).values({
+    featureId: null,
+    ideaId: ssoIdea.id,
+    type: 'idea_pitch' as const,
+    title: 'SSO via OIDC — Idea pitch',
+    status: 'draft' as const,
+    contentJson: markdownToTiptap(ssoPitchMd),
+    contentMd: ssoPitchMd,
+    createdBy: marcus.id,
+    updatedBy: marcus.id,
+    createdAt: daysAgo(1.4),
+    updatedAt: daysAgo(1.1),
+  });
+
+  // Saved roadmap scenario: "Q4 stretch" — a draft snapshot of the current
+  // schedule with the Gantt bar pushed +1 month, so compare mode shows one
+  // ghost-vs-scenario offset out of the box.
+  const inTwoMonths = (day: number) => iso(new Date(Date.UTC(y, m + 2, day)));
+  const [q4Stretch] = await db
+    .insert(plans)
+    .values({
+      name: 'Q4 stretch',
+      status: 'draft',
+      createdBy: corban.id,
+      createdAt: daysAgo(1),
+      updatedAt: daysAgo(1),
+    })
+    .returning();
+  await db.insert(planEntries).values(
+    featureRows.map((f) => ({
+      planId: q4Stretch.id,
+      featureId: f.id,
+      startDate: f.id === gantt.id ? inTwoMonths(1) : f.startDate,
+      endDate: f.id === gantt.id ? inTwoMonths(18) : f.endDate,
+      horizon: f.horizon,
+    })),
+  );
+
   // Evidence: 4 items on flagship features.
   await db.insert(evidence).values([
     {
@@ -1170,6 +1294,6 @@ Fund the two weeks. Gate GA behind one partner running the module in staging for
   ]);
 
   console.log(
-    `seeded: 1 product, ${featureRows.length} features, ${docRows.length} documents, 4 templates, 4 users, 8 comment threads, 18 votes, 3-month activity history, 5 ideas, 4 evidence, 2 decisions, 2 dependencies, 1 release, 2 objectives`,
+    `seeded: 1 product, ${featureRows.length} features, ${docRows.length + 2} documents (incl. idea pitch + release notes), 6 templates, 4 users, 8 comment threads, 18 votes, 3-month activity history, 5 ideas, 4 evidence, 2 decisions, 2 dependencies, 1 release, 2 objectives, 1 saved plan`,
   );
 }

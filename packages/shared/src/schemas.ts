@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   HORIZONS, FEATURE_STATUSES, DOC_TYPES, DOC_STATUSES,
   IDEA_STATUSES, EVIDENCE_KINDS, FEATURE_SIZES,
+  RELEASE_STATUSES, OBJECTIVE_STATUSES,
 } from './constants';
 
 export const featureCreate = z.object({
@@ -129,25 +130,53 @@ export const dependenciesPut = z.object({
 export const releaseCreate = z.object({
   name: z.string().min(1).max(200),
   targetDate: z.string().date().nullable().optional(),
-  notesMd: z.string().max(50000).optional(),
 });
+/** PATCH /api/releases/:id — status moves BOTH ways (shipped→planned clears shippedAt). */
 export const releaseUpdate = z.object({
   name: z.string().min(1).max(200).optional(),
   targetDate: z.string().date().nullable().optional(),
-  notesMd: z.string().max(50000).optional(),
+  status: z.enum(RELEASE_STATUSES).optional(),
+});
+/** PUT /api/releases/:id/features — replace-set membership. */
+export const releaseFeaturesPut = z.object({
+  featureIds: z.array(z.string().uuid()),
 });
 export const objectiveCreate = z.object({
   title: z.string().min(1).max(200),
+  descriptionMd: z.string().max(20000).optional(),
   metric: z.string().max(200).optional(),
   target: z.string().max(200).optional(),
+  current: z.string().max(200).optional(),
+  status: z.enum(OBJECTIVE_STATUSES).optional(),
+  ownerId: z.string().uuid().nullable().optional(),
   quarter: z.string().max(40).optional(),
 });
 export const objectiveUpdate = z.object({
   title: z.string().min(1).max(200).optional(),
+  descriptionMd: z.string().max(20000).optional(),
   metric: z.string().max(200).optional(),
   target: z.string().max(200).optional(),
+  current: z.string().max(200).optional(),
+  status: z.enum(OBJECTIVE_STATUSES).optional(),
+  ownerId: z.string().uuid().nullable().optional(),
   quarter: z.string().max(40).optional(),
 });
+// --- Roadmap scenario plans ---
+/** POST /api/plans — snapshot the current schedule (or another plan) into entries. */
+export const planCreate = z.object({
+  name: z.string().min(1).max(200),
+  copyFrom: z.union([z.literal('current'), z.string().uuid()]).default('current'),
+});
+export const planUpdate = z.object({
+  name: z.string().min(1).max(200).optional(),
+});
+/** PUT /api/plans/:id/entries/:featureId — scenario editing, plan_entries only. */
+export const planEntryUpdate = z.object({
+  startDate: z.string().date().nullable().optional(),
+  endDate: z.string().date().nullable().optional(),
+  horizon: z.enum(HORIZONS).optional(),
+}).refine(d => !(d.startDate && d.endDate) || d.startDate <= d.endDate,
+  { message: 'startDate must be on or before endDate' });
 export const reviewDocBody = z.object({
   documentId: z.string().uuid(),
 });

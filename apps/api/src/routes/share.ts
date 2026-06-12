@@ -69,6 +69,7 @@ export const shareRoutes = new Hono()
 
     const docsByFeature = new Map<string, DocumentMeta[]>();
     for (const d of docRows) {
+      if (!d.featureId) continue; // inner join guarantees this; narrows the type
       const meta: DocumentMeta = {
         ...d,
         createdAt: d.createdAt.toISOString(),

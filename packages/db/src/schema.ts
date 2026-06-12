@@ -18,12 +18,14 @@ import {
 
 export const horizonEnum = pgEnum('horizon', ['now', 'next', 'later']);
 export const featureStatusEnum = pgEnum('feature_status', ['idea', 'planned', 'in_progress', 'shipped']);
-export const docTypeEnum = pgEnum('doc_type', ['prd', 'brd', 'tech_spec', 'feature_brief']);
+export const docTypeEnum = pgEnum('doc_type', ['prd', 'brd', 'tech_spec', 'feature_brief', 'idea_pitch', 'release_notes']);
 export const docStatusEnum = pgEnum('doc_status', ['draft', 'in_review', 'final']);
 export const ideaStatusEnum = pgEnum('idea_status', ['inbox', 'triaged', 'promoted', 'archived']);
 export const evidenceKindEnum = pgEnum('evidence_kind', ['quote', 'research', 'ticket', 'metric', 'other']);
 export const releaseStatusEnum = pgEnum('release_status', ['planned', 'shipped']);
 export const featureSizeEnum = pgEnum('feature_size', ['s', 'm', 'l']);
+export const objectiveStatusEnum = pgEnum('objective_status', ['on_track', 'at_risk', 'achieved', 'dropped']);
+export const planStatusEnum = pgEnum('plan_status', ['draft', 'applied', 'archived']);
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -57,20 +59,35 @@ export const features = pgTable('features', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
-export const documents = pgTable('documents', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  featureId: uuid('feature_id').notNull().references(() => features.id, { onDelete: 'cascade' }),
-  type: docTypeEnum('type').notNull(),
-  title: text('title').notNull(),
-  contentJson: jsonb('content_json').notNull().default({ type: 'doc', content: [] }),
-  contentMd: text('content_md').notNull().default(''),
-  status: docStatusEnum('status').notNull().default('draft'),
-  cover: text('cover'),
-  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
-  updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'set null' }),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
+export const documents = pgTable(
+  'documents',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    featureId: uuid('feature_id').references(() => features.id, { onDelete: 'cascade' }),
+    ideaId: uuid('idea_id').references((): AnyPgColumn => ideas.id, { onDelete: 'cascade' }),
+    type: docTypeEnum('type').notNull(),
+    title: text('title').notNull(),
+    contentJson: jsonb('content_json').notNull().default({ type: 'doc', content: [] }),
+    contentMd: text('content_md').notNull().default(''),
+    status: docStatusEnum('status').notNull().default('draft'),
+    cover: text('cover'),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // Ownership integrity: release_notes docs are owned via releases.notes_doc_id
+    // (both columns NULL); every other doc belongs to a feature and/or an idea
+    // (a promoted idea's pitch carries BOTH — feature_id is set on promote and
+    // idea_id stays for provenance). The ::text cast keeps the new enum label
+    // usable inside the same migration transaction that adds it (PG 55P04).
+    check(
+      'documents_owner_check',
+      sql`CASE WHEN ${t.type}::text = 'release_notes' THEN ${t.featureId} IS NULL AND ${t.ideaId} IS NULL ELSE ${t.featureId} IS NOT NULL OR ${t.ideaId} IS NOT NULL END`,
+    ),
+  ],
+);
 export const featureCollaborators = pgTable(
   'feature_collaborators',
   {
@@ -203,18 +220,42 @@ export const releases = pgTable('releases', {
   name: text('name').notNull(),
   targetDate: date('target_date'),
   status: releaseStatusEnum('status').notNull().default('planned'),
-  notesMd: text('notes_md').notNull().default(''),
+  notesDocId: uuid('notes_doc_id').references(() => documents.id, { onDelete: 'set null' }),
   shippedAt: timestamp('shipped_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 export const objectives = pgTable('objectives', {
   id: uuid('id').defaultRandom().primaryKey(),
   title: text('title').notNull(),
+  descriptionMd: text('description_md').notNull().default(''),
   metric: text('metric').notNull().default(''),
   target: text('target').notNull().default(''),
+  current: text('current').notNull().default(''),
+  status: objectiveStatusEnum('status').notNull().default('on_track'),
+  ownerId: uuid('owner_id').references(() => users.id, { onDelete: 'set null' }),
   quarter: text('quarter').notNull().default(''),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+export const plans = pgTable('plans', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: text('name').notNull(),
+  status: planStatusEnum('status').notNull().default('draft'),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+  appliedAt: timestamp('applied_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+export const planEntries = pgTable(
+  'plan_entries',
+  {
+    planId: uuid('plan_id').notNull().references(() => plans.id, { onDelete: 'cascade' }),
+    featureId: uuid('feature_id').notNull().references(() => features.id, { onDelete: 'cascade' }),
+    startDate: date('start_date'),
+    endDate: date('end_date'),
+    horizon: horizonEnum('horizon').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.planId, t.featureId] })],
+);
 export const shareTokens = pgTable('share_tokens', {
   id: uuid('id').defaultRandom().primaryKey(),
   token: text('token').notNull().unique(),

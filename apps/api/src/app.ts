@@ -21,6 +21,7 @@ import { releasesRoutes } from './routes/releases';
 import { objectivesRoutes } from './routes/objectives';
 import { shareRoutes } from './routes/share';
 import { copilotRoutes } from './routes/copilot';
+import { plansRoutes } from './routes/plans';
 
 export const app = new Hono()
   .get('/api/healthz', (c) => c.json({ ok: true }))
@@ -47,6 +48,7 @@ export const app = new Hono()
   .route('/api/releases', releasesRoutes)
   .route('/api/objectives', objectivesRoutes)
   .route('/api/share', shareRoutes)
+  .route('/api/plans', plansRoutes)
   // copilot defines /ai/review-doc, /ai/chat, /copilot/nudges
   .route('/api', copilotRoutes);
 

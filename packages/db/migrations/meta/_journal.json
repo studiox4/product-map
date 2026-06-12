@@ -43,6 +43,13 @@
       "when": 1781232098084,
       "tag": "0005_windy_patriot",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1781238711904,
+      "tag": "0006_dream_tier_2_foundation",
+      "breakpoints": true
     }
   ]
 }

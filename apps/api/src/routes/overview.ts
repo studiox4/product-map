@@ -48,6 +48,7 @@ export const overviewRoutes = new Hono().get('/', async (c) => {
 
   const docsByFeature = new Map<string, DocumentMeta[]>();
   for (const d of docRows) {
+    if (!d.featureId) continue; // idea/release-owned docs have no board card
     const meta: DocumentMeta = {
       id: d.id,
       featureId: d.featureId,
@@ -122,7 +123,7 @@ export const overviewRoutes = new Hono().get('/', async (c) => {
         attention.push({
           kind: 'draft_doc',
           documentId: d.id,
-          featureId: d.featureId,
+          featureId: f.id,
           title: d.title,
           docType: d.type,
         });
@@ -130,7 +131,7 @@ export const overviewRoutes = new Hono().get('/', async (c) => {
         attention.push({
           kind: 'in_review_doc',
           documentId: d.id,
-          featureId: d.featureId,
+          featureId: f.id,
           title: d.title,
           docType: d.type,
         });

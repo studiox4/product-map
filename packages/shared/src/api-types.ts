@@ -1,6 +1,7 @@
 import type {
   Horizon, FeatureStatus, DocType, DocStatus, ActivityKind,
   IdeaStatus, EvidenceKind, ReleaseStatus, FeatureSize,
+  ObjectiveStatus, PlanStatus,
 } from './constants';
 
 export interface Product { id: string; name: string; vision: string; aboutMd: string; }
@@ -20,7 +21,12 @@ export interface Feature extends VoteSummary {
   createdAt: string; updatedAt: string;
 }
 export interface DocumentMeta {
-  id: string; featureId: string; type: DocType; title: string; status: DocStatus;
+  id: string;
+  /** Owning feature; null for idea-owned (pre-promotion) and release_notes docs. */
+  featureId: string | null;
+  /** Owning idea (idea_pitch docs); kept after promotion for provenance. */
+  ideaId?: string | null;
+  type: DocType; title: string; status: DocStatus;
   /** Curated gradient cover key; null/absent = no cover. Always present in API responses. */
   cover?: string | null;
   createdBy: string | null; updatedBy: string | null;
@@ -89,6 +95,10 @@ export interface Idea {
   id: string; title: string; bodyMd: string; source: string; status: IdeaStatus;
   promotedFeatureId: string | null; createdBy: string | null;
   createdAt: string; updatedAt: string;
+  /** Joined creator (GET /api/ideas); null when the creator was deleted. */
+  creator?: { id: string; name: string; color: string } | null;
+  /** Pitch doc meta when one exists (idea_pitch document owned by this idea). */
+  pitchDoc?: { id: string; title: string; status: DocStatus } | null;
 }
 /** Idea list/detail rows carry their vote summary (same pill UI as the board). */
 export interface IdeaWithVotes extends Idea { score: number; boosts: number; cools: number; myVote: VoteValue | 0; }
@@ -112,10 +122,28 @@ export interface SuggestDecisionResponse {
 export interface FeatureDependencies { blockers: Feature[]; blocked: Feature[]; }
 export interface Release {
   id: string; name: string; targetDate: string | null; status: ReleaseStatus;
-  notesMd: string; shippedAt: string | null; createdAt: string;
+  /** Full-doc release notes (release_notes document); null until created. */
+  notesDocId: string | null;
+  shippedAt: string | null; createdAt: string;
 }
 export interface Objective {
-  id: string; title: string; metric: string; target: string; quarter: string; createdAt: string;
+  id: string; title: string; descriptionMd: string;
+  metric: string; target: string; current: string;
+  status: ObjectiveStatus; ownerId: string | null; quarter: string; createdAt: string;
+  /** Joined owner (GET /api/objectives); null when unowned or owner deleted. */
+  owner?: { name: string; color: string } | null;
+  /** Count of features assigned to this objective (GET /api/objectives). */
+  featureCount?: number;
+}
+// --- Roadmap scenario plans ---
+export interface Plan {
+  id: string; name: string; status: PlanStatus;
+  createdBy: string | null; appliedAt: string | null;
+  createdAt: string; updatedAt: string;
+}
+export interface PlanEntry {
+  planId: string; featureId: string;
+  startDate: string | null; endDate: string | null; horizon: Horizon;
 }
 export interface ShareTokenInfo {
   id: string; token: string; kind: string; createdAt: string; revokedAt: string | null;

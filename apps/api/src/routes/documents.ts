@@ -166,16 +166,20 @@ export const documentsRoutes = new Hono<CurrentUserEnv>()
       .where(eq(documents.id, id))
       .returning();
     if (!row) return c.json({ error: 'not_found' }, 404);
-    if (body.status !== undefined && row.status !== prev.status) {
-      await recordActivity(row.featureId, user?.id, 'doc_status_changed', {
-        from: prev.status,
-        to: row.status,
-      });
+    // Activity/collaborators are feature-scoped; idea- and release-owned docs
+    // (feature_id NULL) have no feature feed to write into.
+    if (row.featureId) {
+      if (body.status !== undefined && row.status !== prev.status) {
+        await recordActivity(row.featureId, user?.id, 'doc_status_changed', {
+          from: prev.status,
+          to: row.status,
+        });
+      }
+      if (body.title !== undefined && row.title !== prev.title) {
+        await recordActivity(row.featureId, user?.id, 'doc_renamed', { from: prev.title, to: row.title });
+      }
+      await addCollaborator(row.featureId, user?.id);
     }
-    if (body.title !== undefined && row.title !== prev.title) {
-      await recordActivity(row.featureId, user?.id, 'doc_renamed', { from: prev.title, to: row.title });
-    }
-    await addCollaborator(row.featureId, user?.id);
     return c.json(toMeta(row));
   })
   // DELETE /api/documents/:id → 204

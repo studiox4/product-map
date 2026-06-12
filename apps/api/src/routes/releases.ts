@@ -36,7 +36,7 @@ export const releasesRoutes = new Hono<CurrentUserEnv>()
         name: releases.name,
         targetDate: releases.targetDate,
         status: releases.status,
-        notesMd: releases.notesMd,
+        notesDocId: releases.notesDocId,
         shippedAt: releases.shippedAt,
         createdAt: releases.createdAt,
         featureCount: count(features.id),
@@ -58,7 +58,7 @@ export const releasesRoutes = new Hono<CurrentUserEnv>()
       const body = c.req.valid('json');
       const [row] = await db
         .insert(releases)
-        .values({ name: body.name, targetDate: body.targetDate ?? null, notesMd: body.notesMd ?? '' })
+        .values({ name: body.name, targetDate: body.targetDate ?? null })
         .returning();
       return c.json(row, 201);
     },

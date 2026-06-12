@@ -41,15 +41,16 @@ describe('POST /api/admin/reset-demo', () => {
 
     expect(await db.select().from(products)).toHaveLength(1);
     expect(await db.select().from(features)).toHaveLength(8);
-    expect(await db.select().from(documents)).toHaveLength(13);
+    // 13 feature docs + the SSO idea pitch + the v0.2 release notes doc.
+    expect(await db.select().from(documents)).toHaveLength(15);
     expect((await db.select().from(activity)).length).toBeGreaterThan(0);
 
-    // 4 built-in templates, one default per doc type, {{title}} preserved.
+    // 6 built-in templates, one default per doc type, {{title}} preserved.
     const tplRows = await db.select().from(templates);
-    expect(tplRows).toHaveLength(4);
+    expect(tplRows).toHaveLength(6);
     expect(tplRows.every((t) => t.isDefault)).toBe(true);
     expect(new Set(tplRows.map((t) => t.type))).toEqual(
-      new Set(['prd', 'brd', 'tech_spec', 'feature_brief']),
+      new Set(['prd', 'brd', 'tech_spec', 'feature_brief', 'idea_pitch', 'release_notes']),
     );
     for (const t of tplRows) {
       expect(t.bodyMd).toContain('{{title}}');
@@ -62,7 +63,7 @@ describe('POST /api/admin/reset-demo', () => {
     await app.request('/api/admin/reset-demo', { method: 'POST' });
     await app.request('/api/admin/reset-demo', { method: 'POST' });
     expect(await db.select().from(users)).toHaveLength(4);
-    expect(await db.select().from(templates)).toHaveLength(4);
+    expect(await db.select().from(templates)).toHaveLength(6);
   });
 
   it('403 when NODE_ENV is production', async () => {

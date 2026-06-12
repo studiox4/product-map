@@ -30,6 +30,7 @@ async function docsForFeatures(featureIds: string[]) {
     .orderBy(asc(documents.createdAt));
   const byFeature = new Map<string, unknown[]>();
   for (const row of rows) {
+    if (!row.featureId) continue; // idea/release-owned docs never match featureIds
     const list = byFeature.get(row.featureId) ?? [];
     list.push(row);
     byFeature.set(row.featureId, list);

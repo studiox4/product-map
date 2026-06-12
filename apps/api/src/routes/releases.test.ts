@@ -78,10 +78,13 @@ describe('releases CRUD', () => {
     expect(body.features.map((f: { id: string }) => f.id)).toEqual([featureA, featureB]);
   });
 
+  // dream-tier-2: notes_md became a full release_notes doc (notes_doc_id), so
+  // PATCH covers name/targetDate here; status transitions land with the
+  // releases agent.
   it('patches a release', async () => {
-    const res = await app.request(`/api/releases/${releaseId}`, json('PATCH', { name: 'v0.2.1', notesMd: 'hi' }));
+    const res = await app.request(`/api/releases/${releaseId}`, json('PATCH', { name: 'v0.2.1', targetDate: '2026-08-01' }));
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ name: 'v0.2.1', notesMd: 'hi' });
+    expect(await res.json()).toMatchObject({ name: 'v0.2.1', targetDate: '2026-08-01' });
   });
 
   it('deletes a release and nulls feature linkage', async () => {
