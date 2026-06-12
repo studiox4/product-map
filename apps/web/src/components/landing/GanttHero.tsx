@@ -1,5 +1,12 @@
 import { useNavigate } from 'react-router-dom';
-import { addDays, differenceInCalendarDays, parseISO, startOfDay } from 'date-fns';
+import {
+  addDays,
+  differenceInCalendarDays,
+  eachMonthOfInterval,
+  format,
+  parseISO,
+  startOfDay,
+} from 'date-fns';
 import { HORIZON_COLORS, type FeatureWithDocs } from '@productmap/shared';
 
 const WIDTH = 1000;
@@ -7,7 +14,7 @@ const GUTTER = 220;
 const ROW_H = 28;
 const BAR_H = 14;
 const PAD_Y = 8;
-const LABEL_H = 22; // headroom for the "today" pill
+const LABEL_H = 40; // headroom for the "today" pill + month labels
 
 /** Read-only compact Gantt: one row per dated feature, bars colored by horizon, today line. */
 export function GanttHero({ features }: { features: FeatureWithDocs[] }) {
@@ -31,6 +38,10 @@ export function GanttHero({ features }: { features: FeatureWithDocs[] }) {
   const x = (date: Date) =>
     GUTTER + (differenceInCalendarDays(date, viewStart) / totalDays) * plotWidth;
 
+  const months = eachMonthOfInterval({ start: viewStart, end: viewEnd }).filter(
+    (m) => x(m) >= GUTTER && x(m) <= WIDTH - 24,
+  );
+
   const height = LABEL_H + dated.length * ROW_H + PAD_Y * 2;
   const today = startOfDay(new Date());
   const todayX = x(today);
@@ -46,6 +57,28 @@ export function GanttHero({ features }: { features: FeatureWithDocs[] }) {
         role="img"
         aria-label="Roadmap timeline"
       >
+        {months.map((m) => {
+          const mx = x(m);
+          return (
+            <g key={m.toISOString()}>
+              <line
+                x1={mx}
+                y1={LABEL_H - 4}
+                x2={mx}
+                y2={height}
+                stroke="var(--pm-line)"
+                strokeWidth={1}
+              />
+              <text
+                x={mx + 4}
+                y={LABEL_H - 10}
+                className="fill-[var(--pm-muted)] text-[10px] font-medium"
+              >
+                {format(m, 'MMM')}
+              </text>
+            </g>
+          );
+        })}
         {dated.map((f, i) => {
           const y = LABEL_H + PAD_Y + i * ROW_H;
           const barX = x(parseISO(f.startDate!));
