@@ -32,12 +32,16 @@ describe('POST /api/admin/reset-demo', () => {
     expect(await res.json()).toEqual({ ok: true });
 
     const userRows = await db.select().from(users);
-    expect(userRows).toHaveLength(1);
-    expect(userRows[0].name).toBe('Corban');
+    expect(userRows).toHaveLength(4);
+    // Corban is the first-created user — several code paths fall back to it.
+    const oldestFirst = [...userRows].sort(
+      (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+    );
+    expect(oldestFirst[0].name).toBe('Corban');
 
     expect(await db.select().from(products)).toHaveLength(1);
     expect(await db.select().from(features)).toHaveLength(8);
-    expect(await db.select().from(documents)).toHaveLength(3);
+    expect(await db.select().from(documents)).toHaveLength(13);
     expect((await db.select().from(activity)).length).toBeGreaterThan(0);
 
     // 4 built-in templates, one default per doc type, {{title}} preserved.
@@ -57,7 +61,7 @@ describe('POST /api/admin/reset-demo', () => {
   it('is idempotent — running twice leaves a single seed', async () => {
     await app.request('/api/admin/reset-demo', { method: 'POST' });
     await app.request('/api/admin/reset-demo', { method: 'POST' });
-    expect(await db.select().from(users)).toHaveLength(1);
+    expect(await db.select().from(users)).toHaveLength(4);
     expect(await db.select().from(templates)).toHaveLength(4);
   });
 

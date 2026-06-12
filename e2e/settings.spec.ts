@@ -263,7 +263,12 @@ test('AC4: reset-demo is confirm-gated and restores the seed', async ({ page, re
   expect(overview.product.vision).toBe(SEED_VISION);
 
   users = (await (await request.get('/api/users')).json()) as { name: string }[];
-  expect(users.map((u) => u.name)).toEqual(['Corban']);
+  expect(users.map((u) => u.name)).toEqual([
+    'Corban',
+    'Priya Shah',
+    'Marcus Webb',
+    'Elena Rodriguez',
+  ]);
 
   const templates = (await (
     await request.get('/api/templates?includeArchived=true')
