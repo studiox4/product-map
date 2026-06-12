@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import archiver from 'archiver';
 import { documentCreate, documentUpdate } from '@productmap/shared';
-import { documents, features, templates } from '@productmap/db';
+import { documents, features, ideas, releases, templates } from '@productmap/db';
 import type { Context } from 'hono';
 import { db } from '../db';
 import { tiptapToMarkdown } from '../lib/markdown';
@@ -51,6 +51,7 @@ export const documentsRoutes = new Hono<CurrentUserEnv>()
         .select({
           id: documents.id,
           featureId: documents.featureId,
+          ideaId: documents.ideaId,
           type: documents.type,
           title: documents.title,
           status: documents.status,
@@ -61,12 +62,36 @@ export const documentsRoutes = new Hono<CurrentUserEnv>()
           updatedAt: documents.updatedAt,
           featureTitle: features.title,
           featureHorizon: features.horizon,
+          ideaTitle: ideas.title,
+          releaseId: releases.id,
+          releaseName: releases.name,
           contentMd: documents.contentMd,
         })
         .from(documents)
-        .innerJoin(features, eq(documents.featureId, features.id))
+        .leftJoin(features, eq(documents.featureId, features.id))
+        .leftJoin(ideas, eq(documents.ideaId, ideas.id))
+        .leftJoin(releases, eq(releases.notesDocId, documents.id))
         .orderBy(asc(documents.createdAt));
-      return c.json(rows.map(({ contentMd, ...item }) => ({ ...item, wordCount: wordCount(contentMd) })));
+      return c.json(
+        rows.map(({ contentMd, ideaTitle, releaseId, releaseName, ...item }) => {
+          // Owner precedence: feature (incl. promoted pitches carrying both ids)
+          // → idea → release. Null only for orphaned release_notes docs.
+          const ownerLabel =
+            item.featureId && item.featureTitle
+              ? { kind: 'feature' as const, id: item.featureId, title: item.featureTitle }
+              : item.ideaId && ideaTitle
+                ? { kind: 'idea' as const, id: item.ideaId, title: ideaTitle }
+                : releaseId
+                  ? { kind: 'release' as const, id: releaseId, title: releaseName }
+                  : null;
+          return {
+            ...item,
+            featureTitle: item.featureTitle ?? '',
+            wordCount: wordCount(contentMd),
+            ownerLabel,
+          };
+        }),
+      );
     }
     const featureId = c.req.query('featureId');
     const rows = await db

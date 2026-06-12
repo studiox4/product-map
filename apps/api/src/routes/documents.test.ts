@@ -3,7 +3,7 @@
 import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { products, features, users, activity, featureCollaborators, templates } from '@productmap/db';
+import { products, features, users, activity, featureCollaborators, templates, ideas, releases, documents } from '@productmap/db';
 import { asc, eq } from 'drizzle-orm';
 import AdmZip from 'adm-zip';
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
@@ -217,6 +217,62 @@ describe('GET /api/documents', () => {
     expect(item.wordCount).toBeGreaterThan(0);
     expect(item.contentJson).toBeUndefined();
     expect(item.contentMd).toBeUndefined();
+    expect(item.ownerLabel).toEqual({ kind: 'feature', id: featureId, title: 'Rich Markdown Editor' });
+  });
+
+  it('?all=true includes idea-owned docs with an idea ownerLabel', async () => {
+    const [idea] = await db.insert(ideas).values({ title: 'SSO via OIDC', bodyMd: '' }).returning();
+    const [doc] = await db
+      .insert(documents)
+      .values({
+        ideaId: idea.id,
+        type: 'idea_pitch',
+        title: 'SSO via OIDC — Idea pitch',
+        contentMd: 'one two three',
+      })
+      .returning();
+    const list = await (await app.request('/api/documents?all=true')).json();
+    const item = list.find((d: { id: string }) => d.id === doc.id);
+    expect(item).toBeDefined();
+    expect(item.ownerLabel).toEqual({ kind: 'idea', id: idea.id, title: 'SSO via OIDC' });
+    expect(item.featureTitle).toBe('');
+    expect(item.featureHorizon).toBeNull();
+    expect(item.wordCount).toBe(3);
+  });
+
+  it('?all=true includes release_notes docs with a release ownerLabel', async () => {
+    const [doc] = await db
+      .insert(documents)
+      .values({ type: 'release_notes', title: 'v0.3 — Release notes', contentMd: 'shipped things' })
+      .returning();
+    const [release] = await db
+      .insert(releases)
+      .values({ name: 'v0.3', notesDocId: doc.id })
+      .returning();
+    const list = await (await app.request('/api/documents?all=true')).json();
+    const item = list.find((d: { id: string }) => d.id === doc.id);
+    expect(item).toBeDefined();
+    expect(item.ownerLabel).toEqual({ kind: 'release', id: release.id, title: 'v0.3' });
+    expect(item.featureTitle).toBe('');
+    expect(item.wordCount).toBe(2);
+  });
+
+  it('?all=true labels a promoted pitch (feature_id + idea_id) as feature-owned', async () => {
+    const [idea] = await db.insert(ideas).values({ title: 'Promoted idea', bodyMd: '' }).returning();
+    const [doc] = await db
+      .insert(documents)
+      .values({
+        featureId,
+        ideaId: idea.id,
+        type: 'idea_pitch',
+        title: 'Promoted idea — Idea pitch',
+        contentMd: '',
+      })
+      .returning();
+    const list = await (await app.request('/api/documents?all=true')).json();
+    const item = list.find((d: { id: string }) => d.id === doc.id);
+    expect(item.ownerLabel).toEqual({ kind: 'feature', id: featureId, title: 'Rich Markdown Editor' });
+    expect(item.ideaId).toBe(idea.id);
   });
 
   it('?all=true wordCount counts whitespace-separated words of contentMd', async () => {

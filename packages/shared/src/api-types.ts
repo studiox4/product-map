@@ -32,8 +32,21 @@ export interface DocumentMeta {
   createdBy: string | null; updatedBy: string | null;
   createdAt: string; updatedAt: string;
 }
+// --- docs-library owner labels (ideas/docs API agent) ---
+/** Owning surface of a doc in the docs library: feature, idea, or release. */
+export interface DocOwnerLabel { kind: 'feature' | 'idea' | 'release'; id: string; title: string; }
 export interface DocumentListItem extends DocumentMeta {
-  featureTitle: string; featureHorizon: Horizon; wordCount: number;
+  /** '' for idea-owned and release_notes docs (no owning feature). */
+  featureTitle: string;
+  /** Null for idea-owned and release_notes docs. */
+  featureHorizon: Horizon | null;
+  wordCount: number;
+  /**
+   * Owning surface chip target. Always present in API responses (optional here
+   * like `cover` so existing fixtures keep compiling); null only for orphaned
+   * release_notes docs whose release was deleted.
+   */
+  ownerLabel?: DocOwnerLabel | null;
 }
 export interface ActivityItem {
   id: string; featureId: string; actorId: string; actorName: string; actorColor: string;
