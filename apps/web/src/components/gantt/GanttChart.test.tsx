@@ -177,16 +177,16 @@ describe('GanttChart', () => {
         releases={[
           {
             id: 'r1', name: 'v0.2 — Team ready', targetDate: '2026-07-15',
-            status: 'planned', notesMd: '', shippedAt: null, createdAt: '2026-06-01T00:00:00Z',
+            status: 'planned', notesDocId: null, shippedAt: null, createdAt: '2026-06-01T00:00:00Z',
           },
           {
             id: 'r2', name: 'v0.1', targetDate: '2026-06-20',
-            status: 'shipped', notesMd: '', shippedAt: '2026-06-20T00:00:00Z',
+            status: 'shipped', notesDocId: null, shippedAt: '2026-06-20T00:00:00Z',
             createdAt: '2026-05-01T00:00:00Z',
           },
           {
             id: 'r3', name: 'Dateless', targetDate: null,
-            status: 'planned', notesMd: '', shippedAt: null, createdAt: '2026-05-01T00:00:00Z',
+            status: 'planned', notesDocId: null, shippedAt: null, createdAt: '2026-05-01T00:00:00Z',
           },
         ]}
       />,

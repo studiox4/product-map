@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
-import type { Feature, Release } from '@productmap/shared';
+import { HORIZONS, HORIZON_COLORS, type Feature, type Horizon, type Release } from '@productmap/shared';
 import { monthlyLoads } from './capacity-math';
 import { CAPACITY_STRIP_HEIGHT, CapacityStrip } from './CapacityStrip';
 import { DependencyArrows, type DependencyEdge } from './DependencyArrows';
@@ -32,6 +32,16 @@ export interface GanttChartProps {
   dependencyEdges?: DependencyEdge[];
   /** Show the per-month capacity strip beneath the rows. */
   showCapacity?: boolean;
+  /**
+   * Scenario compare (dream tier 2 §6): the CURRENT schedule, rendered as
+   * non-interactive ghost bars at 30% opacity beneath the scenario bars.
+   */
+  ghostFeatures?: Feature[];
+  /**
+   * Scenario mode only: shows a small horizon select in the gutter on row
+   * hover. Scenario edits are dates + horizon — nothing else.
+   */
+  onHorizonChange?: (feature: Feature, horizon: Horizon) => void;
 }
 
 export function GanttChart({
@@ -43,6 +53,8 @@ export function GanttChart({
   releases = [],
   dependencyEdges = [],
   showCapacity = false,
+  ghostFeatures,
+  onHorizonChange,
 }: GanttChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -60,6 +72,12 @@ export function GanttChart({
   const rowsBottom = HEADER_HEIGHT + Math.max(dated.length, 1) * ROW_HEIGHT;
   const chartHeight = rowsBottom + (showCapacity ? CAPACITY_STRIP_HEIGHT : 0);
   const todayX = dateToX(format(new Date(), 'yyyy-MM-dd'), viewStart, PX_PER_DAY);
+
+  // Ghost-compare lookup: current schedule by feature id (scenario mode only).
+  const ghostById = useMemo(
+    () => new Map((ghostFeatures ?? []).map((f) => [f.id, f])),
+    [ghostFeatures],
+  );
 
   const capacityMonths = useMemo(
     () => (showCapacity ? monthlyLoads(dated, viewStart, totalDays) : []),
@@ -113,7 +131,7 @@ export function GanttChart({
           const y = HEADER_HEIGHT + i * ROW_HEIGHT;
           const highlighted = f.id === highlightId;
           return (
-            <g key={f.id} data-gantt-row={f.id}>
+            <g key={f.id} data-gantt-row={f.id} className="group/row">
               {highlighted && (
                 <rect
                   x={0}
@@ -150,6 +168,29 @@ export function GanttChart({
                 {f.title.length > 26 ? `${f.title.slice(0, 25)}…` : f.title}
                 <title>{f.title}</title>
               </text>
+              {onHorizonChange && (
+                <foreignObject
+                  x={GUTTER_WIDTH - 76}
+                  y={y + (ROW_HEIGHT - 24) / 2}
+                  width={70}
+                  height={24}
+                  className="opacity-0 transition-opacity duration-150 ease-out focus-within:opacity-100 group-hover/row:opacity-100"
+                >
+                  <select
+                    data-testid={`gantt-horizon-select-${f.id}`}
+                    aria-label={`Horizon for ${f.title}`}
+                    value={f.horizon}
+                    onChange={(e) => onHorizonChange(f, e.target.value as Horizon)}
+                    className="h-6 w-full rounded-full border border-line bg-card px-1.5 text-[11px] font-medium text-body-ink outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {HORIZONS.map((h) => (
+                      <option key={h} value={h}>
+                        {h[0].toUpperCase() + h.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </foreignObject>
+              )}
             </g>
           );
         })}
@@ -186,6 +227,29 @@ export function GanttChart({
               Today
             </text>
           </g>
+          {/* Ghost-compare layer: the current schedule at 30% opacity, drawn
+              beneath the scenario bars so drift reads at a glance. */}
+          {ghostFeatures &&
+            dated.map((f, i) => {
+              const ghost = ghostById.get(f.id);
+              if (!ghost) return null;
+              const rect = barRect(ghost, viewStart, PX_PER_DAY, i);
+              if (!rect) return null;
+              return (
+                <rect
+                  key={`ghost-${f.id}`}
+                  data-testid={`gantt-ghost-${f.id}`}
+                  x={rect.x}
+                  y={rect.y + HEADER_HEIGHT}
+                  width={rect.width}
+                  height={rect.height}
+                  rx={rect.height / 2}
+                  fill={HORIZON_COLORS[ghost.horizon].bar}
+                  fillOpacity={0.3}
+                  pointerEvents="none"
+                />
+              );
+            })}
           {dated.map((f, i) => {
             const rect = barRect(f, viewStart, PX_PER_DAY, i);
             if (!rect) return null;

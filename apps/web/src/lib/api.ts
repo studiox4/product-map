@@ -1508,3 +1508,132 @@ export function useSetReleaseFeatures() {
 }
 
 // ============== END APPEND BLOCK (outcomes & release detail) ===============
+
+// ============================================================================
+// APPEND BLOCK — roadmap scenario plans (dream tier 2 §6: plan switcher,
+// scenario editing, ghost compare, apply). Owned by the roadmap scenarios
+// task; keep additions inside this block.
+// ============================================================================
+
+// (`Horizon` is already imported at the top of this file.)
+import type { Plan, PlanApplyResult, PlanWithEntries } from '@productmap/shared';
+
+export const plansKey = ['plans'] as const;
+export const planKey = (id: string) => ['plans', id] as const;
+
+export function usePlans() {
+  return useQuery({
+    queryKey: plansKey,
+    queryFn: () => fetchJson<Plan[]>('/api/plans'),
+  });
+}
+
+/** Full plan snapshot (entries) — drives scenario-mode bar rendering. */
+export function usePlan(id: string | null) {
+  return useQuery({
+    queryKey: planKey(id ?? ''),
+    queryFn: () => fetchJson<PlanWithEntries>(`/api/plans/${id}`),
+    enabled: !!id,
+  });
+}
+
+export interface PlanCreateInput {
+  name: string;
+  /** Snapshot source — the live schedule (default) or another plan's entries. */
+  copyFrom?: 'current' | string;
+}
+
+export function useCreatePlan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: PlanCreateInput) =>
+      fetchJson<PlanWithEntries>('/api/plans', { method: 'POST', body: JSON.stringify(input) }),
+    onSuccess: (plan) => qc.setQueryData(planKey(plan.id), plan),
+    onSettled: () => qc.invalidateQueries({ queryKey: plansKey }),
+  });
+}
+
+export function useRenamePlan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) =>
+      fetchJson<Plan>(`/api/plans/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
+    onSettled: () => qc.invalidateQueries({ queryKey: plansKey }),
+  });
+}
+
+export function useDeletePlan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => fetchJson<void>(`/api/plans/${id}`, { method: 'DELETE' }),
+    onSettled: () => qc.invalidateQueries({ queryKey: plansKey }),
+  });
+}
+
+export interface PlanEntryUpdateVars {
+  planId: string;
+  featureId: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  horizon?: Horizon;
+}
+
+/**
+ * PUT /api/plans/:id/entries/:featureId — scenario editing. Touches plan
+ * entries ONLY (never features); optimistic so drags settle instantly.
+ */
+export function useUpdatePlanEntry() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ planId, featureId, ...patch }: PlanEntryUpdateVars) =>
+      fetchJson<PlanWithEntries['entries'][number]>(
+        `/api/plans/${planId}/entries/${featureId}`,
+        { method: 'PUT', body: JSON.stringify(patch) },
+      ),
+    onMutate: async ({ planId, featureId, ...patch }) => {
+      await qc.cancelQueries({ queryKey: planKey(planId) });
+      const previous = qc.getQueryData<PlanWithEntries>(planKey(planId));
+      qc.setQueryData<PlanWithEntries>(planKey(planId), (old) => {
+        if (!old) return old;
+        const exists = old.entries.some((e) => e.featureId === featureId);
+        const entries = exists
+          ? old.entries.map((e) => (e.featureId === featureId ? { ...e, ...patch } : e))
+          : [
+              ...old.entries,
+              {
+                planId,
+                featureId,
+                startDate: patch.startDate ?? null,
+                endDate: patch.endDate ?? null,
+                // Callers pass horizon on insert (tray drop); 'later' is a
+                // safety net the server immediately corrects.
+                horizon: patch.horizon ?? 'later',
+              },
+            ];
+        return { ...old, entries };
+      });
+      return { previous };
+    },
+    onError: (_err, { planId }, ctx) => {
+      if (ctx?.previous) qc.setQueryData(planKey(planId), ctx.previous);
+    },
+    onSettled: (_data, _err, { planId }) =>
+      qc.invalidateQueries({ queryKey: planKey(planId) }),
+  });
+}
+
+/** POST /api/plans/:id/apply — promote the scenario to the real roadmap. */
+export function useApplyPlan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (planId: string) =>
+      fetchJson<PlanApplyResult>(`/api/plans/${planId}/apply`, { method: 'POST' }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: plansKey });
+      qc.invalidateQueries({ queryKey: queryKeys.features });
+      qc.invalidateQueries({ queryKey: queryKeys.overview });
+    },
+  });
+}
+
+// ================= END APPEND BLOCK (roadmap scenario plans) ================

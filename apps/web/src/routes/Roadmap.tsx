@@ -3,17 +3,27 @@ import { useSearchParams } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { Gauge, History } from 'lucide-react';
 import { toast } from 'sonner';
-import type { Feature } from '@productmap/shared';
+import type { Feature, Horizon } from '@productmap/shared';
 import {
   useAllDependencies,
+  useApplyPlan,
+  useCreatePlan,
+  useDeletePlan,
   useFeatures,
+  usePlan,
+  usePlans,
   useReleases,
+  useRenamePlan,
   useUpdateFeature,
+  useUpdatePlanEntry,
   useWorkspaceActivity,
 } from '@/lib/api';
 import { FeatureDetailPanel } from '@/components/board/FeatureDetailPanel';
 import { GanttChart } from '@/components/gantt/GanttChart';
+import { PlanSwitcher } from '@/components/gantt/PlanSwitcher';
+import { ScenarioBanner } from '@/components/gantt/ScenarioBanner';
 import { TimeMachine } from '@/components/gantt/TimeMachine';
+import { computePlanDiff } from '@/components/gantt/plan-diff';
 import { reconstructState, timelineRange } from '@/components/gantt/history-replay';
 import { UnscheduledTray } from '@/components/gantt/UnscheduledTray';
 import { Button } from '@/components/ui/button';
@@ -38,6 +48,42 @@ export default function RoadmapPage() {
   const featureIds = useMemo(() => (features ?? []).map((f) => f.id), [features]);
   const dependenciesQuery = useAllDependencies(featureIds);
 
+  // Scenario plans (Dream Tier 2 §6): drafts edited in isolation, then applied.
+  const [activePlanId, setActivePlanId] = useState<string | null>(null);
+  const [compare, setCompare] = useState(false);
+  const plansQuery = usePlans();
+  const planQuery = usePlan(activePlanId);
+  const createPlan = useCreatePlan();
+  const renamePlan = useRenamePlan();
+  const deletePlan = useDeletePlan();
+  const updatePlanEntry = useUpdatePlanEntry();
+  const applyPlan = useApplyPlan();
+  const scenarioMode = activePlanId !== null;
+  const planEntries = useMemo(() => planQuery.data?.entries ?? [], [planQuery.data]);
+
+  /** Plan entries override dates+horizon; features missing from the snapshot keep their live values (the entry upsert seeds the same way server-side). */
+  const scenarioFeatures = useMemo(() => {
+    if (!scenarioMode || !features) return null;
+    const byFeature = new Map(planEntries.map((e) => [e.featureId, e]));
+    return features.map((f) => {
+      const entry = byFeature.get(f.id);
+      return entry
+        ? { ...f, startDate: entry.startDate, endDate: entry.endDate, horizon: entry.horizon }
+        : f;
+    });
+  }, [scenarioMode, features, planEntries]);
+
+  const planDiff = useMemo(
+    () => (scenarioMode && features ? computePlanDiff(features, planEntries) : []),
+    [scenarioMode, features, planEntries],
+  );
+
+  function selectPlan(planId: string | null) {
+    setActivePlanId(planId);
+    setCompare(false);
+    exitHistory(); // scenario and time-travel are mutually exclusive
+  }
+
   // Time Machine (Spec 2.1): scrub history client-side from the activity feed.
   const [historyMode, setHistoryMode] = useState(false);
   const [scrubTime, setScrubTime] = useState<number | null>(null); // null = now
@@ -46,14 +92,15 @@ export default function RoadmapPage() {
   const historyRange = useMemo(() => timelineRange(activityEvents), [activityEvents]);
   const scrubValue = scrubTime ?? historyRange.end;
 
-  /** Features as of the scrub time — replayed backward from now, no writes. */
+  /** Features as displayed: scenario overlay, or replayed history — no writes. */
   const displayFeatures = useMemo(() => {
+    if (scenarioFeatures) return scenarioFeatures;
     if (!historyMode || !features || scrubTime === null) return features;
     const snapshots = new Map(
       reconstructState(features, activityEvents, scrubTime).map((s) => [s.id, s]),
     );
     return features.filter((f) => snapshots.has(f.id)).map((f) => ({ ...f, ...snapshots.get(f.id)! }));
-  }, [historyMode, features, activityEvents, scrubTime]);
+  }, [scenarioFeatures, historyMode, features, activityEvents, scrubTime]);
 
   function exitHistory() {
     setHistoryMode(false);
@@ -70,14 +117,23 @@ export default function RoadmapPage() {
     return () => clearTimeout(timer);
   }, [featureParam, features]);
 
+  // Tray feeds off the displayed schedule so scenario drops/edits reflect too.
   const unscheduled = useMemo(
-    () => (features ?? []).filter((f) => !f.startDate || !f.endDate),
-    [features],
+    () => (scenarioFeatures ?? features ?? []).filter((f) => !f.startDate || !f.endDate),
+    [scenarioFeatures, features],
   );
 
   function commitDates(feature: Feature, patch: { startDate?: string; endDate?: string }) {
     const startDate = patch.startDate ?? feature.startDate;
     const endDate = patch.endDate ?? feature.endDate;
+    if (activePlanId) {
+      // Scenario mode: write the plan entry, never the feature.
+      updatePlanEntry.mutate(
+        { planId: activePlanId, featureId: feature.id, ...patch },
+        { onError: () => toast.error(`Couldn't move '${feature.title}' — restored`) },
+      );
+      return;
+    }
     updateFeature.mutate(
       { id: feature.id, ...patch },
       {
@@ -89,6 +145,14 @@ export default function RoadmapPage() {
   }
 
   function scheduleFeature(feature: Feature, startDate: string, endDate: string) {
+    if (activePlanId) {
+      // Pass horizon so a feature new to the snapshot seeds correctly.
+      updatePlanEntry.mutate(
+        { planId: activePlanId, featureId: feature.id, startDate, endDate, horizon: feature.horizon },
+        { onError: () => toast.error(`Couldn't schedule '${feature.title}' — restored`) },
+      );
+      return;
+    }
     updateFeature.mutate(
       { id: feature.id, startDate, endDate },
       {
@@ -97,6 +161,31 @@ export default function RoadmapPage() {
         onError: () => toast.error(`Couldn't schedule '${feature.title}' — restored`),
       },
     );
+  }
+
+  /** Scenario-only horizon recolor (row-hover select in the gutter). */
+  function changeScenarioHorizon(feature: Feature, horizon: Horizon) {
+    if (!activePlanId) return;
+    updatePlanEntry.mutate(
+      { planId: activePlanId, featureId: feature.id, horizon },
+      { onError: () => toast.error(`Couldn't update '${feature.title}' — restored`) },
+    );
+  }
+
+  function handleApply() {
+    if (!activePlanId) return;
+    const planName = planQuery.data?.name ?? 'plan';
+    applyPlan.mutate(activePlanId, {
+      onSuccess: (result) => {
+        toast.success(
+          `Applied '${result.plan.name}' — ${result.changed.length} feature${
+            result.changed.length === 1 ? '' : 's'
+          } updated`,
+        );
+        selectPlan(null);
+      },
+      onError: () => toast.error(`Couldn't apply '${planName}'`),
+    });
   }
 
   return (
@@ -108,10 +197,45 @@ export default function RoadmapPage() {
           <p className="mt-1 text-sm text-muted-foreground">
             {historyMode
               ? 'Time travel — scrub to replay how the roadmap evolved. Read-only until you come back to now.'
-              : 'Drag a bar to move its dates, drag its right edge to resize, or click it for details.'}
+              : scenarioMode
+                ? 'Scenario draft — drag bars and recolor horizons freely; nothing is real until you apply.'
+                : 'Drag a bar to move its dates, drag its right edge to resize, or click it for details.'}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+        <PlanSwitcher
+          plans={plansQuery.data ?? []}
+          activePlanId={activePlanId}
+          onSelect={selectPlan}
+          creating={createPlan.isPending}
+          onCreate={(name) =>
+            createPlan.mutate(
+              { name },
+              {
+                onSuccess: (plan) => {
+                  toast.success(`Created plan '${plan.name}'`);
+                  selectPlan(plan.id);
+                },
+                onError: () => toast.error(`Couldn't create '${name}'`),
+              },
+            )
+          }
+          onRename={(planId, name) =>
+            renamePlan.mutate(
+              { id: planId, name },
+              { onError: () => toast.error("Couldn't rename plan") },
+            )
+          }
+          onDelete={(planId) =>
+            deletePlan.mutate(planId, {
+              onSuccess: () => {
+                if (planId === activePlanId) selectPlan(null);
+                toast.success('Plan deleted');
+              },
+              onError: () => toast.error("Couldn't delete plan"),
+            })
+          }
+        />
         <button
           type="button"
           data-testid="capacity-toggle"
@@ -130,8 +254,10 @@ export default function RoadmapPage() {
           type="button"
           data-testid="history-toggle"
           aria-pressed={historyMode}
+          disabled={scenarioMode}
+          title={scenarioMode ? 'History is unavailable while editing a scenario' : undefined}
           onClick={() => (historyMode ? exitHistory() : setHistoryMode(true))}
-          className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium outline-none transition-all duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring ${
+          className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium outline-none transition-all duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 ${
             historyMode
               ? 'border-transparent bg-action-soft text-action'
               : 'border-line text-body-ink hover:bg-surface/60 hover:text-ink'
@@ -172,6 +298,17 @@ export default function RoadmapPage() {
         </div>
       )}
 
+      {features && scenarioMode && planQuery.data && (
+        <ScenarioBanner
+          planName={planQuery.data.name}
+          compare={compare}
+          onCompareChange={setCompare}
+          diff={planDiff}
+          onApply={handleApply}
+          applying={applyPlan.isPending}
+        />
+      )}
+
       {features && (
         <div className="space-y-6">
           {/* History mode: read-only (no pointer interaction) + 300ms ease-out bar
@@ -188,12 +325,16 @@ export default function RoadmapPage() {
             <GanttChart
               features={displayFeatures ?? features}
               onCommitDates={historyMode ? () => {} : commitDates}
-              onBarClick={historyMode ? () => {} : (f) => setSelectedId(f.id)}
+              // Scenario mode: detail panel edits REAL features, so bar click
+              // is off — scenario edits stay scoped to dates + horizon.
+              onBarClick={historyMode || scenarioMode ? () => {} : (f) => setSelectedId(f.id)}
               highlightId={highlightId}
               trayDropActive={trayDragging}
               releases={releasesQuery.data ?? []}
               dependencyEdges={dependenciesQuery.data ?? []}
               showCapacity={showCapacity}
+              ghostFeatures={scenarioMode && compare ? features : undefined}
+              onHorizonChange={scenarioMode ? changeScenarioHorizon : undefined}
             />
           </div>
 
