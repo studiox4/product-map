@@ -1,6 +1,12 @@
 import { useState } from 'react';
-import { Link, NavLink, Outlet } from 'react-router-dom';
-import { Lightbulb, Map, Search, Settings, Sparkles } from 'lucide-react';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { ChevronDown, Lightbulb, Map, Search, Settings, Sparkles } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Toaster } from '@/components/ui/sonner';
 import ThemeToggle from '@/components/ThemeToggle';
 import WelcomeDialog from '@/components/WelcomeDialog';
@@ -15,17 +21,32 @@ import { cn } from '@/lib/utils';
 const NAV_LINKS: { to: string; label: string; end: boolean; icon?: typeof Lightbulb }[] = [
   { to: '/', label: 'Overview', end: true },
   { to: '/inbox', label: 'Inbox', end: false, icon: Lightbulb },
-  { to: '/board', label: 'Board', end: false },
-  { to: '/docs', label: 'Docs', end: true },
-  { to: '/roadmap', label: 'Roadmap', end: false },
-  { to: '/releases', label: 'Releases', end: false },
-  { to: '/outcomes', label: 'Outcomes', end: false },
 ];
+
+/** Planning surfaces grouped under one "Plan" pill to keep the nav calm. */
+const PLAN_LINKS: { to: string; label: string }[] = [
+  { to: '/board', label: 'Board' },
+  { to: '/roadmap', label: 'Roadmap' },
+  { to: '/releases', label: 'Releases' },
+  { to: '/outcomes', label: 'Outcomes' },
+];
+
+const DOCS_LINK = { to: '/docs', label: 'Docs', end: true };
 
 const isMac =
   typeof navigator !== 'undefined' && /Mac|iP(hone|ad|od)/.test(navigator.platform);
 
+const pillClass = (isActive: boolean) =>
+  cn(
+    'flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium outline-none transition-all duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring',
+    isActive
+      ? 'bg-surface text-ink shadow-card'
+      : 'text-body-ink hover:bg-surface/60 hover:text-ink',
+  );
+
 export function AppShell() {
+  const location = useLocation();
+  const planActive = PLAN_LINKS.some((l) => location.pathname.startsWith(l.to));
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
@@ -55,19 +76,40 @@ export function AppShell() {
                 key={link.to}
                 to={link.to}
                 end={link.end}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium outline-none transition-all duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring',
-                    isActive
-                      ? 'bg-surface text-ink shadow-card'
-                      : 'text-body-ink hover:bg-surface/60 hover:text-ink',
-                  )
-                }
+                className={({ isActive }) => pillClass(isActive)}
               >
                 {link.icon ? <link.icon className="h-3.5 w-3.5" aria-hidden /> : null}
                 {link.label}
               </NavLink>
             ))}
+            <DropdownMenu>
+              <DropdownMenuTrigger className={pillClass(planActive)}>
+                Plan
+                <ChevronDown className="h-3.5 w-3.5" aria-hidden />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="min-w-36">
+                {PLAN_LINKS.map((link) => (
+                  <DropdownMenuItem key={link.to} asChild>
+                    <Link
+                      to={link.to}
+                      className={cn(
+                        'cursor-pointer',
+                        location.pathname.startsWith(link.to) && 'font-semibold text-ink',
+                      )}
+                    >
+                      {link.label}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <NavLink
+              to={DOCS_LINK.to}
+              end={DOCS_LINK.end}
+              className={({ isActive }) => pillClass(isActive)}
+            >
+              {DOCS_LINK.label}
+            </NavLink>
           </div>
           <div className="ml-auto flex items-center gap-2">
             <button

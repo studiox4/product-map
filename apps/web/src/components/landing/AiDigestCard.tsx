@@ -70,8 +70,6 @@ export function AiDigestCard() {
   const startedRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => () => abortRef.current?.abort(), []);
-
   async function start() {
     setError(null);
     setStreaming(true);
@@ -117,7 +115,7 @@ export function AiDigestCard() {
       }
     } finally {
       clearTimeout(timeout);
-      abortRef.current = null;
+      if (abortRef.current === controller) abortRef.current = null;
       setStreaming(false);
     }
   }
@@ -126,6 +124,12 @@ export function AiDigestCard() {
     if (!enabled || startedRef.current) return;
     startedRef.current = true;
     if (readCache() === null) void start();
+    return () => {
+      // Abort the in-flight stream on unmount; reset the guard so a
+      // StrictMode remount (or future remount) restarts the stream.
+      abortRef.current?.abort();
+      startedRef.current = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled]);
 

@@ -41,6 +41,23 @@ export function activityVerb(item: ActivityItem): string {
       return item.payload?.['resolved'] === false
         ? 'reopened a comment thread'
         : 'resolved a comment thread';
+    // Dream-tier kinds (D1–D9).
+    case 'idea_promoted':
+      return 'promoted this from the idea inbox';
+    case 'decision_logged': {
+      const title = payloadString(item.payload, 'title');
+      return title ? `logged decision “${title}”` : 'logged a decision';
+    }
+    case 'dependency_added':
+      return 'added a dependency';
+    case 'dependency_removed':
+      return 'removed a dependency';
+    case 'release_shipped': {
+      const name = payloadString(item.payload, 'releaseName');
+      return name ? `shipped this in ${name}` : 'shipped this in a release';
+    }
+    case 'size_changed':
+      return to ? `sized this ${to.toUpperCase()}` : 'changed the size';
     default:
       return 'updated this feature';
   }

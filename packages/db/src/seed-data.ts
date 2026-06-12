@@ -670,7 +670,8 @@ Fund the two weeks. Gate GA behind one partner running the module in staging for
       mkDoc({ feature: gantt, type: 'tech_spec', title: 'Gantt roadmap — Drag interaction spec', status: 'in_review', author: elena, createdDaysAgo: 6, updatedDaysAgo: 1, md: ganttSpecMd }),
       mkDoc({ feature: ai, type: 'prd', title: 'AI doc drafting — PRD', status: 'in_review', author: priya, createdDaysAgo: 16, updatedDaysAgo: 6, md: aiPrdMd }),
       mkDoc({ feature: ai, type: 'tech_spec', title: 'AI doc drafting — Prompt pipeline spec', status: 'draft', author: marcus, editedBy: elena, createdDaysAgo: 8, updatedDaysAgo: 2.5, md: aiSpecMd }),
-      mkDoc({ feature: commentsFeature, type: 'feature_brief', title: 'Comments & review — Feature brief', status: 'draft', author: elena, createdDaysAgo: 10, updatedDaysAgo: 8, md: commentsBriefMd }),
+      // updatedDaysAgo > 14 on purpose: feeds the copilot stale-draft nudge (D5).
+      mkDoc({ feature: commentsFeature, type: 'feature_brief', title: 'Comments & review — Feature brief', status: 'draft', author: elena, createdDaysAgo: 18, updatedDaysAgo: 16, md: commentsBriefMd }),
       mkDoc({ feature: voting, type: 'feature_brief', title: 'Up/down voting — Feature brief', status: 'draft', author: priya, createdDaysAgo: 7, updatedDaysAgo: 1.5, md: votingBriefMd }),
       mkDoc({ feature: realtime, type: 'tech_spec', title: 'Realtime collaboration — Yjs evaluation', status: 'draft', author: elena, createdDaysAgo: 5, updatedDaysAgo: 1.2, md: realtimeSpecMd }),
       mkDoc({ feature: ecs, type: 'brd', title: 'ECS deployment — Business case', status: 'in_review', author: marcus, createdDaysAgo: 8.5, updatedDaysAgo: 2.2, md: ecsBrdMd }),

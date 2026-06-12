@@ -33,6 +33,7 @@ import { EvidenceSection } from '@/components/feature/EvidenceSection';
 import { DecisionsSection } from '@/components/feature/DecisionsSection';
 import { DependenciesRail } from '@/components/feature/DependenciesRail';
 import { SizeRiskRail } from '@/components/feature/SizeRiskRail';
+import { PlanningRail } from '@/components/feature/PlanningRail';
 import { DocsGrid } from '@/components/feature/DocsGrid';
 import { ActivityFeed } from '@/components/feature/ActivityFeed';
 import { CommentsSection } from '@/components/comments/CommentsSection';
@@ -184,6 +185,7 @@ function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
           <PeopleRail feature={feature} />
           <DependenciesRail feature={feature} />
           <SizeRiskRail feature={feature} />
+          <PlanningRail feature={feature} />
 
           <section className="space-y-3 rounded-2xl bg-surface p-4 shadow-card" aria-label="Dates">
             <h2 className="font-display text-sm font-semibold text-ink">Dates</h2>
