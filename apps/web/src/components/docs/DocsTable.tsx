@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import {
   DOC_TYPE_COLORS,
   DOC_TYPE_LABELS,
+  type DocOwnerLabel,
   type DocumentFull,
   type DocumentListItem,
 } from '@productmap/shared';
@@ -57,6 +58,35 @@ function SortableHeader({
         {active && <Arrow className="h-3 w-3" aria-hidden />}
       </button>
     </th>
+  );
+}
+
+/** Route for a doc's owning surface chip (dream tier 2 — docs can belong to features, ideas, or releases). */
+function ownerHref(owner: DocOwnerLabel): string {
+  if (owner.kind === 'idea') return `/inbox?idea=${owner.id}`;
+  if (owner.kind === 'release') return `/releases/${owner.id}`;
+  return `/features/${owner.id}`;
+}
+
+/**
+ * Owner cell: idea/release/feature name + link via ownerLabel; falls back to
+ * the legacy featureTitle columns, and "—" for ownerless docs.
+ */
+function OwnerCell({ doc }: { doc: DocumentListItem }) {
+  const owner: DocOwnerLabel | null =
+    doc.ownerLabel ??
+    (doc.featureId
+      ? { kind: 'feature', id: doc.featureId, title: doc.featureTitle }
+      : null);
+  if (!owner) return <span className="text-muted-ink">—</span>;
+  return (
+    <Link
+      to={ownerHref(owner)}
+      onClick={(e) => e.stopPropagation()}
+      className="rounded-full text-body-ink underline-offset-2 outline-none transition-colors duration-150 ease-out hover:text-action hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      {owner.title}
+    </Link>
   );
 }
 
@@ -125,13 +155,7 @@ function DocsRow({
         <StatusBadge status={doc.status} />
       </td>
       <td className="px-4 py-3">
-        <Link
-          to={`/features/${doc.featureId}`}
-          onClick={(e) => e.stopPropagation()}
-          className="rounded-full text-body-ink underline-offset-2 outline-none transition-colors duration-150 ease-out hover:text-action hover:underline focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {doc.featureTitle}
-        </Link>
+        <OwnerCell doc={doc} />
       </td>
       <td className="px-4 py-3 text-muted-ink">
         {format(new Date(doc.updatedAt), 'MMM d, yyyy')}
@@ -187,7 +211,7 @@ export function DocsTable({ docs, sort, onSortChange, onRowClick }: DocsTablePro
             <SortableHeader label="Title" sortKey="title" sort={sort} onSortChange={onSortChange} />
             <th scope="col" className={headerCellClass}>Type</th>
             <th scope="col" className={headerCellClass}>Status</th>
-            <th scope="col" className={headerCellClass}>Feature</th>
+            <th scope="col" className={headerCellClass}>Owner</th>
             <SortableHeader label="Updated" sortKey="updatedAt" sort={sort} onSortChange={onSortChange} />
           </tr>
         </thead>

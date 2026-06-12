@@ -113,7 +113,8 @@ export default function DocsPage() {
       if (
         needle &&
         !doc.title.toLowerCase().includes(needle) &&
-        !doc.featureTitle.toLowerCase().includes(needle)
+        !doc.featureTitle.toLowerCase().includes(needle) &&
+        !(doc.ownerLabel?.title ?? '').toLowerCase().includes(needle)
       ) {
         return false;
       }

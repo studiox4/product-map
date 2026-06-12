@@ -212,6 +212,71 @@ describe('DocsPage', () => {
     expect((window as unknown as Record<string, unknown>).__pwned).toBeUndefined();
   });
 
+  it('renders idea/release owners with links and "—" for ownerless docs', async () => {
+    const extra: DocumentListItem[] = [
+      {
+        ...base,
+        id: 'd4',
+        featureId: null,
+        ideaId: 'i1',
+        type: 'idea_pitch',
+        title: 'Bulk export — Idea pitch',
+        status: 'draft',
+        updatedAt: '2026-06-10T00:00:00.000Z',
+        featureTitle: '',
+        featureHorizon: null,
+        wordCount: 40,
+        ownerLabel: { kind: 'idea', id: 'i1', title: 'Bulk export to CSV' },
+      },
+      {
+        ...base,
+        id: 'd5',
+        featureId: null,
+        type: 'release_notes',
+        title: 'June release notes',
+        status: 'draft',
+        updatedAt: '2026-06-11T00:00:00.000Z',
+        featureTitle: '',
+        featureHorizon: null,
+        wordCount: 80,
+        ownerLabel: { kind: 'release', id: 'r1', title: 'June release' },
+      },
+      {
+        ...base,
+        id: 'd6',
+        featureId: null,
+        type: 'release_notes',
+        title: 'Orphaned notes',
+        status: 'draft',
+        updatedAt: '2026-06-12T00:00:00.000Z',
+        featureTitle: '',
+        featureHorizon: null,
+        wordCount: 10,
+        ownerLabel: null,
+      },
+    ];
+    server.use(http.get('/api/documents', () => HttpResponse.json([...fixture, ...extra])));
+    renderDocs();
+    await screen.findByText('Bulk export — Idea pitch');
+
+    expect(screen.getByRole('link', { name: 'Bulk export to CSV' })).toHaveProperty(
+      'pathname',
+      '/inbox',
+    );
+    expect(
+      (screen.getByRole('link', { name: 'Bulk export to CSV' }) as HTMLAnchorElement).search,
+    ).toBe('?idea=i1');
+    expect(screen.getByRole('link', { name: 'June release' })).toHaveProperty(
+      'pathname',
+      '/releases/r1',
+    );
+    const orphanRow = screen.getByText('Orphaned notes').closest('tr')!;
+    expect(within(orphanRow).getByText('—')).toBeTruthy();
+    // Idea pitch chip renders in the type column.
+    const pitchRow = screen.getByText('Bulk export — Idea pitch').closest('tr')!;
+    expect(within(pitchRow).getByText('Idea pitch')).toBeTruthy();
+  });
+
   it('shows error state with retry', async () => {
     server.use(
       http.get('/api/documents', () => new HttpResponse(null, { status: 500 })),

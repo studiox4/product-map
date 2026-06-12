@@ -1329,6 +1329,41 @@ export function usePromoteIdea() {
   });
 }
 
+// -- dream tier 2: idea editing + pitch docs (Inbox agent additions) --
+
+export function ideaKey(id: string) {
+  return ['ideas', 'detail', id] as const;
+}
+
+/** Single idea with creator + pitchDoc meta (GET /api/ideas/:id). Used by the editor back-link for idea-owned docs. */
+export function useIdea(id: string) {
+  return useQuery({
+    queryKey: ideaKey(id),
+    queryFn: () => fetchJson<IdeaWithVotes>(`/api/ideas/${id}`),
+    enabled: !!id,
+  });
+}
+
+/**
+ * POST /api/ideas/:id/pitch — create the idea's pitch doc from the default
+ * idea_pitch template (409 when one exists). Seeds the document cache so
+ * navigating straight to /docs/:id renders without a refetch.
+ */
+export function useCreatePitch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ideaId: string) =>
+      fetchJson<DocumentFull>(`/api/ideas/${ideaId}/pitch`, { method: 'POST' }),
+    onSuccess: (doc) => {
+      qc.setQueryData(queryKeys.document(doc.id), doc);
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ideasRootKey });
+      qc.invalidateQueries({ queryKey: queryKeys.allDocuments });
+    },
+  });
+}
+
 // ---- gantt upgrades (Dream Tier — releases + dependency arrows + capacity) ----
 // Append-only block: self-contained, including its imports (hoisted by ESM).
 

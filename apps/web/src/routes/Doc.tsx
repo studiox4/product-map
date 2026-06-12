@@ -7,8 +7,10 @@ import {
   useComments,
   useDocument,
   useFeature,
+  useIdea,
   useUpdateDocument,
 } from '@/lib/api';
+import { docBackLink } from './doc-back-link';
 import { DocTypeChip } from '@/components/DocTypeChip';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -53,6 +55,8 @@ export default function DocPage() {
   const docQuery = useDocument(id);
   const doc = docQuery.data;
   const featureQuery = useFeature(doc?.featureId ?? '');
+  // Idea-owned docs (pitch pre-promotion): fetch the idea for the back-link title.
+  const ideaQuery = useIdea(doc && !doc.featureId ? (doc.ideaId ?? '') : '');
   const aiStatus = useAiStatus();
   const updateDocument = useUpdateDocument();
   const { mutateAsync: patchDocument, mutate: patchDocumentFireAndForget } =
@@ -145,8 +149,11 @@ export default function DocPage() {
     [id, patchDocumentFireAndForget],
   );
 
+  // AI drafting needs an owning feature for context — idea/release-owned docs
+  // (featureId null) keep the editor but skip the AI seam.
   const aiConfig = useMemo(
-    () => (doc ? { featureId: doc.featureId, docType: doc.type } : undefined),
+    () =>
+      doc?.featureId ? { featureId: doc.featureId, docType: doc.type } : undefined,
     [doc],
   );
 
@@ -173,6 +180,10 @@ export default function DocPage() {
 
   const feature = featureQuery.data;
   const cover = coverCss(doc.cover);
+  const back = docBackLink(doc, {
+    featureTitle: feature?.title,
+    ideaTitle: ideaQuery.data?.title,
+  });
 
   return (
     <div className="mx-auto w-full max-w-[860px] px-4 pb-16 pt-6 sm:px-6">
@@ -185,8 +196,8 @@ export default function DocPage() {
         />
       ) : null}
       <EditorToolbar
-        backHref={`/board?feature=${doc.featureId}`}
-        backLabel={feature?.title ?? 'Back to board'}
+        backHref={back.href}
+        backLabel={back.label}
         title={doc.title}
         onRenameTitle={handleRenameTitle}
         typeChip={<DocTypeChip type={doc.type} />}

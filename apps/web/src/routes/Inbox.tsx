@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { marked } from 'marked';
-import DOMPurify from 'dompurify';
-import { ArrowUpRight, Archive, Lightbulb, Plus, RotateCcw } from 'lucide-react';
-import { toast } from 'sonner';
-import type { IdeaStatus, IdeaWithVotes } from '@productmap/shared';
-import { useIdeas, useUpdateIdea } from '@/lib/api';
+import { useSearchParams } from 'react-router-dom';
+import { Lightbulb, Plus } from 'lucide-react';
+import type { IdeaStatus } from '@productmap/shared';
+import { useIdeas } from '@/lib/api';
 import { IdeaVotePills } from '@/components/inbox/IdeaVotePills';
+import { IdeaByline, IdeaDetailPane } from '@/components/inbox/IdeaDetailPane';
 import { NewIdeaDialog } from '@/components/inbox/NewIdeaDialog';
 import { PromoteIdeaDialog } from '@/components/inbox/PromoteIdeaDialog';
 import { Button } from '@/components/ui/button';
@@ -35,15 +33,6 @@ const STATUS_BADGE: Record<IdeaStatus, string> = {
   archived: 'bg-inset text-muted-ink line-through',
 };
 
-const proseClass =
-  'space-y-3 text-sm leading-6 text-body-ink ' +
-  '[&_h1]:font-display [&_h1]:text-xl [&_h1]:font-semibold [&_h1]:text-ink ' +
-  '[&_h2]:font-display [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-ink ' +
-  '[&_h3]:font-display [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-ink ' +
-  '[&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:space-y-1 [&_ol]:pl-5 ' +
-  '[&_a]:text-action [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-line-dash [&_blockquote]:pl-3 ' +
-  '[&_code]:rounded [&_code]:bg-inset [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs';
-
 function StatusBadgeChip({ status }: { status: IdeaStatus }) {
   return (
     <span
@@ -62,7 +51,6 @@ export default function Inbox() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [filter, setFilter] = useState<IdeaStatus | undefined>(undefined);
   const { data: ideas, isLoading, isError, refetch } = useIdeas(filter);
-  const updateIdea = useUpdateIdea();
   const [newOpen, setNewOpen] = useState(false);
   const [promoteOpen, setPromoteOpen] = useState(false);
 
@@ -94,21 +82,6 @@ export default function Inbox() {
       return next;
     });
   };
-
-  const setStatus = (idea: IdeaWithVotes, status: IdeaStatus, errorLabel: string) => {
-    updateIdea.mutate(
-      { id: idea.id, status },
-      { onError: () => toast.error(`Couldn't ${errorLabel} '${idea.title}'`) },
-    );
-  };
-
-  const bodyHtml = useMemo(
-    () =>
-      selected?.bodyMd
-        ? DOMPurify.sanitize(marked.parse(selected.bodyMd, { async: false }) as string)
-        : '',
-    [selected?.bodyMd],
-  );
 
   if (isError) {
     return (
@@ -205,6 +178,9 @@ export default function Inbox() {
                     <p className="text-sm font-medium text-ink">{idea.title}</p>
                     {idea.status !== 'inbox' ? <StatusBadgeChip status={idea.status} /> : null}
                   </div>
+                  <div className="mt-1.5">
+                    <IdeaByline idea={idea} />
+                  </div>
                   <div className="mt-2 flex items-center justify-between gap-3">
                     <IdeaVotePills idea={idea} size="compact" />
                     {idea.source ? (
@@ -218,78 +194,11 @@ export default function Inbox() {
 
           {/* Right: detail pane */}
           {selected ? (
-            <section className="self-start rounded-2xl bg-panel p-6" aria-label="Idea detail">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="font-display text-lg font-semibold text-ink">
-                    {selected.title}
-                  </h2>
-                  {selected.source ? (
-                    <p className="mt-1 text-xs text-muted-ink">Source: {selected.source}</p>
-                  ) : null}
-                </div>
-                <StatusBadgeChip status={selected.status} />
-              </div>
-
-              <div className="mt-4">
-                <IdeaVotePills idea={selected} size="full" />
-              </div>
-
-              <div className="mt-5">
-                {selected.bodyMd ? (
-                  // eslint-disable-next-line react/no-danger -- sanitized via DOMPurify above
-                  <div className={proseClass} dangerouslySetInnerHTML={{ __html: bodyHtml }} />
-                ) : (
-                  <p className="text-sm text-muted-ink">No details yet.</p>
-                )}
-              </div>
-
-              <div className="mt-6 flex flex-wrap items-center gap-2">
-                {selected.status === 'promoted' && selected.promotedFeatureId ? (
-                  <Button asChild variant="outline" className="rounded-full">
-                    <Link to={`/features/${selected.promotedFeatureId}`}>
-                      <ArrowUpRight className="h-4 w-4" aria-hidden />
-                      View feature
-                    </Link>
-                  </Button>
-                ) : null}
-                {selected.status === 'inbox' || selected.status === 'triaged' ? (
-                  <>
-                    <Button className="rounded-full" onClick={() => setPromoteOpen(true)}>
-                      <ArrowUpRight className="h-4 w-4" aria-hidden />
-                      Promote to feature
-                    </Button>
-                    {selected.status === 'inbox' ? (
-                      <Button
-                        variant="outline"
-                        className="rounded-full"
-                        onClick={() => setStatus(selected, 'triaged', 'triage')}
-                      >
-                        Mark triaged
-                      </Button>
-                    ) : null}
-                    <Button
-                      variant="ghost"
-                      className="rounded-full"
-                      onClick={() => setStatus(selected, 'archived', 'archive')}
-                    >
-                      <Archive className="h-4 w-4" aria-hidden />
-                      Archive
-                    </Button>
-                  </>
-                ) : null}
-                {selected.status === 'archived' ? (
-                  <Button
-                    variant="outline"
-                    className="rounded-full"
-                    onClick={() => setStatus(selected, 'inbox', 'restore')}
-                  >
-                    <RotateCcw className="h-4 w-4" aria-hidden />
-                    Restore to inbox
-                  </Button>
-                ) : null}
-              </div>
-            </section>
+            <IdeaDetailPane
+              key={selected.id}
+              idea={selected}
+              onPromote={() => setPromoteOpen(true)}
+            />
           ) : null}
         </div>
       )}
