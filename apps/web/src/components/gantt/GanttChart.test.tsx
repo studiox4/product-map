@@ -148,6 +148,79 @@ describe('GanttChart', () => {
     render(<GanttChart features={[dateless]} onCommitDates={() => {}} onBarClick={() => {}} />);
     expect(screen.getByText(/no scheduled features/i)).toBeTruthy();
   });
+
+  it('draws a dependency arrow per edge whose endpoints both have bars', () => {
+    render(
+      <GanttChart
+        features={[...dated, dateless]}
+        onCommitDates={() => {}}
+        onBarClick={() => {}}
+        dependencyEdges={[
+          { blockerId: 'f1', blockedId: 'f2' },
+          { blockerId: 'f4', blockedId: 'f2' }, // f4 is dateless → skipped
+        ]}
+      />,
+    );
+    expect(screen.getByTestId('gantt-dep-f1-f2')).toBeTruthy();
+    expect(screen.queryByTestId('gantt-dep-f4-f2')).toBeNull();
+    expect(screen.getByTestId('gantt-dep-f1-f2').getAttribute('marker-end')).toBe(
+      'url(#pm-dep-arrowhead)',
+    );
+  });
+
+  it('renders release milestones with sage-when-shipped state', () => {
+    render(
+      <GanttChart
+        features={dated}
+        onCommitDates={() => {}}
+        onBarClick={() => {}}
+        releases={[
+          {
+            id: 'r1', name: 'v0.2 — Team ready', targetDate: '2026-07-15',
+            status: 'planned', notesMd: '', shippedAt: null, createdAt: '2026-06-01T00:00:00Z',
+          },
+          {
+            id: 'r2', name: 'v0.1', targetDate: '2026-06-20',
+            status: 'shipped', notesMd: '', shippedAt: '2026-06-20T00:00:00Z',
+            createdAt: '2026-05-01T00:00:00Z',
+          },
+          {
+            id: 'r3', name: 'Dateless', targetDate: null,
+            status: 'planned', notesMd: '', shippedAt: null, createdAt: '2026-05-01T00:00:00Z',
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByTestId('gantt-milestone-r1').getAttribute('data-release-status')).toBe(
+      'planned',
+    );
+    expect(screen.getByTestId('gantt-milestone-r2').getAttribute('data-release-status')).toBe(
+      'shipped',
+    );
+    expect(screen.queryByTestId('gantt-milestone-r3')).toBeNull();
+    expect(screen.getByText('v0.2 — Team ready')).toBeTruthy();
+  });
+
+  it('shows the capacity strip only when toggled, flagging overcommitted months', () => {
+    const heavy = [
+      feature({ id: 'h1', title: 'A', startDate: '2026-06-01', endDate: '2026-06-30', size: 'l' }),
+      feature({ id: 'h2', title: 'B', startDate: '2026-06-01', endDate: '2026-06-30', size: 'l' }),
+      feature({ id: 'h3', title: 'C', startDate: '2026-06-01', endDate: '2026-06-30', size: 'l' }),
+    ];
+    const { rerender } = render(
+      <GanttChart features={heavy} onCommitDates={() => {}} onBarClick={() => {}} />,
+    );
+    expect(screen.queryByTestId('gantt-capacity-strip')).toBeNull();
+
+    rerender(
+      <GanttChart features={heavy} onCommitDates={() => {}} onBarClick={() => {}} showCapacity />,
+    );
+    expect(screen.getByTestId('gantt-capacity-strip')).toBeTruthy();
+    // 18w of load vs ~17.1w June capacity → overcommitted warm wash.
+    expect(
+      screen.getByTestId('capacity-month-2026-06').getAttribute('data-overcommitted'),
+    ).toBe('true');
+  });
 });
 
 describe('UnscheduledTray', () => {

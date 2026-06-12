@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
-import { Map, Search, Settings } from 'lucide-react';
+import { Lightbulb, Map, Search, Settings } from 'lucide-react';
 import { Toaster } from '@/components/ui/sonner';
 import ThemeToggle from '@/components/ThemeToggle';
 import WelcomeDialog from '@/components/WelcomeDialog';
@@ -10,8 +10,9 @@ import { useGlobalShortcuts } from '@/components/command/useGlobalShortcuts';
 import { useTrackRecents } from '@/components/command/recents';
 import { cn } from '@/lib/utils';
 
-const NAV_LINKS = [
+const NAV_LINKS: { to: string; label: string; end: boolean; icon?: typeof Lightbulb }[] = [
   { to: '/', label: 'Overview', end: true },
+  { to: '/inbox', label: 'Inbox', end: false, icon: Lightbulb },
   { to: '/board', label: 'Board', end: false },
   { to: '/docs', label: 'Docs', end: true },
   { to: '/roadmap', label: 'Roadmap', end: false },
@@ -51,13 +52,14 @@ export function AppShell() {
                 end={link.end}
                 className={({ isActive }) =>
                   cn(
-                    'rounded-full px-4 py-1.5 text-sm font-medium outline-none transition-all duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring',
+                    'flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium outline-none transition-all duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring',
                     isActive
                       ? 'bg-surface text-ink shadow-card'
                       : 'text-body-ink hover:bg-surface/60 hover:text-ink',
                   )
                 }
               >
+                {link.icon ? <link.icon className="h-3.5 w-3.5" aria-hidden /> : null}
                 {link.label}
               </NavLink>
             ))}

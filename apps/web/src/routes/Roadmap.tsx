@@ -1,10 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
-import { History } from 'lucide-react';
+import { Gauge, History } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Feature } from '@productmap/shared';
-import { useFeatures, useUpdateFeature, useWorkspaceActivity } from '@/lib/api';
+import {
+  useAllDependencies,
+  useFeatures,
+  useReleases,
+  useUpdateFeature,
+  useWorkspaceActivity,
+} from '@/lib/api';
 import { FeatureDetailPanel } from '@/components/board/FeatureDetailPanel';
 import { GanttChart } from '@/components/gantt/GanttChart';
 import { TimeMachine } from '@/components/gantt/TimeMachine';
@@ -25,6 +31,12 @@ export default function RoadmapPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [trayDragging, setTrayDragging] = useState(false);
+
+  // Gantt upgrades (Dream Tier): arrows + milestones always on; capacity toggled.
+  const [showCapacity, setShowCapacity] = useState(false);
+  const releasesQuery = useReleases();
+  const featureIds = useMemo(() => (features ?? []).map((f) => f.id), [features]);
+  const dependenciesQuery = useAllDependencies(featureIds);
 
   // Time Machine (Spec 2.1): scrub history client-side from the activity feed.
   const [historyMode, setHistoryMode] = useState(false);
@@ -99,6 +111,21 @@ export default function RoadmapPage() {
               : 'Drag a bar to move its dates, drag its right edge to resize, or click it for details.'}
           </p>
         </div>
+        <div className="flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          data-testid="capacity-toggle"
+          aria-pressed={showCapacity}
+          onClick={() => setShowCapacity((v) => !v)}
+          className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium outline-none transition-all duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring ${
+            showCapacity
+              ? 'border-transparent bg-action-soft text-action'
+              : 'border-line text-body-ink hover:bg-surface/60 hover:text-ink'
+          }`}
+        >
+          <Gauge className="h-3.5 w-3.5" aria-hidden />
+          Capacity
+        </button>
         <button
           type="button"
           data-testid="history-toggle"
@@ -113,6 +140,7 @@ export default function RoadmapPage() {
           <History className="h-3.5 w-3.5" aria-hidden />
           History
         </button>
+        </div>
       </div>
 
       {isLoading && (
@@ -163,6 +191,9 @@ export default function RoadmapPage() {
               onBarClick={historyMode ? () => {} : (f) => setSelectedId(f.id)}
               highlightId={highlightId}
               trayDropActive={trayDragging}
+              releases={releasesQuery.data ?? []}
+              dependencyEdges={dependenciesQuery.data ?? []}
+              showCapacity={showCapacity}
             />
           </div>
 

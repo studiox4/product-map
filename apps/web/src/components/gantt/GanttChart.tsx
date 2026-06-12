@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
-import type { Feature } from '@productmap/shared';
+import type { Feature, Release } from '@productmap/shared';
+import { monthlyLoads } from './capacity-math';
+import { CAPACITY_STRIP_HEIGHT, CapacityStrip } from './CapacityStrip';
+import { DependencyArrows, type DependencyEdge } from './DependencyArrows';
 import { GanttBar } from './GanttBar';
 import { GanttHeader } from './GanttHeader';
+import { ReleaseMilestones } from './ReleaseMilestones';
 import {
   GUTTER_WIDTH,
   HEADER_HEIGHT,
@@ -22,6 +26,12 @@ export interface GanttChartProps {
   highlightId?: string | null;
   /** A tray chip is being dragged — show the drop highlight ring. */
   trayDropActive?: boolean;
+  /** Release milestones (diamond at target date; sage when shipped). Always on. */
+  releases?: Release[];
+  /** Workspace dependency edges — drawn as bezier arrows between bars. Always on. */
+  dependencyEdges?: DependencyEdge[];
+  /** Show the per-month capacity strip beneath the rows. */
+  showCapacity?: boolean;
 }
 
 export function GanttChart({
@@ -30,6 +40,9 @@ export function GanttChart({
   onBarClick,
   highlightId,
   trayDropActive,
+  releases = [],
+  dependencyEdges = [],
+  showCapacity = false,
 }: GanttChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -44,8 +57,14 @@ export function GanttChart({
   const { viewStart, totalDays } = useMemo(() => computeViewRange(dated), [dated]);
 
   const plotWidth = totalDays * PX_PER_DAY;
-  const chartHeight = HEADER_HEIGHT + Math.max(dated.length, 1) * ROW_HEIGHT;
+  const rowsBottom = HEADER_HEIGHT + Math.max(dated.length, 1) * ROW_HEIGHT;
+  const chartHeight = rowsBottom + (showCapacity ? CAPACITY_STRIP_HEIGHT : 0);
   const todayX = dateToX(format(new Date(), 'yyyy-MM-dd'), viewStart, PX_PER_DAY);
+
+  const capacityMonths = useMemo(
+    () => (showCapacity ? monthlyLoads(dated, viewStart, totalDays) : []),
+    [showCapacity, dated, viewStart, totalDays],
+  );
 
   // Deep link: scroll the highlighted feature's bar into view.
   useEffect(() => {
@@ -149,7 +168,7 @@ export function GanttChart({
             x1={todayX}
             y1={16}
             x2={todayX}
-            y2={chartHeight}
+            y2={rowsBottom}
             stroke="var(--pm-action)"
             strokeOpacity={0.45}
             strokeWidth={1.5}
@@ -182,6 +201,28 @@ export function GanttChart({
               />
             );
           })}
+          <DependencyArrows
+            features={dated}
+            edges={dependencyEdges}
+            viewStart={viewStart}
+            pxPerDay={PX_PER_DAY}
+          />
+          <ReleaseMilestones
+            releases={releases}
+            viewStart={viewStart}
+            pxPerDay={PX_PER_DAY}
+            chartHeight={rowsBottom}
+            plotWidth={plotWidth}
+          />
+          {showCapacity && (
+            <CapacityStrip
+              months={capacityMonths}
+              viewStart={viewStart}
+              pxPerDay={PX_PER_DAY}
+              y={rowsBottom}
+              plotWidth={plotWidth}
+            />
+          )}
         </g>
         <line x1={GUTTER_WIDTH} y1={0} x2={GUTTER_WIDTH} y2={chartHeight} stroke="var(--pm-line)" />
       </svg>
