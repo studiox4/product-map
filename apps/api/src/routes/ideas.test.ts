@@ -1,0 +1,306 @@
+import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll } from 'vitest';
+import { simulateReadableStream } from 'ai';
+import { MockLanguageModelV3 } from 'ai/test';
+import type { LanguageModelV3StreamPart } from '@ai-sdk/provider';
+import { asc, eq } from 'drizzle-orm';
+import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
+
+const { app } = await import('../app');
+const { db } = await import('../db');
+const { products, features, users, activity, documents, ideas, templates } = await import(
+  '@productmap/db'
+);
+const { setAiModelFactory } = await import('../lib/ai');
+
+const AWS_ENV = ['AWS_REGION', 'AWS_PROFILE', 'AWS_ACCESS_KEY_ID', 'BEDROCK_MODEL_ID'] as const;
+
+function clearAwsEnv() {
+  for (const key of AWS_ENV) delete process.env[key];
+}
+
+let userId: string;
+
+beforeAll(async () => {
+  await setupTestDb();
+});
+
+beforeEach(async () => {
+  clearAwsEnv();
+  await truncateAll();
+  await db.insert(products).values({ name: 'ProductMap', vision: 'v', aboutMd: '' });
+  const [u] = await db.insert(users).values({ name: 'Corban', color: '#2b557e' }).returning();
+  userId = u.id;
+});
+
+afterEach(() => {
+  setAiModelFactory(null);
+  clearAwsEnv();
+});
+
+afterAll(async () => {
+  await closeTestDb();
+});
+
+const json = (body: unknown, method = 'POST') => ({
+  method,
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify(body),
+});
+
+async function createIdea(overrides: Record<string, unknown> = {}) {
+  const res = await app.request(
+    '/api/ideas',
+    json({ title: 'Bulk CSV import', bodyMd: 'Customers keep asking.', source: 'sales call', ...overrides }),
+  );
+  expect(res.status).toBe(201);
+  return res.json();
+}
+
+interface Captured {
+  user?: string;
+}
+
+function makeMockModel(captured: Captured) {
+  const deltas = ['# Bulk CSV import\n\n', '## Success metric\n\nGenerated brief body.'];
+  return new MockLanguageModelV3({
+    doStream: async ({ prompt }) => {
+      captured.user = prompt
+        .filter((m) => m.role === 'user')
+        .flatMap((m) =>
+          (m.content as Array<{ type: string; text?: string }>)
+            .filter((p) => p.type === 'text')
+            .map((p) => p.text ?? ''),
+        )
+        .join('\n');
+      const chunks: LanguageModelV3StreamPart[] = [
+        { type: 'stream-start', warnings: [] },
+        { type: 'text-start', id: '1' },
+        ...deltas.map(
+          (delta): LanguageModelV3StreamPart => ({ type: 'text-delta', id: '1', delta }),
+        ),
+        { type: 'text-end', id: '1' },
+        {
+          type: 'finish',
+          finishReason: { unified: 'stop', raw: undefined },
+          usage: {
+            inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
+            outputTokens: { total: 2, text: 2, reasoning: 0 },
+          },
+        },
+      ];
+      return { stream: simulateReadableStream({ chunks }) };
+    },
+  });
+}
+
+function enableAi(captured: Captured = {}) {
+  process.env.AWS_REGION = 'us-east-1';
+  setAiModelFactory(() => makeMockModel(captured));
+  return captured;
+}
+
+const BRIEF_HINTS = 'Lead with the customer problem; include a measurable success metric.';
+
+async function seedBriefTemplate() {
+  await db.insert(templates).values({
+    type: 'feature_brief',
+    name: 'Feature brief',
+    bodyJson: { type: 'doc', content: [] },
+    bodyMd: '# {{title}}\n\n## Problem\n\n## Success metric',
+    promptHints: BRIEF_HINTS,
+    isDefault: true,
+  });
+}
+
+describe('idea lifecycle (create → list → update)', () => {
+  it('creates an idea with 201 and defaults', async () => {
+    const idea = await createIdea();
+    expect(idea.title).toBe('Bulk CSV import');
+    expect(idea.bodyMd).toBe('Customers keep asking.');
+    expect(idea.source).toBe('sales call');
+    expect(idea.status).toBe('inbox');
+    expect(idea.promotedFeatureId).toBeNull();
+    expect(idea.createdBy).toBe(userId);
+  });
+
+  it('rejects an empty title with 400', async () => {
+    const res = await app.request('/api/ideas', json({ title: '' }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('validation');
+  });
+
+  it('lists ideas with vote summaries and filters by status', async () => {
+    const idea = await createIdea();
+    await createIdea({ title: 'Dark mode', source: 'support' });
+    await app.request(`/api/ideas/${idea.id}`, json({ status: 'triaged' }, 'PATCH'));
+
+    const all = await (await app.request('/api/ideas')).json();
+    expect(all).toHaveLength(2);
+    expect(all[0]).toMatchObject({ score: 0, boosts: 0, cools: 0, myVote: 0 });
+
+    const triaged = await (await app.request('/api/ideas?status=triaged')).json();
+    expect(triaged).toHaveLength(1);
+    expect(triaged[0].id).toBe(idea.id);
+  });
+
+  it('rejects an unknown status filter with 400', async () => {
+    const res = await app.request('/api/ideas?status=bogus');
+    expect(res.status).toBe(400);
+  });
+
+  it('updates title/body/source/status via PATCH', async () => {
+    const idea = await createIdea();
+    const res = await app.request(
+      `/api/ideas/${idea.id}`,
+      json({ title: 'CSV import v2', bodyMd: 'Updated.', status: 'triaged' }, 'PATCH'),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.title).toBe('CSV import v2');
+    expect(body.bodyMd).toBe('Updated.');
+    expect(body.status).toBe('triaged');
+  });
+
+  it('404s PATCH on a missing idea', async () => {
+    const res = await app.request(
+      '/api/ideas/00000000-0000-0000-0000-000000000000',
+      json({ title: 'x' }, 'PATCH'),
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it('deletes an idea with 204', async () => {
+    const idea = await createIdea();
+    const res = await app.request(`/api/ideas/${idea.id}`, { method: 'DELETE' });
+    expect(res.status).toBe(204);
+    expect(await (await app.request('/api/ideas')).json()).toHaveLength(0);
+  });
+});
+
+describe('PUT /api/ideas/:id/vote', () => {
+  it('records, switches, and clears a vote like feature votes', async () => {
+    const idea = await createIdea();
+
+    let res = await app.request(`/api/ideas/${idea.id}/vote`, json({ value: 1 }, 'PUT'));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ score: 1, boosts: 1, cools: 0, myVote: 1 });
+
+    res = await app.request(`/api/ideas/${idea.id}/vote`, json({ value: -1 }, 'PUT'));
+    expect(await res.json()).toEqual({ score: -1, boosts: 0, cools: 1, myVote: -1 });
+
+    res = await app.request(`/api/ideas/${idea.id}/vote`, json({ value: 0 }, 'PUT'));
+    expect(await res.json()).toEqual({ score: 0, boosts: 0, cools: 0, myVote: 0 });
+  });
+
+  it('reflects my vote in the list for the requesting user', async () => {
+    const idea = await createIdea();
+    await app.request(`/api/ideas/${idea.id}/vote`, {
+      ...json({ value: 1 }, 'PUT'),
+      headers: { 'content-type': 'application/json', 'x-user-id': userId },
+    });
+    const [row] = await (
+      await app.request('/api/ideas', { headers: { 'x-user-id': userId } })
+    ).json();
+    expect(row).toMatchObject({ score: 1, boosts: 1, myVote: 1 });
+  });
+
+  it('404s on a missing idea', async () => {
+    const res = await app.request(
+      '/api/ideas/00000000-0000-0000-0000-000000000000/vote',
+      json({ value: 1 }, 'PUT'),
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it('rejects an invalid value with 400', async () => {
+    const idea = await createIdea();
+    const res = await app.request(`/api/ideas/${idea.id}/vote`, json({ value: 5 }, 'PUT'));
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('POST /api/ideas/:id/promote', () => {
+  it('creates a feature from the idea, marks it promoted, and logs idea_promoted', async () => {
+    const idea = await createIdea();
+    const res = await app.request(`/api/ideas/${idea.id}/promote`, json({ horizon: 'later' }));
+    expect(res.status).toBe(201);
+    const feature = await res.json();
+    expect(feature.title).toBe('Bulk CSV import');
+    expect(feature.horizon).toBe('later');
+    expect(feature.descriptionMd).toBe('Customers keep asking.');
+    expect(feature.status).toBe('idea');
+
+    const [row] = await db.select().from(ideas).where(eq(ideas.id, idea.id));
+    expect(row.status).toBe('promoted');
+    expect(row.promotedFeatureId).toBe(feature.id);
+
+    const acts = await db
+      .select()
+      .from(activity)
+      .where(eq(activity.featureId, feature.id))
+      .orderBy(asc(activity.createdAt));
+    expect(acts.map((a) => a.kind)).toContain('idea_promoted');
+    const promoted = acts.find((a) => a.kind === 'idea_promoted');
+    expect(promoted?.actorId).toBe(userId);
+    expect(promoted?.payload).toMatchObject({ ideaId: idea.id, to: 'Bulk CSV import' });
+
+    // no AI brief requested → no documents
+    expect(await db.select().from(documents).where(eq(documents.featureId, feature.id))).toHaveLength(0);
+  });
+
+  it('400s when the idea is already promoted (idempotency guard)', async () => {
+    const idea = await createIdea();
+    const first = await app.request(`/api/ideas/${idea.id}/promote`, json({ horizon: 'now' }));
+    expect(first.status).toBe(201);
+    const second = await app.request(`/api/ideas/${idea.id}/promote`, json({ horizon: 'now' }));
+    expect(second.status).toBe(400);
+    expect((await second.json()).error).toBe('already_promoted');
+    expect(await db.select().from(features)).toHaveLength(1);
+  });
+
+  it('404s on a missing idea', async () => {
+    const res = await app.request(
+      '/api/ideas/00000000-0000-0000-0000-000000000000/promote',
+      json({ horizon: 'now' }),
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it('withAiBrief creates a feature_brief doc via the DB template (mocked model)', async () => {
+    const captured = enableAi();
+    await seedBriefTemplate();
+    const idea = await createIdea();
+    const res = await app.request(
+      `/api/ideas/${idea.id}/promote`,
+      json({ horizon: 'later', withAiBrief: true }),
+    );
+    expect(res.status).toBe(201);
+    const feature = await res.json();
+
+    const docs = await db.select().from(documents).where(eq(documents.featureId, feature.id));
+    expect(docs).toHaveLength(1);
+    expect(docs[0].type).toBe('feature_brief');
+    expect(docs[0].contentMd).toBe('# Bulk CSV import\n\n## Success metric\n\nGenerated brief body.');
+
+    // Prompt is built from the DB template + idea body
+    expect(captured.user).toContain(BRIEF_HINTS);
+    expect(captured.user).toContain('Customers keep asking.');
+    expect(captured.user).toContain('Bulk CSV import');
+  });
+
+  it('withAiBrief is silently skipped when AI is disabled', async () => {
+    await seedBriefTemplate();
+    const idea = await createIdea();
+    const res = await app.request(
+      `/api/ideas/${idea.id}/promote`,
+      json({ horizon: 'later', withAiBrief: true }),
+    );
+    expect(res.status).toBe(201);
+    const feature = await res.json();
+    expect(feature.title).toBe('Bulk CSV import');
+    expect(await db.select().from(documents).where(eq(documents.featureId, feature.id))).toHaveLength(0);
+
+    const [row] = await db.select().from(ideas).where(eq(ideas.id, idea.id));
+    expect(row.status).toBe('promoted');
+  });
+});
