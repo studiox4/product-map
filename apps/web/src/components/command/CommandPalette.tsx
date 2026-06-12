@@ -8,6 +8,7 @@ import {
   FileText,
   GanttChart,
   LayoutDashboard,
+  Lightbulb,
   Library,
   MessageCircle,
   Monitor,
@@ -59,6 +60,7 @@ type Page = { kind: 'create-feature'; horizon: Horizon } | { kind: 'new-doc' };
 
 const NAV_TARGETS = [
   { to: '/', label: 'Overview', icon: LayoutDashboard },
+  { to: '/inbox', label: 'Inbox', icon: Lightbulb },
   { to: '/board', label: 'Board', icon: Columns3 },
   { to: '/roadmap', label: 'Roadmap', icon: GanttChart },
   { to: '/releases', label: 'Releases', icon: Rocket },
@@ -382,6 +384,13 @@ function PaletteContent({
                   New feature in {HORIZON_LABELS[horizon]}…
                 </CommandItem>
               ))}
+              <CommandItem
+                value="create-idea new idea"
+                onSelect={() => go('/inbox?new=1')}
+              >
+                <Lightbulb aria-hidden />
+                New idea…
+              </CommandItem>
               <CommandItem
                 value="create-doc new doc"
                 onSelect={() => openPage({ kind: 'new-doc' })}
