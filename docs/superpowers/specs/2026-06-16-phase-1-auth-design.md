@@ -41,11 +41,14 @@ Two tokens, both httpOnly + `Secure` (prod) + `SameSite=Lax` cookies.
 - Claims: `sub` (userId), `role` (`admin|member`), `tv` (token_version), `iat`, `exp`.
 - Verified on every request: **signature + expiry only. No DB read.** This is the stateless hot path.
 
-**Refresh token — cookie `pm_refresh`, Path `/api/auth/refresh`, exp 30 days.**
+**Refresh token — cookie `pm_refresh`, Path `/api/auth/refresh`, exp 30 days. Fixed, NOT rotated.**
 - Claims: `sub`, `tv`, `iat`, `exp`.
-- On `POST /api/auth/refresh`: read the user row, require `is_active = true` **and** `token_version == tv`. If valid, mint a new access token (and rotate the refresh token). This is the only place that reads the user for auth — roughly once per 15 min, not per request.
+- On `POST /api/auth/refresh`: read the user row, require `is_active = true` **and** `token_version == tv`. If valid, mint a **new access token only** — the refresh token is left untouched until it expires or `token_version` moves. This is the only place that reads the user for auth — roughly once per 15 min, not per request.
+- **Why no rotation:** rotation is only meaningful if presenting the *old* refresh token after rotation fails, which requires per-token server state (a `jti` denylist / version) — directly contradicting the stateless, no-sessions-table decision. It would also break the app: `lib/api.ts` fires many concurrent queries, so an expired access token produces N parallel `/refresh` calls at once; with rotation the first wins and the rest present a now-dead token → spurious mid-session logout (violates AC#3). A fixed refresh token makes concurrent refreshes harmless. Refresh-reuse detection is therefore **out of scope** (it is a stateful feature this architecture cannot support); client single-flight on refresh is a nice-to-have, not a correctness requirement.
 
 **Revocation** = bump `users.token_version`. Triggered by: change-password, admin deactivate, "log out everywhere". Effect: refresh fails on next attempt; the outstanding access token expires within ≤15 min. Emergency global revocation = rotate `AUTH_SECRET` (invalidates all tokens).
+
+**Accepted staleness (decision, not oversight):** the access token carries `role`, so a demoted or deactivated user retains their old `role`/access for up to one access-token TTL (≤15 min) until refresh re-reads the user. This is an explicit, acceptable trade for the zero-DB-read hot path.
 
 **Logout** = clear both cookies (single device). **Logout-everywhere** = bump `token_version`.
 
@@ -69,7 +72,7 @@ Keep `name`, `color`, `createdAt`. No sessions table (stateless).
 | `POST /register` | `{ email, password, name }`. If zero users exist → create as `admin`. Else require `ALLOW_OPEN_SIGNUP=true`, create as `member`, else `403`. Sets both cookies. Validates password policy. |
 | `POST /login` | `{ email, password }` → verify argon2id → set cookies. Generic `401 invalid_credentials` on any failure (no user enumeration). |
 | `POST /logout` | Clear both cookies. `204`. |
-| `POST /refresh` | Validate refresh cookie + `token_version` + `is_active` → rotate tokens. `401` otherwise. |
+| `POST /refresh` | Validate refresh cookie + `token_version` + `is_active` → mint a **new access token only** (refresh token unchanged). `401` otherwise. |
 | `GET /me` | Current user (id, name, color, role). Replaces client `useMe` over `/api/users`. |
 | `POST /change-password` | `{ currentPassword, newPassword }` → verify, re-hash, **bump `token_version`**, re-issue caller's cookies. |
 
@@ -90,6 +93,7 @@ Full invite-by-link / by-email flow is Phase 2.
 
 - **`requireAuth`** replaces `current-user.ts`: read `pm_session`, verify, attach `currentUser` (no DB read); `401` if absent/invalid. **Applies to all `/api/*` including GETs** — today GETs skip auth; Phase 1 closes that.
 - **Public allowlist** (no auth): `GET /api/healthz`, `POST /api/auth/login`, `POST /api/auth/register`, `POST /api/auth/refresh`, all of `/api/share/*`.
+- **Share-page fetch surface — verified (AC#8 safe):** `SharePage.tsx` calls only `useShareData` → `GET /api/share/:token/data`, which returns `{ product, features, releases }` and renders titles, an SVG gantt, and a changelog — **no doc bodies, no images**. Uploaded images are served from the static path `/uploads/<nanoid>` (**not** `/api/uploads`), which sits outside `/api/*` and is unaffected by `requireAuth`. So `/api/share/*` is a sufficient allowlist today. **Revisit if** the share page ever renders doc content with embedded images (it would then need a public read path for share-referenced assets). Note: static `/uploads/*` is public-by-unguessable-path today — a pre-existing behavior, not a Phase 1 regression; tightening it is out of scope here.
 - **`requireAdmin`**: requires `role = admin`; guards `/api/admin/*`.
 - Remove the "fallback to first user" path everywhere. The 11 consuming routes keep using `c.get('currentUser')`, now guaranteed non-null behind `requireAuth`.
 
@@ -97,7 +101,7 @@ Full invite-by-link / by-email flow is Phase 2.
 
 - **argon2id** with sensible memory/time params (tuned at implementation).
 - **`AUTH_SECRET`** signs tokens. **Required in production — boot fails if unset.** Dev generates an ephemeral secret with a loud warning (tokens won't survive restart — acceptable in dev).
-- **Rate limiting** on `login`, `register`, `refresh`: in-memory token bucket keyed by IP. Document the multi-instance caveat (per-process limit; a shared store is a later concern).
+- **Rate limiting** on `login`, `register`, `refresh`: in-memory token bucket keyed by client IP. **Behind a reverse proxy (the Phase 0 docker-compose target), the socket IP is the proxy's** — derive the client IP from `X-Forwarded-For` only when `TRUST_PROXY` is set, else use the socket IP. Without this the limiter either buckets all users together or is trivially bypassed. Document the multi-instance caveat (per-process limit; a shared store is a later concern).
 - **CSRF:** `SameSite=Lax` cookies + an Origin/Referer check on all mutating requests (reject cross-origin). Same-origin app, so no token plumbing needed; document the decision.
 - **No secret leakage:** `GET /api/users` and any user serialization return only `{ id, name, color, role }`. `email`/`password_hash`/`token_version` never serialized.
 - **No user enumeration:** login and forgot-password return generic responses regardless of whether the email exists.
@@ -142,5 +146,6 @@ Full invite-by-link / by-email flow is Phase 2.
 
 - argon2id parameters and the specific argon2 + jose package versions.
 - Whether dev auto-login is worth the code vs just printing seeded admin credentials.
-- Exact access/refresh lifetimes (15 min / 30 days proposed) and refresh-rotation reuse-detection (defer reuse-detection unless cheap).
+- Exact access/refresh lifetimes (15 min / 30 days proposed). (Refresh rotation + reuse-detection are out of scope — see §4.)
+- `TRUST_PROXY` shape: boolean (trust XFF wholesale) vs a trusted-hop count / CIDR allowlist. Boolean is likely enough for Phase 1.
 - Password-reset: ship the optional SMTP flow in Phase 1 or defer entirely to a later pass.
