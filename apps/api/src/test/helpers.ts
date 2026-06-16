@@ -3,6 +3,10 @@ import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { users } from '@productmap/db';
+import { signAccess } from '../lib/auth/tokens';
+import { ACCESS_COOKIE } from '../lib/auth/cookies';
+import { hashPassword } from '../lib/auth/password';
 
 const TEST_DB_NAME = 'productmap_test';
 const PG_BASE = process.env.TEST_PG_BASE ?? 'postgres://localhost:5432';
@@ -60,4 +64,34 @@ export async function closeTestDb(): Promise<void> {
   }
   const { pool: appPool } = await import('../db');
   await appPool.end().catch(() => {});
+}
+
+// Reuse the helper's existing pg.Pool (getPool) — no second pool to leak.
+let helperDb: ReturnType<typeof drizzle> | null = null;
+function hdb() {
+  if (!helperDb) helperDb = drizzle(getPool());
+  return helperDb;
+}
+
+interface TestUserOpts { role?: 'admin' | 'member'; email?: string; name?: string; }
+
+/** Insert a user directly and return the row (for seeding test actors). */
+export async function createTestUser(opts: TestUserOpts = {}) {
+  const [row] = await hdb()
+    .insert(users)
+    .values({
+      email: opts.email ?? `u-${Math.random().toString(36).slice(2)}@test.co`,
+      name: opts.name ?? 'Test User',
+      color: '#2b557e',
+      role: opts.role ?? 'member',
+      passwordHash: await hashPassword('test-password-1234'),
+    })
+    .returning();
+  return row;
+}
+
+/** Cookie header value carrying a valid access token for `user`. */
+export async function authCookie(user: { id: string; role: 'admin' | 'member'; tokenVersion?: number }): Promise<string> {
+  const token = await signAccess({ id: user.id, role: user.role, tokenVersion: user.tokenVersion ?? 0 });
+  return `${ACCESS_COOKIE}=${token}`;
 }
