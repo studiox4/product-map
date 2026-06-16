@@ -24,33 +24,8 @@ import type {
 } from '@productmap/shared';
 import type { AppType } from '../../../api/src/app';
 
-// ---- identity (no auth — demo; see feature-hub spec) ----
-
-export const USER_ID_KEY = 'pmUserId';
-
-export function getStoredUserId(): string | null {
-  try {
-    return localStorage.getItem(USER_ID_KEY);
-  } catch {
-    return null;
-  }
-}
-
-export function setStoredUserId(id: string) {
-  try {
-    localStorage.setItem(USER_ID_KEY, id);
-  } catch {
-    // private mode etc. — identity falls back to first seeded user server-side
-  }
-}
-
-function userIdHeaders(): Record<string, string> {
-  const userId = getStoredUserId();
-  return userId ? { 'x-user-id': userId } : {};
-}
-
 /** Typed hono client for the API (same-origin; Vite proxies /api in dev). */
-export const api = hc<AppType>('/', { headers: userIdHeaders });
+export const api = hc<AppType>('/');
 
 // ---- request body types (mirror @productmap/shared zod schemas) ----
 
@@ -106,22 +81,32 @@ export class ApiError extends Error {
   }
 }
 
+let refreshing: Promise<boolean> | null = null;
+async function tryRefresh(): Promise<boolean> {
+  if (!refreshing) {
+    refreshing = fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' })
+      .then((r) => r.ok)
+      .finally(() => { refreshing = null; });
+  }
+  return refreshing;
+}
+
 export async function fetchJson<T>(input: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(input, {
+  const doFetch = () => fetch(input, {
     ...init,
+    credentials: 'include',
     headers: {
       ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
-      ...userIdHeaders(),
       ...(init?.headers as Record<string, string> | undefined),
     },
   });
+  let res = await doFetch();
+  if (res.status === 401 && !input.startsWith('/api/auth/')) {
+    if (await tryRefresh()) res = await doFetch();
+  }
   if (!res.ok) {
     let body: unknown = null;
-    try {
-      body = await res.json();
-    } catch {
-      // non-json error body
-    }
+    try { body = await res.json(); } catch { /* non-json */ }
     throw new ApiError(res.status, body);
   }
   if (res.status === 204) return undefined as T;
@@ -180,14 +165,19 @@ export function useUsers() {
   });
 }
 
-/** Current user, resolved from localStorage.pmUserId against the users list (falls back to the first user, mirroring the server). */
+/** Current authenticated user. Returns null when logged out (401); does NOT trigger the refresh interceptor. */
 export function useMe() {
-  const query = useUsers();
-  const storedId = getStoredUserId();
-  const me: User | null | undefined = query.data
-    ? (query.data.find((u) => u.id === storedId) ?? query.data[0] ?? null)
-    : undefined;
-  return { ...query, me };
+  return useQuery({
+    queryKey: ['me'],
+    queryFn: async (): Promise<User | null> => {
+      const res = await fetch('/api/auth/me', { credentials: 'include' });
+      if (res.status === 401) return null;
+      if (!res.ok) throw new ApiError(res.status, await res.json().catch(() => null));
+      return (await res.json()) as User;
+    },
+    retry: false,
+    staleTime: 60_000,
+  });
 }
 
 export function useActivity(featureId: string) {
@@ -609,7 +599,7 @@ export function useResolveComment() {
       const resolvedAt = resolved ? new Date().toISOString() : null;
       qc.setQueryData<CommentThread[]>(commentsKey(target), (old) =>
         old?.map((t) =>
-          t.id === id ? { ...t, resolvedAt, resolvedBy: resolved ? getStoredUserId() : null } : t,
+          t.id === id ? { ...t, resolvedAt, resolvedBy: null } : t,
         ),
       );
       return snapshot;
@@ -1637,3 +1627,29 @@ export function useApplyPlan() {
 }
 
 // ================= END APPEND BLOCK (roadmap scenario plans) ================
+
+// ---- auth mutations (phase-1-auth) ----
+
+export function useLogin() {
+  return useMutation({
+    mutationFn: (input: { email: string; password: string }) =>
+      fetchJson<User>('/api/auth/login', { method: 'POST', body: JSON.stringify(input) }),
+  });
+}
+export function useRegister() {
+  return useMutation({
+    mutationFn: (input: { email: string; name: string; password: string }) =>
+      fetchJson<User>('/api/auth/register', { method: 'POST', body: JSON.stringify(input) }),
+  });
+}
+export function useLogout() {
+  return useMutation({
+    mutationFn: () => fetchJson<void>('/api/auth/logout', { method: 'POST' }),
+  });
+}
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: (input: { currentPassword: string; newPassword: string }) =>
+      fetchJson<User>('/api/auth/change-password', { method: 'POST', body: JSON.stringify(input) }),
+  });
+}

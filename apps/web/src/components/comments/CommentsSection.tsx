@@ -32,7 +32,7 @@ export interface CommentsSectionProps {
 /** Shared comments surface for feature pages and the doc editor sheet. */
 export function CommentsSection({ target, showHeader = true }: CommentsSectionProps) {
   const { data, isLoading } = useComments(target);
-  const { me } = useMe();
+  const { data: me } = useMe();
   const addComment = useAddComment();
   const editComment = useEditComment();
   const resolveComment = useResolveComment();

@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
  * color from USER_COLORS, with a live avatar preview.
  */
 export function ProfileTab() {
-  const { me } = useMe();
+  const { data: me } = useMe();
 
   if (!me) {
     return <Skeleton className="h-64 rounded-2xl" />;
