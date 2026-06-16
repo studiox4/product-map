@@ -40,4 +40,4 @@ export function assertConfig(): AppConfig {
 }
 
 /** Singleton config for runtime use (tests call loadConfig directly to vary env). */
-export const config = loadConfig();
+export const config = assertConfig();
