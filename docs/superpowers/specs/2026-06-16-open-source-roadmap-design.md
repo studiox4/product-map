@@ -14,8 +14,10 @@ Take ProductMap from a single-tenant, no-auth demo to a credible open-source, se
 
 - **Monorepo:** `apps/web` (Vite + React + TanStack Query + Tiptap), `apps/api` (Hono, zod-validated REST), `packages/{shared,db,templates}`. Postgres via Drizzle. Two prior "dream tier" feature waves shipped (ideas inbox, evidence/decisions, releases, objectives, roadmap scenario plans, copilot, share links).
 - **No real authentication.** `apps/api/src/middleware/current-user.ts` resolves the `x-user-id` header to a user row, falling back to the first seeded user on any mutation. Read requests skip resolution entirely. "Login" = type your name; `users` table is `{ id, name, color, createdAt }` — no email, no password.
-- **Tenancy is latent, not real.** A `products` table exists and `features.productId` already scopes features to a product, but the seed creates exactly one product and the UI assumes it. There is no project create/list/switch, and no membership or access-control layer. `products` route only exposes `PATCH /:id`.
-- **Sharing exists.** `share_tokens` table + `/share` routes already provide public read-only links — reusable foundation for Phase 3 and dream item #6.
+- **Tenancy is barely latent — most data is globally scoped.** Verified against `packages/db/src/schema.ts`: **only `features` carries `productId`.** These tables have **no path to a product at all** and are workspace-global today: `ideas`, `releases`, `objectives`, `plans`, `templates`, `share_tokens`. Two more can orphan: `documents` (a `release_notes` doc has neither `featureId` nor `ideaId`) and `decisions` (nullable `featureId`). Project-reachable via FK chain (no change needed): `featureCollaborators`, `activity`, `comments`, `votes`, `evidence`, `feature_dependencies`, `plan_entries`, `idea_votes`, `uploads`. The seed creates exactly one product and the UI assumes it; there is no project create/list/switch and no membership/access-control layer. `products` route exposes only `PATCH /:id`.
+- **Sharing is single-product.** `share_tokens` (`{ token, kind='roadmap', revokedAt }`) + `/share` routes provide public read-only links, but carry **no project reference** — they implicitly share "the" roadmap. Reusable foundation for Phase 3 / dream #6, but must gain `projectId` in Phase 2.
+- **`featureCollaborators` already exists** (per-feature assignment). It is orthogonal to the new per-project roles (membership = access; collaborators = assignment); Phase 2 must state the relationship so it isn't rediscovered mid-build.
+- **`admin.ts`** is a dev-only `POST /admin/reset-demo`, hard-blocked when `NODE_ENV=production`. No meaningful overlap with Phase 1's admin bootstrap.
 - **AI is Bedrock-only.** Drafting + copilot run on Claude via Amazon Bedrock (Vercel AI SDK), gated on AWS credentials. No path for self-hosters without AWS.
 - **OSS hygiene:** strong README + screenshots already present. Missing: LICENSE, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, issue/PR templates, Dockerfile/compose, CI, `.env.example`, CHANGELOG.
 
@@ -27,7 +29,7 @@ Take ProductMap from a single-tenant, no-auth demo to a credible open-source, se
 | Authentication | **Email + password (argon2) by default**, optional env-gated GitHub/Google OAuth, httpOnly cookie sessions | Works offline / air-gapped (matches the security-constrained pitch); OAuth is opt-in convenience, not a dependency. |
 | Marketing page | **Public route in the existing web app** at `/`; app moves to `/app` | Less infra than a separate site; reuses the existing build. SEO handled via prerender/SSG of the landing route. |
 | License | **Apache-2.0** | Max adoption + enterprise-safe + explicit patent grant. Accepts that closed SaaS forks are permitted. |
-| Project unit naming | **Rename `products` → `projects`** (table, FKs, code, shared types, seed) | Clearer long-term vocabulary; done now while the codebase is small rather than after more routes accrete. Medium churn, ~20+ references. |
+| Project unit naming | **Rename `products` → `projects`** (table, FKs, code, shared types, seed) — **executed in Phase 0**, not Phase 2 | Mechanical, behavior-neutral churn (~20+ refs). Landing it before auth means Phase 1 code is written against the final name, not churned later. The *column additions* (`projectId` on global tables) stay in Phase 2 — only the rename moves up. |
 
 ## 4. Phases
 
@@ -42,8 +44,9 @@ The hygiene that makes the repo credible the moment it goes public.
 - **`Dockerfile` + `docker-compose.yml`** — app + Postgres, one-command up. The single biggest adoption lever for a "self-hosted" tool.
 - **CI** (GitHub Actions): lint, typecheck, unit tests, e2e, build. Publish a container image to GHCR on tagged release.
 - `.env.example`, a configuration reference in docs, `CHANGELOG.md`, semver release process.
+- **Rename `products` → `projects`** (table, FKs, shared contracts, routes, web, seed) as an isolated, behavior-neutral commit + data migration. Pulled here so all subsequent phases use the final name. *(Column additions for global tables are NOT part of this — they belong to Phase 2.)*
 
-**Acceptance:** a stranger can clone, `docker compose up`, and reach a running instance; CI is green on PRs; license + contribution docs are present.
+**Acceptance:** a stranger can clone, `docker compose up`, and reach a running instance; CI is green on PRs; license + contribution docs are present; the rename migration runs clean against existing data and all tests pass on `projects`.
 
 ### Phase 1 — Authentication & identity *(keystone)*
 *Size: large. Risk: high (breaking change to the actor model). Everything downstream depends on this.*
@@ -60,24 +63,28 @@ The hygiene that makes the repo credible the moment it goes public.
 **Dependencies:** none (keystone). **Blocks:** Phases 2 and 3.
 
 ### Phase 2 — Multi-project + membership
-*Size: large. Risk: high (data-model + authorization change touching every route).*
+*Size: **largest by far**. Risk: high. Two distinct hard problems stacked: a data-model migration AND an authorization layer. Do not treat as "just add memberships."*
 
-- Rename `products` → `projects` (schema, FKs, shared contracts, seed, routes, web). Migration handles existing data.
-- New `memberships(userId, projectId, role)` with role enum `owner | editor | viewer`.
-- Project **create / list / switch** — a switcher in the nav; first-run "create your first project" flow.
-- **Authorize and scope every query** by project membership. This is the bulk of the work: every existing route currently assumes one global project and an always-present user.
-- **Invites:** by email when SMTP is configured, otherwise a shareable invite link carrying a role.
+This phase has three sequential sub-stages. The rename already happened in Phase 0.
 
-**Acceptance:** a user sees only projects they are a member of; role is enforced on every mutation (viewer cannot edit, etc.); switching projects re-scopes all views; invites grant the correct role.
+**2a — Project-scope the global tables (data migration).** Today only `features` carries `projectId`. Add `projectId` (FK → `projects`, `on delete cascade`) to every globally-scoped table — `ideas`, `releases`, `objectives`, `plans`, `templates`, `share_tokens` — and resolve the orphan cases in `documents` (release-notes docs) and `decisions` (standalone). Backfill every existing row to the single seeded project, then make columns `NOT NULL`. Update all inserts to set `projectId`, all reads to filter by it. **Decision for this phase's brainstorm:** are `templates` per-project or workspace-global by design? (Lean per-project for isolation, with optional seed of shared starters.)
 
-**Dependencies:** Phase 1. **Blocks:** Phase 3 gating semantics.
+**2b — Membership + authorization.** New `memberships(userId, projectId, role)`, role enum `owner | editor | viewer`. Authorize and scope every route by membership. State the `featureCollaborators` relationship explicitly: membership = access to a project; collaborator = assignment on a feature (orthogonal).
+
+**2c — Project lifecycle + invites.** Create / list / switch (nav switcher); first-run "create your first project". Invites by email (if SMTP) or shareable invite link carrying a role.
+
+- `share_tokens` gains `projectId` here (it currently shares "the" roadmap with no scope).
+
+**Acceptance:** every domain row belongs to exactly one project; a user sees only projects they are a member of; role is enforced on every mutation (viewer cannot edit); switching projects re-scopes all views; share links resolve to their own project; invites grant the correct role; an authorization test matrix (role × action × resource) passes.
+
+**Dependencies:** Phase 1. **Blocks:** Phase 3 gating semantics. **Note:** the rename moved to Phase 0; only column additions remain here.
 
 ### Phase 3 — Public marketing landing
 *Size: medium. Risk: medium (routing + SEO). The visual phase — Visual Companion offered during its brainstorm.*
 
 - Public `/` landing: hero, feature highlights, animated/static screenshots, quickstart, self-host CTA, GitHub stars.
 - App moves to `/app`; `/app/*` is auth-gated. Existing share-token pages remain public.
-- SEO: prerender / SSG the landing route; Open Graph tags; sitemap.
+- SEO: prerender / SSG the landing route; Open Graph tags; sitemap. **Caveat:** the app is a Vite SPA — Vite does not SSG a single route out of the box. Needs `vite-ssg`, a small prerender step, or accepting a client-rendered landing. Tooling choice is a Phase 3 open question, not a solved item.
 
 **Acceptance:** unauthenticated visitors see the landing at `/`; `/app/*` redirects to login; the landing is crawlable (prerendered HTML, OG tags present); share links still work unauthenticated.
 
@@ -110,9 +117,10 @@ Recommended order: **0 → 1 → 2 → 3**, Phase 0 begun in parallel with Phase
 
 ## 6. Cross-cutting risks
 
-- **Authorization is the highest-risk surface.** Once multi-user + public, every route needs membership/role checks. Phase 2 should include an explicit authorization test matrix (role × action × resource).
+- **Project-scoping the global tables is the sleeper risk** (Phase 2a). Six tables + two orphan cases gain `projectId`, backfill, and `NOT NULL`. Every insert/read path that currently assumes one global product must change. This — not membership — is the bulk of Phase 2 and the reason it is the largest phase.
+- **Authorization is the highest-risk surface.** Once multi-user + public, every route needs membership/role checks. Phase 2 includes an explicit authorization test matrix (role × action × resource).
 - **Auth is a breaking change.** Phase 1 removes the `x-user-id` fallback; the seed, e2e tests, and dev workflow all assume an always-present user today and must be migrated.
-- **The `products` → `projects` rename** touches ~20+ files; do it as the first commit of Phase 2 with a data migration, in isolation, before adding membership logic.
+- **The `products` → `projects` rename** touches ~20+ files; done in Phase 0 as an isolated, behavior-neutral commit + migration so later phases never churn it.
 - **Don't lose the offline ethos.** Every new dependency (SMTP, OAuth, cloud AI) must be optional and env-gated, with a working air-gapped fallback.
 
 ## 7. Open questions (resolve at each phase's own brainstorm)
@@ -120,7 +128,8 @@ Recommended order: **0 → 1 → 2 → 3**, Phase 0 begun in parallel with Phase
 - Session storage: DB-backed `sessions` table vs signed stateless cookies. (Lean DB-backed for revocation.)
 - First-run admin bootstrap mechanics: first-registered-user-is-admin vs env-seeded credentials.
 - Invite link security: single-use vs reusable, expiry, role embedding.
-- Marketing landing: prerender tooling choice (vite-ssg / react-static / hand-rolled) — decide in Phase 3 brainstorm.
+- `templates` scope: per-project vs workspace-global (Phase 2a) — leaning per-project with optional shared starters.
+- Marketing landing: prerender tooling choice (vite-ssg / a prerender step / hand-rolled / accept client-render) — decide in Phase 3 brainstorm; Vite won't SSG a single route unaided.
 - Provider-agnostic AI: unify on the Vercel AI SDK's provider abstraction vs a thin internal adapter.
 
 ## 8. Next step
