@@ -48,8 +48,8 @@ beforeAll(() => {
 
 const now = new Date().toISOString();
 
-const corban: User = { id: 'u1', name: 'Corban', color: '#2b557e', createdAt: now };
-const ada: User = { id: 'u2', name: 'Ada', color: '#3c6b46', createdAt: now };
+const corban: User = { id: 'u1', name: 'Corban', color: '#2b557e', role: 'member', createdAt: now };
+const ada: User = { id: 'u2', name: 'Ada', color: '#3c6b46', role: 'member', createdAt: now };
 
 function comment(overrides: Partial<CommentThread> & { id: string }): CommentThread {
   return {
@@ -108,8 +108,11 @@ const resolvedThread = comment({
 });
 
 let threads: CommentThread[] = [];
+// Default: me = corban (u1). Override per-test with server.use().
+let meUser: User = corban;
 
 const server = setupServer(
+  http.get('/api/auth/me', () => HttpResponse.json(meUser)),
   http.get('/api/users', () => HttpResponse.json([corban, ada])),
   http.get('/api/comments', () => HttpResponse.json(threads)),
   // Decision extraction gates on AI status; enabled by default in tests.
@@ -118,6 +121,7 @@ const server = setupServer(
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
+  meUser = corban;
   cleanup();
   server.resetHandlers();
   localStorage.clear();
@@ -197,20 +201,20 @@ describe('CommentsSection', () => {
 
   it('shows the actions menu only on my own comments', async () => {
     threads = [myThread, adaThread];
+    // me = corban (u1) → only c1 root is mine
     renderSection();
     await screen.findByText('Root by Ada');
-    // me = u1 (localStorage empty falls back to first user) → only c1 root is mine
     expect(screen.getAllByRole('button', { name: 'Comment actions' })).toHaveLength(1);
     const mine = screen.getByRole('article', { name: /thread by Corban/i });
     expect(within(mine).getByRole('button', { name: 'Comment actions' })).toBeTruthy();
   });
 
   it('switching identity moves the menus to the other user', async () => {
-    localStorage.setItem('pmUserId', 'u2');
+    // me = ada (u2) → owns the reply (c2) and the ada root (c3)
+    meUser = ada;
     threads = [myThread, adaThread];
     renderSection();
     await screen.findByText('Root by Ada');
-    // u2 owns the reply (c2) and the ada root (c3)
     expect(screen.getAllByRole('button', { name: 'Comment actions' })).toHaveLength(2);
     const mine = screen.getByRole('article', { name: /thread by Corban/i });
     // Corban's root has no menu now, but Ada's nested reply does

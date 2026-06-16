@@ -78,7 +78,7 @@ const shareData: ShareData = {
       name: 'v0.2 — Team ready',
       targetDate: '2026-06-15',
       status: 'shipped',
-      notesMd: 'Editor goes GA.',
+      notesDocId: null,
       shippedAt: '2026-06-15T12:00:00Z',
       createdAt: '2026-05-01T00:00:00Z',
     },
@@ -87,7 +87,7 @@ const shareData: ShareData = {
       name: 'v0.3 — Planned only',
       targetDate: null,
       status: 'planned',
-      notesMd: '',
+      notesDocId: null,
       shippedAt: null,
       createdAt: '2026-05-02T00:00:00Z',
     },
@@ -153,7 +153,6 @@ describe('SharePage', () => {
     // Changelog: shipped release only, with its feature list
     const changelog = screen.getByRole('region', { name: 'Changelog' });
     expect(within(changelog).getByText('v0.2 — Team ready')).toBeDefined();
-    expect(within(changelog).getByText('Editor goes GA.')).toBeDefined();
     expect(within(changelog).getByText('Rich markdown editor')).toBeDefined();
     expect(screen.queryByText('v0.3 — Planned only')).toBeNull();
 

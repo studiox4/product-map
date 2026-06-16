@@ -26,8 +26,8 @@ beforeAll(() => {
 
 const now = '2026-06-09T00:00:00.000Z';
 
-const corban: User = { id: 'u1', name: 'Corban', color: '#2b557e', createdAt: now };
-const ada: User = { id: 'u2', name: 'Ada', color: '#3c6b46', createdAt: now };
+const corban: User = { id: 'u1', name: 'Corban', color: '#2b557e', role: 'member', createdAt: now };
+const ada: User = { id: 'u2', name: 'Ada', color: '#3c6b46', role: 'member', createdAt: now };
 
 const feature: FeatureWithDocs = {
   id: 'f1',

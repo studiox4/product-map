@@ -167,13 +167,15 @@ export default function App() {
               </Suspense>
             }
           />
-          {/* Chrome-free reader view (spec 2.3) — outside AppShell on purpose. */}
+          {/* Chrome-free reader view (spec 2.3) — outside AppShell on purpose, but auth-gated. */}
           <Route
             path="/docs/:id/read"
             element={
-              <Suspense fallback={<RouteFallback />}>
-                <ReaderView />
-              </Suspense>
+              <RequireAuth>
+                <Suspense fallback={<RouteFallback />}>
+                  <ReaderView />
+                </Suspense>
+              </RequireAuth>
             }
           />
           </Routes>
