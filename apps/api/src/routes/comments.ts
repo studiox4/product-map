@@ -4,7 +4,7 @@ import { asc, eq, sql } from 'drizzle-orm';
 import { commentCreate, commentUpdate, resolveBody } from '@productmap/shared';
 import { comments, documents, features, users } from '@productmap/db';
 import { db } from '../db';
-import { currentUser, type CurrentUserEnv } from '../middleware/current-user';
+import { type CurrentUserEnv } from '../middleware/current-user';
 import { recordActivity, addCollaborator } from '../lib/activity';
 
 const commentColumns = {
@@ -44,7 +44,6 @@ async function withAuthor(row: CommentRow) {
 }
 
 export const commentsRoutes = new Hono<CurrentUserEnv>()
-  .use('*', currentUser)
   .get('/', async (c) => {
     const featureId = c.req.query('featureId');
     const documentId = c.req.query('documentId');

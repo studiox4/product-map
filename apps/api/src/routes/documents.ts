@@ -7,7 +7,7 @@ import { documents, features, ideas, releases, templates } from '@productmap/db'
 import type { Context } from 'hono';
 import { db } from '../db';
 import { tiptapToMarkdown } from '../lib/markdown';
-import { currentUser, type CurrentUserEnv } from '../middleware/current-user';
+import { type CurrentUserEnv } from '../middleware/current-user';
 import { recordActivity, addCollaborator } from '../lib/activity';
 
 const EMPTY_DOC = { type: 'doc', content: [] };
@@ -42,7 +42,6 @@ function wordCount(md: string): number {
 }
 
 export const documentsRoutes = new Hono<CurrentUserEnv>()
-  .use('*', currentUser)
   // GET /api/documents?featureId= → DocumentMeta[]
   // GET /api/documents?all=true   → DocumentListItem[] (meta + featureTitle/featureHorizon/wordCount)
   .get('/', async (c) => {

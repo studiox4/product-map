@@ -6,7 +6,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { dependenciesPut } from '@productmap/shared';
 import { features, featureDependencies } from '@productmap/db';
 import { db } from '../db';
-import { currentUser, type CurrentUserEnv } from '../middleware/current-user';
+import { type CurrentUserEnv } from '../middleware/current-user';
 import { recordActivity } from '../lib/activity';
 
 async function featuresByIds(ids: string[]) {
@@ -63,7 +63,6 @@ function createsCycle(
 }
 
 export const depsRoutes = new Hono<CurrentUserEnv>()
-  .use('*', currentUser)
   .get('/:id/dependencies', async (c) => {
     const id = c.req.param('id');
     const [feature] = await db.select({ id: features.id }).from(features).where(eq(features.id, id));

@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { decisionCreate, suggestDecisionBody } from '@productmap/shared';
 import { comments, decisions, features, users } from '@productmap/db';
 import { db } from '../db';
-import { currentUser, type CurrentUserEnv } from '../middleware/current-user';
+import { type CurrentUserEnv } from '../middleware/current-user';
 import { recordActivity, addCollaborator } from '../lib/activity';
 import { createAiModel } from '../lib/ai';
 
@@ -40,7 +40,6 @@ const decisionSuggestion = z.object({
 });
 
 export const decisionsRoutes = new Hono<CurrentUserEnv>()
-  .use('*', currentUser)
   .get('/decisions', async (c) => {
     const featureId = c.req.query('featureId');
     const base = db

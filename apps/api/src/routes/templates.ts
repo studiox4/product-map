@@ -6,7 +6,7 @@ import { templates } from '@productmap/db';
 import type { Context } from 'hono';
 import { db } from '../db';
 import { tiptapToMarkdown } from '../lib/markdown';
-import { currentUser, type CurrentUserEnv } from '../middleware/current-user';
+import { type CurrentUserEnv } from '../middleware/current-user';
 
 const EMPTY_DOC = { type: 'doc', content: [] };
 
@@ -20,7 +20,6 @@ function validationHook(result: { success: boolean; error?: unknown }, c: Contex
 }
 
 export const templatesRoutes = new Hono<CurrentUserEnv>()
-  .use('*', currentUser)
   // GET /api/templates?type=&includeArchived= → Template[] (defaults first, then name)
   .get('/', async (c) => {
     const type = c.req.query('type');

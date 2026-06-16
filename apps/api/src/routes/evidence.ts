@@ -6,7 +6,7 @@ import { asc, eq } from 'drizzle-orm';
 import { evidenceCreate } from '@productmap/shared';
 import { evidence, features, users } from '@productmap/db';
 import { db } from '../db';
-import { currentUser, type CurrentUserEnv } from '../middleware/current-user';
+import { type CurrentUserEnv } from '../middleware/current-user';
 
 const evidenceColumns = {
   id: evidence.id,
@@ -28,7 +28,6 @@ async function featureExists(id: string): Promise<boolean> {
 }
 
 export const evidenceRoutes = new Hono<CurrentUserEnv>()
-  .use('*', currentUser)
   .get('/features/:id/evidence', async (c) => {
     const featureId = c.req.param('id');
     if (!(await featureExists(featureId))) return c.json({ error: 'not_found' }, 404);

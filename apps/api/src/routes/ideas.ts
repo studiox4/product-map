@@ -11,7 +11,7 @@ import {
 } from '@productmap/shared';
 import { activity, documents, features, ideas, ideaVotes, products, templates, users } from '@productmap/db';
 import { db } from '../db';
-import { currentUser, type CurrentUserEnv } from '../middleware/current-user';
+import { type CurrentUserEnv } from '../middleware/current-user';
 import { recordActivity, addCollaborator } from '../lib/activity';
 import { EMPTY_VOTE_SUMMARY, requestUserId } from '../lib/votes';
 import { createAiModel, generateDocStream } from '../lib/ai';
@@ -135,7 +135,6 @@ async function draftAiBrief(
 }
 
 export const ideasRoutes = new Hono<CurrentUserEnv>()
-  .use('*', currentUser)
   // GET /api/ideas?status= — newest first, with vote summaries
   .get('/', async (c) => {
     const status = c.req.query('status');

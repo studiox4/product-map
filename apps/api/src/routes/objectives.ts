@@ -5,10 +5,9 @@ import { asc, count, eq } from 'drizzle-orm';
 import { objectiveCreate, objectiveUpdate } from '@productmap/shared';
 import { objectives, users, features } from '@productmap/db';
 import { db } from '../db';
-import { currentUser, type CurrentUserEnv } from '../middleware/current-user';
+import { type CurrentUserEnv } from '../middleware/current-user';
 
 export const objectivesRoutes = new Hono<CurrentUserEnv>()
-  .use('*', currentUser)
   // GET / → Objective[] with joined owner {name,color} + featureCount.
   .get('/', async (c) => {
     const rows = await db

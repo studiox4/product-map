@@ -7,7 +7,7 @@ import { and, asc, eq, ne, sql } from 'drizzle-orm';
 import { planCreate, planUpdate, planEntryUpdate } from '@productmap/shared';
 import { plans, planEntries, features, activity } from '@productmap/db';
 import { db } from '../db';
-import { currentUser, type CurrentUserEnv } from '../middleware/current-user';
+import { type CurrentUserEnv } from '../middleware/current-user';
 
 async function entriesFor(planId: string) {
   return db.select().from(planEntries).where(eq(planEntries.planId, planId));
@@ -32,7 +32,6 @@ function diffFields(
 }
 
 export const plansRoutes = new Hono<CurrentUserEnv>()
-  .use('*', currentUser)
   .get('/', async (c) => {
     const rows = await db.select().from(plans).orderBy(asc(plans.createdAt));
     return c.json(rows);

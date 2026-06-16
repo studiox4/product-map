@@ -39,7 +39,11 @@ export function clientIp(c: Context): string {
     const xri = c.req.header('x-real-ip');
     if (xri) return xri.trim();
   }
-  return getConnInfo(c).remote.address ?? 'unknown';
+  try {
+    return getConnInfo(c).remote.address ?? 'unknown';
+  } catch {
+    return 'unknown';
+  }
 }
 
 /**
