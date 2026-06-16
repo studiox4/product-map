@@ -216,11 +216,10 @@ describe('PUT /api/ideas/:id/vote', () => {
 
   it('reflects my vote in the list for the requesting user', async () => {
     const idea = await createIdea();
-    // Vote write uses cookie auth (Corban)
+    // Vote write and read both use the same auth cookie (Corban)
     await app.request(`/api/ideas/${idea.id}/vote`, json({ value: 1 }, 'PUT'));
-    // GET read-path uses x-user-id for personalization (still valid on read)
     const [row] = await (
-      await app.request('/api/ideas', { headers: { ...auth, 'x-user-id': userId } })
+      await app.request('/api/ideas', { headers: auth })
     ).json();
     expect(row).toMatchObject({ score: 1, boosts: 1, myVote: 1 });
   });

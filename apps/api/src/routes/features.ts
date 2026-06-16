@@ -62,7 +62,7 @@ export const featuresRoutes = new Hono<CurrentUserEnv>()
       .orderBy(horizonOrder, asc(features.sortOrder), asc(features.createdAt));
     const ids = rows.map((f) => f.id);
     const docs = await docsForFeatures(ids);
-    const voteMap = await voteSummaries(ids, await requestUserId(c));
+    const voteMap = await voteSummaries(ids, requestUserId(c));
     const blockers = await blockerIdsForFeatures(ids);
     return c.json(
       rows.map((f) => ({
@@ -115,7 +115,7 @@ export const featuresRoutes = new Hono<CurrentUserEnv>()
     const [row] = await db.select().from(features).where(eq(features.id, id));
     if (!row) return c.json({ error: 'not_found' }, 404);
     const docs = await docsForFeatures([row.id]);
-    const voteSummary = await voteSummaryFor(row.id, await requestUserId(c));
+    const voteSummary = await voteSummaryFor(row.id, requestUserId(c));
     const blockers = await blockerIdsForFeatures([row.id]);
     return c.json({
       ...row,

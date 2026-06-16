@@ -198,14 +198,16 @@ describe('GET /api/overview', () => {
   it('includes vote summaries on features with per-user myVote', async () => {
     const { editor, gantt } = await seedFixture();
     const [corban] = await db.insert(users).values({ name: 'Corban', color: '#2b557e' }).returning();
-    const [ada] = await db.insert(users).values({ name: 'Ada', color: '#3c6b46' }).returning();
+    // Ada is a real auth user so we can read the overview as her via cookie.
+    const ada = await createTestUser({ role: 'member', name: 'Ada', email: 'ada@test.co', color: '#3c6b46' });
+    const adaAuth = { cookie: await authCookie(ada), origin: 'http://localhost', host: 'localhost' };
     await db.insert(votes).values([
       { userId: corban.id, featureId: editor.id, value: 1 },
       { userId: ada.id, featureId: editor.id, value: 1 },
       { userId: ada.id, featureId: gantt.id, value: -1 },
     ]);
 
-    const res = await app.request('/api/overview', { headers: { ...auth, 'x-user-id': ada.id } });
+    const res = await app.request('/api/overview', { headers: adaAuth });
     const body = (await res.json()) as OverviewResponse;
     const editorF = body.features.find((f) => f.id === editor.id)!;
     expect(editorF).toMatchObject({ score: 2, boosts: 2, cools: 0, myVote: 1 });

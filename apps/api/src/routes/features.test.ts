@@ -150,7 +150,7 @@ describe('GET /api/features', () => {
 });
 
 describe('PUT /api/features/:id/vote', () => {
-  // Vote writes use auth cookie to identify voter; reads use x-user-id for personalization.
+  // Voter identity (write and read) comes from the auth cookie.
   const put = (value: number, voteAuth?: Record<string, string>) => ({
     method: 'PUT',
     headers: { 'content-type': 'application/json', ...(voteAuth ?? auth) },
@@ -203,11 +203,11 @@ describe('PUT /api/features/:id/vote', () => {
     await app.request(`/api/features/${f.id}/vote`, put(1)); // Corban votes +1
     await app.request(`/api/features/${f.id}/vote`, put(-1, adaAuth)); // Ada votes -1
 
-    // GET list: x-user-id for read-path personalization (myVote for Ada = -1)
-    const list = await (await app.request('/api/features', { headers: { ...auth, 'x-user-id': ada.id } })).json();
+    // GET list authenticated as Ada → her myVote = -1
+    const list = await (await app.request('/api/features', { headers: adaAuth })).json();
     expect(list[0]).toMatchObject({ score: 0, boosts: 1, cools: 1, myVote: -1 });
 
-    // GET single: no x-user-id → uses auth cookie user = Corban (+1)
+    // GET single authenticated as Corban → his myVote = +1
     const single = await (await app.request(`/api/features/${f.id}`, { headers: auth })).json();
     expect(single).toMatchObject({ score: 0, boosts: 1, cools: 1, myVote: 1 }); // Corban voted +1
 
@@ -216,13 +216,13 @@ describe('PUT /api/features/:id/vote', () => {
     expect(fresh).toMatchObject({ score: 0, boosts: 0, cools: 0, myVote: 0 });
   });
 
-  it('x-user-id on reads returns personalized myVote for that user', async () => {
+  it('reads return personalized myVote for the authenticated cookie user', async () => {
     const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
     // Corban votes +1 via auth cookie
     await app.request(`/api/features/${f.id}/vote`, put(1));
-    // Read as Corban via x-user-id (read-path personalization)
+    // Read as Corban via the same auth cookie → myVote = +1
     const single = await (
-      await app.request(`/api/features/${f.id}`, { headers: { ...auth, 'x-user-id': userId } })
+      await app.request(`/api/features/${f.id}`, { headers: auth })
     ).json();
     expect(single).toMatchObject({ score: 1, boosts: 1, cools: 0, myVote: 1 });
   });
