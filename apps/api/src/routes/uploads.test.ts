@@ -1,6 +1,6 @@
 // Integration tests for uploads route (Task 2B).
 // helpers must be imported before ../app so DATABASE_URL points at productmap_test.
-import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
+import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { Hono } from 'hono';
 import { serveStatic } from '@hono/node-server/serve-static';
@@ -16,6 +16,8 @@ const PNG_BYTES = Buffer.from(
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
 
+let auth: Record<string, string> = {};
+
 beforeAll(async () => {
   await setupTestDb();
 });
@@ -26,6 +28,8 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await truncateAll();
+  const actor = await createTestUser({ role: 'admin' });
+  auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
 });
 
 function makeForm(bytes: Buffer | Uint8Array, mime: string, name = 'pixel.png'): FormData {
@@ -36,7 +40,7 @@ function makeForm(bytes: Buffer | Uint8Array, mime: string, name = 'pixel.png'):
 
 describe('POST /api/uploads', () => {
   it('accepts a png and returns 201 {id,url}; stored bytes match', async () => {
-    const res = await app.request('/api/uploads', { method: 'POST', body: makeForm(PNG_BYTES, 'image/png') });
+    const res = await app.request('/api/uploads', { method: 'POST', headers: auth, body: makeForm(PNG_BYTES, 'image/png') });
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.id).toBeTruthy();
@@ -61,6 +65,7 @@ describe('POST /api/uploads', () => {
   it('rejects disallowed mime types with 400', async () => {
     const res = await app.request('/api/uploads', {
       method: 'POST',
+      headers: auth,
       body: makeForm(Buffer.from('hello'), 'text/plain', 'notes.txt'),
     });
     expect(res.status).toBe(400);
@@ -68,14 +73,14 @@ describe('POST /api/uploads', () => {
 
   it('rejects files over 10MB with 413', async () => {
     const big = Buffer.alloc(10 * 1024 * 1024 + 1, 1);
-    const res = await app.request('/api/uploads', { method: 'POST', body: makeForm(big, 'image/png', 'big.png') });
+    const res = await app.request('/api/uploads', { method: 'POST', headers: auth, body: makeForm(big, 'image/png', 'big.png') });
     expect(res.status).toBe(413);
   });
 
   it('rejects a missing file field with 400', async () => {
     const form = new FormData();
     form.append('documentId', 'not-a-file');
-    const res = await app.request('/api/uploads', { method: 'POST', body: form });
+    const res = await app.request('/api/uploads', { method: 'POST', headers: auth, body: form });
     expect(res.status).toBe(400);
   });
 });

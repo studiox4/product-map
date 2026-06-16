@@ -2,6 +2,7 @@ import { beforeAll, beforeEach, afterAll, describe, expect, it } from 'vitest';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { fileURLToPath } from 'node:url';
 import type { OverviewResponse, AttentionItem } from '@productmap/shared';
+import { createTestUser, authCookie } from '../test/helpers';
 
 process.env.DATABASE_URL = 'postgres://localhost:5432/productmap_test';
 
@@ -13,12 +14,16 @@ const migrationsFolder = fileURLToPath(
   new URL('../../../../packages/db/migrations', import.meta.url),
 );
 
+let auth: Record<string, string> = {};
+
 beforeAll(async () => {
   await migrate(db, { migrationsFolder });
 });
 
 beforeEach(async () => {
   await db.execute('truncate table documents, features, products, users cascade' as never);
+  const actor = await createTestUser({ role: 'admin' });
+  auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
 });
 
 afterAll(async () => {
@@ -110,7 +115,7 @@ async function seedFixture() {
 describe('GET /api/overview', () => {
   it('returns product, features with nested docs, and attention items', async () => {
     const { product, editor, gantt, collab, draftDoc, reviewDoc } = await seedFixture();
-    const res = await app.request('/api/overview');
+    const res = await app.request('/api/overview', { headers: auth });
     expect(res.status).toBe(200);
     const body = (await res.json()) as OverviewResponse;
 
@@ -175,7 +180,7 @@ describe('GET /api/overview', () => {
 
   it('has no duplicate attention items and orders doc items before feature items', async () => {
     await seedFixture();
-    const res = await app.request('/api/overview');
+    const res = await app.request('/api/overview', { headers: auth });
     const body = (await res.json()) as OverviewResponse;
 
     const keys = body.attention.map((a) =>
@@ -200,7 +205,7 @@ describe('GET /api/overview', () => {
       { userId: ada.id, featureId: gantt.id, value: -1 },
     ]);
 
-    const res = await app.request('/api/overview', { headers: { 'x-user-id': ada.id } });
+    const res = await app.request('/api/overview', { headers: { ...auth, 'x-user-id': ada.id } });
     const body = (await res.json()) as OverviewResponse;
     const editorF = body.features.find((f) => f.id === editor.id)!;
     expect(editorF).toMatchObject({ score: 2, boosts: 2, cools: 0, myVote: 1 });
@@ -235,7 +240,7 @@ describe('GET /api/overview', () => {
       resolvedBy: corban.id,
     });
 
-    const res = await app.request('/api/overview');
+    const res = await app.request('/api/overview', { headers: auth });
     const body = (await res.json()) as OverviewResponse;
     const openItems = body.attention.filter((a) => a.kind === 'open_comments');
     expect(openItems).toEqual([
@@ -246,7 +251,7 @@ describe('GET /api/overview', () => {
   });
 
   it('404s when no product exists', async () => {
-    const res = await app.request('/api/overview');
+    const res = await app.request('/api/overview', { headers: auth });
     expect(res.status).toBe(404);
     expect(await res.json()).toMatchObject({ error: 'not_found' });
   });

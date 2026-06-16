@@ -1,9 +1,12 @@
-// Integration tests for users routes (identity, no auth — demo).
-// helpers must be imported before ../app so DATABASE_URL points at productmap_test.
-import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
+// Integration tests for GET /api/users and PATCH /api/users/:id (auth-gated).
+import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
-import { USER_COLORS } from '@productmap/shared';
+import { db } from '../db';
+import { users } from '@productmap/db';
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
+
+let auth: Record<string, string> = {};
+let actorId: string;
 
 beforeAll(async () => {
   await setupTestDb();
@@ -15,104 +18,108 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await truncateAll();
+  const actor = await createTestUser({ role: 'admin', name: 'Corban', email: 'corban@test.co' });
+  actorId = actor.id;
+  auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
 });
 
-const json = (method: string, body: unknown) => ({
-  method,
-  headers: { 'content-type': 'application/json' },
+const patch = (body: unknown) => ({
+  method: 'PATCH',
+  headers: { 'content-type': 'application/json', ...auth },
   body: JSON.stringify(body),
 });
 
-describe('POST /api/users', () => {
-  it('creates a user with the first round-robin color', async () => {
-    const res = await app.request('/api/users', json('POST', { name: 'Corban' }));
-    expect(res.status).toBe(201);
-    const body = await res.json();
-    expect(body.name).toBe('Corban');
-    expect(body.color).toBe(USER_COLORS[0]);
-    expect(body.id).toMatch(/^[0-9a-f-]{36}$/);
-  });
-
-  it('assigns colors round-robin, wrapping after the palette is exhausted', async () => {
-    const colors: string[] = [];
-    for (let i = 0; i < USER_COLORS.length + 1; i++) {
-      const res = await app.request('/api/users', json('POST', { name: `User ${i}` }));
-      colors.push((await res.json()).color);
-    }
-    expect(colors.slice(0, USER_COLORS.length)).toEqual([...USER_COLORS]);
-    expect(colors[USER_COLORS.length]).toBe(USER_COLORS[0]);
-  });
-
-  it('400 on empty or over-long name', async () => {
-    expect((await app.request('/api/users', json('POST', { name: '' }))).status).toBe(400);
-    expect(
-      (await app.request('/api/users', json('POST', { name: 'a'.repeat(81) }))).status,
-    ).toBe(400);
-  });
-});
-
 describe('GET /api/users', () => {
-  it('returns [] when empty, then users in creation order', async () => {
-    const empty = await app.request('/api/users');
-    expect(empty.status).toBe(200);
-    expect(await empty.json()).toEqual([]);
-
-    await app.request('/api/users', json('POST', { name: 'Ada' }));
-    await app.request('/api/users', json('POST', { name: 'Brin' }));
-    const res = await app.request('/api/users');
+  it('returns scrubbed {id,name,color,role} shape (no email, no createdAt)', async () => {
+    const res = await app.request('/api/users', { headers: auth });
+    expect(res.status).toBe(200);
     const list = await res.json();
-    expect(list.map((u: { name: string }) => u.name)).toEqual(['Ada', 'Brin']);
+    expect(list).toHaveLength(1); // only the actor
+    const u = list[0];
+    expect(u).toMatchObject({ id: actorId, name: 'Corban', color: '#2b557e', role: 'admin' });
+    expect(u).not.toHaveProperty('email');
+    expect(u).not.toHaveProperty('createdAt');
+    expect(u).not.toHaveProperty('passwordHash');
+  });
+
+  it('lists all users in creation order', async () => {
+    // Insert additional users via DB directly (admin actor already in DB)
+    await db.insert(users).values([
+      { name: 'Ada', color: '#3c6b46', role: 'member', email: 'ada@test.co' },
+      { name: 'Brin', color: '#7c4d00', role: 'member', email: 'brin@test.co' },
+    ]);
+    const res = await app.request('/api/users', { headers: auth });
+    expect(res.status).toBe(200);
+    const list = await res.json();
+    // actor + 2 extras
+    expect(list).toHaveLength(3);
+    expect(list.map((u: { name: string }) => u.name)).toEqual(['Corban', 'Ada', 'Brin']);
   });
 });
 
 describe('PATCH /api/users/:id', () => {
-  it('renames a user, keeping the color', async () => {
-    const user = await (await app.request('/api/users', json('POST', { name: 'Ada' }))).json();
-    const res = await app.request(`/api/users/${user.id}`, json('PATCH', { name: 'Ada L' }));
+  it('admin can rename any user', async () => {
+    const [other] = await db
+      .insert(users)
+      .values({ name: 'Ada', color: '#3c6b46', role: 'member', email: 'ada@test.co' })
+      .returning();
+    const res = await app.request(`/api/users/${other.id}`, patch({ name: 'Ada L' }));
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.name).toBe('Ada L');
-    expect(body.color).toBe(user.color);
+    expect(body.color).toBe('#3c6b46');
+    expect(body).not.toHaveProperty('email');
   });
 
-  it('changes the avatar color from the palette', async () => {
-    const user = await (await app.request('/api/users', json('POST', { name: 'Ada' }))).json();
-    const color = USER_COLORS[3];
-    const res = await app.request(`/api/users/${user.id}`, json('PATCH', { color }));
+  it('admin can change color of any user', async () => {
+    const [other] = await db
+      .insert(users)
+      .values({ name: 'Ada', color: '#3c6b46', role: 'member', email: 'ada@test.co' })
+      .returning();
+    const res = await app.request(`/api/users/${other.id}`, patch({ color: '#0e7490' }));
     expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.color).toBe(color);
-    expect(body.name).toBe('Ada');
+    expect((await res.json()).color).toBe('#0e7490');
   });
 
-  it('updates name and color together', async () => {
-    const user = await (await app.request('/api/users', json('POST', { name: 'Ada' }))).json();
-    const res = await app.request(
-      `/api/users/${user.id}`,
-      json('PATCH', { name: 'Ada L', color: '#0e7490' }),
-    );
-    const body = await res.json();
-    expect(body.name).toBe('Ada L');
-    expect(body.color).toBe('#0e7490');
+  it('member cannot patch another user (403)', async () => {
+    const member = await createTestUser({ role: 'member', name: 'Ada', email: 'ada@test.co' });
+    const memberAuth = { cookie: await authCookie(member), origin: 'http://localhost', host: 'localhost' };
+    const [other] = await db
+      .insert(users)
+      .values({ name: 'Brin', color: '#7c4d00', role: 'member', email: 'brin@test.co' })
+      .returning();
+    const res = await app.request(`/api/users/${other.id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json', ...memberAuth },
+      body: JSON.stringify({ name: 'Hijack' }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it('member can patch their own profile', async () => {
+    const member = await createTestUser({ role: 'member', name: 'Ada', email: 'ada@test.co' });
+    const memberAuth = { cookie: await authCookie(member), origin: 'http://localhost', host: 'localhost' };
+    const res = await app.request(`/api/users/${member.id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json', ...memberAuth },
+      body: JSON.stringify({ name: 'Ada L' }),
+    });
+    expect(res.status).toBe(200);
+    expect((await res.json()).name).toBe('Ada L');
   });
 
   it('400 on a non-hex color', async () => {
-    const user = await (await app.request('/api/users', json('POST', { name: 'Ada' }))).json();
-    const res = await app.request(`/api/users/${user.id}`, json('PATCH', { color: 'tomato' }));
+    const res = await app.request(`/api/users/${actorId}`, patch({ color: 'tomato' }));
+    expect(res.status).toBe(400);
+  });
+
+  it('400 on invalid name', async () => {
+    const res = await app.request(`/api/users/${actorId}`, patch({ name: '' }));
     expect(res.status).toBe(400);
   });
 
   it('404 on unknown id', async () => {
-    const res = await app.request(
-      '/api/users/00000000-0000-4000-8000-000000000000',
-      json('PATCH', { name: 'x' }),
-    );
+    const res = await app.request('/api/users/00000000-0000-4000-8000-000000000000', patch({ name: 'x' }));
     expect(res.status).toBe(404);
-  });
-
-  it('400 on invalid name', async () => {
-    const user = await (await app.request('/api/users', json('POST', { name: 'Ada' }))).json();
-    const res = await app.request(`/api/users/${user.id}`, json('PATCH', { name: '' }));
-    expect(res.status).toBe(400);
   });
 });

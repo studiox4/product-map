@@ -1,13 +1,14 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
-import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
+import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { products, features, users, evidence } from '@productmap/db';
+import { products, features, evidence } from '@productmap/db';
 import { eq } from 'drizzle-orm';
 
 let productId: string;
 let userId: string;
 let featureId: string;
+let auth: Record<string, string> = {};
 
 const MISSING_ID = '00000000-0000-4000-8000-000000000000';
 
@@ -21,17 +22,19 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await truncateAll();
+  // Actor is the Corban user — attribution checks compare against userId
+  const actor = await createTestUser({ role: 'admin', name: 'Corban', email: 'corban@test.co' });
+  userId = actor.id;
+  auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
   const [p] = await db.insert(products).values({ name: 'ProductMap', vision: 'v', aboutMd: '' }).returning();
   productId = p.id;
-  const [u] = await db.insert(users).values({ name: 'Corban', color: '#2b557e' }).returning();
-  userId = u.id;
   const [f] = await db.insert(features).values({ productId, title: 'Gantt roadmap', horizon: 'next' }).returning();
   featureId = f.id;
 });
 
 const post = (body: unknown) => ({
   method: 'POST',
-  headers: { 'content-type': 'application/json' },
+  headers: { 'content-type': 'application/json', ...auth },
   body: JSON.stringify(body),
 });
 
@@ -90,7 +93,7 @@ describe('GET /api/features/:id/evidence', () => {
     await app.request(`/api/features/${featureId}/evidence`, post({ kind: 'quote', title: 'First' }));
     await app.request(`/api/features/${featureId}/evidence`, post({ kind: 'metric', title: 'Second', weight: 3 }));
 
-    const res = await app.request(`/api/features/${featureId}/evidence`);
+    const res = await app.request(`/api/features/${featureId}/evidence`, { headers: auth });
     expect(res.status).toBe(200);
     const rows = await res.json();
     expect(rows).toHaveLength(2);
@@ -100,7 +103,7 @@ describe('GET /api/features/:id/evidence', () => {
   });
 
   it('404 on unknown feature', async () => {
-    const res = await app.request(`/api/features/${MISSING_ID}/evidence`);
+    const res = await app.request(`/api/features/${MISSING_ID}/evidence`, { headers: auth });
     expect(res.status).toBe(404);
   });
 });
@@ -111,14 +114,14 @@ describe('DELETE /api/evidence/:id', () => {
       await app.request(`/api/features/${featureId}/evidence`, post({ kind: 'quote', title: 'Bye' }))
     ).json();
 
-    const res = await app.request(`/api/evidence/${created.id}`, { method: 'DELETE' });
+    const res = await app.request(`/api/evidence/${created.id}`, { method: 'DELETE', headers: auth });
     expect(res.status).toBe(204);
     const rows = await db.select().from(evidence).where(eq(evidence.id, created.id));
     expect(rows).toHaveLength(0);
   });
 
   it('404 on unknown id', async () => {
-    const res = await app.request(`/api/evidence/${MISSING_ID}`, { method: 'DELETE' });
+    const res = await app.request(`/api/evidence/${MISSING_ID}`, { method: 'DELETE', headers: auth });
     expect(res.status).toBe(404);
   });
 });

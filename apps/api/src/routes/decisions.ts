@@ -9,6 +9,7 @@ import { decisionCreate, suggestDecisionBody } from '@productmap/shared';
 import { comments, decisions, features, users } from '@productmap/db';
 import { db } from '../db';
 import { type CurrentUserEnv } from '../middleware/current-user';
+import { loadUser } from '../middleware/auth';
 import { recordActivity, addCollaborator } from '../lib/activity';
 import { createAiModel } from '../lib/ai';
 
@@ -90,6 +91,7 @@ export const decisionsRoutes = new Hono<CurrentUserEnv>()
         })
         .returning();
 
+      const fullUser = await loadUser(user.id);
       if (row.featureId) {
         await recordActivity(row.featureId, user.id, 'decision_logged', {
           decisionId: row.id,
@@ -97,7 +99,7 @@ export const decisionsRoutes = new Hono<CurrentUserEnv>()
         });
         await addCollaborator(row.featureId, user.id);
       }
-      return c.json({ ...row, decidedByName: user.name, decidedByColor: user.color }, 201);
+      return c.json({ ...row, decidedByName: fullUser?.name ?? null, decidedByColor: fullUser?.color ?? null }, 201);
     },
   )
   .delete('/decisions/:id', async (c) => {

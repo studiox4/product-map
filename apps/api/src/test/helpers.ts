@@ -73,7 +73,7 @@ function hdb() {
   return helperDb;
 }
 
-interface TestUserOpts { role?: 'admin' | 'member'; email?: string; name?: string; }
+interface TestUserOpts { role?: 'admin' | 'member'; email?: string; name?: string; color?: string; }
 
 /** Insert a user directly and return the row (for seeding test actors). */
 export async function createTestUser(opts: TestUserOpts = {}) {
@@ -82,7 +82,7 @@ export async function createTestUser(opts: TestUserOpts = {}) {
     .values({
       email: opts.email ?? `u-${Math.random().toString(36).slice(2)}@test.co`,
       name: opts.name ?? 'Test User',
-      color: '#2b557e',
+      color: opts.color ?? '#2b557e',
       role: opts.role ?? 'member',
       passwordHash: await hashPassword('test-password-1234'),
     })

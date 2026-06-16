@@ -7,6 +7,7 @@ import { evidenceCreate } from '@productmap/shared';
 import { evidence, features, users } from '@productmap/db';
 import { db } from '../db';
 import { type CurrentUserEnv } from '../middleware/current-user';
+import { loadUser } from '../middleware/auth';
 
 const evidenceColumns = {
   id: evidence.id,
@@ -52,6 +53,7 @@ export const evidenceRoutes = new Hono<CurrentUserEnv>()
       const user = c.get('currentUser');
       if (!(await featureExists(featureId))) return c.json({ error: 'not_found' }, 404);
 
+      const fullUser = user ? await loadUser(user.id) : null;
       const [row] = await db
         .insert(evidence)
         .values({
@@ -61,11 +63,11 @@ export const evidenceRoutes = new Hono<CurrentUserEnv>()
           bodyMd: body.bodyMd ?? '',
           sourceUrl: body.sourceUrl ?? '',
           weight: body.weight ?? 1,
-          createdBy: user?.id ?? null,
+          createdBy: fullUser?.id ?? null,
         })
         .returning();
       return c.json(
-        { ...row, createdByName: user?.name ?? null, createdByColor: user?.color ?? null },
+        { ...row, createdByName: fullUser?.name ?? null, createdByColor: fullUser?.color ?? null },
         201,
       );
     },

@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
-import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
+import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
 import { products } from '@productmap/db';
 
 let productId: string;
+let auth: Record<string, string> = {};
 
 beforeAll(async () => {
   await setupTestDb();
@@ -16,6 +17,8 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await truncateAll();
+  const actor = await createTestUser({ role: 'admin' });
+  auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
   const [p] = await db
     .insert(products)
     .values({ name: 'ProductMap', vision: 'old vision', aboutMd: 'about' })
@@ -25,7 +28,7 @@ beforeEach(async () => {
 
 const patch = (body: unknown) => ({
   method: 'PATCH',
-  headers: { 'content-type': 'application/json' },
+  headers: { 'content-type': 'application/json', ...auth },
   body: JSON.stringify(body),
 });
 

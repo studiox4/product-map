@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
-import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
+import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
 import { products, features, documents, users, activity, featureCollaborators, votes, objectives, releases, featureDependencies } from '@productmap/db';
@@ -7,6 +7,7 @@ import { asc, eq } from 'drizzle-orm';
 
 let productId: string;
 let userId: string;
+let auth: Record<string, string> = {};
 
 beforeAll(async () => {
   await setupTestDb();
@@ -18,13 +19,15 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await truncateAll();
+  // Actor IS the Corban user — attribution checks compare against userId
+  const actor = await createTestUser({ role: 'admin', name: 'Corban', email: 'corban@test.co' });
+  userId = actor.id;
+  auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
   const [p] = await db
     .insert(products)
     .values({ name: 'ProductMap', vision: 'v', aboutMd: '' })
     .returning();
   productId = p.id;
-  const [u] = await db.insert(users).values({ name: 'Corban', color: '#2b557e' }).returning();
-  userId = u.id;
 });
 
 async function activityRows(featureId: string) {
@@ -37,13 +40,13 @@ async function activityRows(featureId: string) {
 
 const json = (body: unknown) => ({
   method: 'POST',
-  headers: { 'content-type': 'application/json' },
+  headers: { 'content-type': 'application/json', ...auth },
   body: JSON.stringify(body),
 });
 
 const patch = (body: unknown) => ({
   method: 'PATCH',
-  headers: { 'content-type': 'application/json' },
+  headers: { 'content-type': 'application/json', ...auth },
   body: JSON.stringify(body),
 });
 
@@ -92,11 +95,13 @@ describe('POST /api/features', () => {
     expect(collabs.map((c) => c.userId)).toEqual([userId]);
   });
 
-  it('resolves x-user-id header as the actor', async () => {
-    const [other] = await db.insert(users).values({ name: 'Ada', color: '#3c6b46' }).returning();
+  it('auth cookie determines the actor on write', async () => {
+    const other = await createTestUser({ role: 'member', name: 'Ada', email: 'ada@test.co', color: '#3c6b46' });
+    const otherAuth = { cookie: await authCookie(other), origin: 'http://localhost', host: 'localhost' };
     const res = await app.request('/api/features', {
-      ...json({ title: 'Voting', horizon: 'later' }),
-      headers: { 'content-type': 'application/json', 'x-user-id': other.id },
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...otherAuth },
+      body: JSON.stringify({ title: 'Voting', horizon: 'later' }),
     });
     const body = await res.json();
     expect(body.createdBy).toBe(other.id);
@@ -116,7 +121,7 @@ describe('POST /api/features', () => {
 describe('GET /api/features', () => {
   it('returns FeatureWithDocs with empty documents array', async () => {
     await app.request('/api/features', json({ title: 'A', horizon: 'now' }));
-    const res = await app.request('/api/features');
+    const res = await app.request('/api/features', { headers: auth });
     expect(res.status).toBe(200);
     const list = await res.json();
     expect(list).toHaveLength(1);
@@ -132,7 +137,7 @@ describe('GET /api/features', () => {
     await insert('now-0a', 'now', 0);
     await insert('now-0b', 'now', 0);
 
-    const res = await app.request('/api/features');
+    const res = await app.request('/api/features', { headers: auth });
     const list = await res.json();
     expect(list.map((f: { title: string }) => f.title)).toEqual([
       'now-0a',
@@ -145,9 +150,10 @@ describe('GET /api/features', () => {
 });
 
 describe('PUT /api/features/:id/vote', () => {
-  const put = (value: number, asUser?: string) => ({
+  // Vote writes use auth cookie to identify voter; reads use x-user-id for personalization.
+  const put = (value: number, voteAuth?: Record<string, string>) => ({
     method: 'PUT',
-    headers: { 'content-type': 'application/json', ...(asUser ? { 'x-user-id': asUser } : {}) },
+    headers: { 'content-type': 'application/json', ...(voteAuth ?? auth) },
     body: JSON.stringify({ value }),
   });
 
@@ -170,11 +176,12 @@ describe('PUT /api/features/:id/vote', () => {
 
   it('enforces one vote per user and aggregates across users', async () => {
     const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
-    const [ada] = await db.insert(users).values({ name: 'Ada', color: '#3c6b46' }).returning();
+    const ada = await createTestUser({ role: 'member', name: 'Ada', email: 'ada@test.co', color: '#3c6b46' });
+    const adaAuth = { cookie: await authCookie(ada), origin: 'http://localhost', host: 'localhost' };
 
     await app.request(`/api/features/${f.id}/vote`, put(1));
     await app.request(`/api/features/${f.id}/vote`, put(1)); // same user again: still one row
-    const res = await app.request(`/api/features/${f.id}/vote`, put(-1, ada.id));
+    const res = await app.request(`/api/features/${f.id}/vote`, put(-1, adaAuth));
     expect(await res.json()).toEqual({ score: 0, boosts: 1, cools: 1, myVote: -1 });
 
     const rows = await db.select().from(votes).where(eq(votes.featureId, f.id));
@@ -182,7 +189,7 @@ describe('PUT /api/features/:id/vote', () => {
   });
 
   it('404 on unknown feature and 400 on invalid value', async () => {
-    const missing = await app.request('/api/features/00000000-0000-4000-8000-000000000000/vote', put(1));
+    const missing = await app.request('/api/features/00000000-0000-4000-8000-000000000000/vote', put(1, auth));
     expect(missing.status).toBe(404);
     const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
     const bad = await app.request(`/api/features/${f.id}/vote`, put(2));
@@ -191,30 +198,31 @@ describe('PUT /api/features/:id/vote', () => {
 
   it('GET /api/features and /api/features/:id include vote fields with per-user myVote', async () => {
     const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
-    const [ada] = await db.insert(users).values({ name: 'Ada', color: '#3c6b46' }).returning();
-    await app.request(`/api/features/${f.id}/vote`, put(1));
-    await app.request(`/api/features/${f.id}/vote`, put(-1, ada.id));
+    const ada = await createTestUser({ role: 'member', name: 'Ada', email: 'ada@test.co', color: '#3c6b46' });
+    const adaAuth = { cookie: await authCookie(ada), origin: 'http://localhost', host: 'localhost' };
+    await app.request(`/api/features/${f.id}/vote`, put(1)); // Corban votes +1
+    await app.request(`/api/features/${f.id}/vote`, put(-1, adaAuth)); // Ada votes -1
 
-    const list = await (await app.request('/api/features', { headers: { 'x-user-id': ada.id } })).json();
+    // GET list: x-user-id for read-path personalization (myVote for Ada = -1)
+    const list = await (await app.request('/api/features', { headers: { ...auth, 'x-user-id': ada.id } })).json();
     expect(list[0]).toMatchObject({ score: 0, boosts: 1, cools: 1, myVote: -1 });
 
-    const single = await (await app.request(`/api/features/${f.id}`)).json();
-    expect(single).toMatchObject({ score: 0, boosts: 1, cools: 1, myVote: 1 }); // fallback user = Corban
+    // GET single: no x-user-id → uses auth cookie user = Corban (+1)
+    const single = await (await app.request(`/api/features/${f.id}`, { headers: auth })).json();
+    expect(single).toMatchObject({ score: 0, boosts: 1, cools: 1, myVote: 1 }); // Corban voted +1
 
     const [unvoted] = await db.insert(features).values({ productId, title: 'G', horizon: 'later' }).returning();
-    const fresh = await (await app.request(`/api/features/${unvoted.id}`)).json();
+    const fresh = await (await app.request(`/api/features/${unvoted.id}`, { headers: auth })).json();
     expect(fresh).toMatchObject({ score: 0, boosts: 0, cools: 0, myVote: 0 });
   });
 
-  it('reads with a stale/unknown x-user-id fall back to the first user (matches write path)', async () => {
+  it('x-user-id on reads returns personalized myVote for that user', async () => {
     const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
-    // Stale id (e.g. localStorage survives a db reset): the write fell back to
-    // the first user, so the read must compute myVote for that same user.
-    const staleId = '11111111-2222-4333-8444-555555555555';
-    await app.request(`/api/features/${f.id}/vote`, put(1, staleId));
-
+    // Corban votes +1 via auth cookie
+    await app.request(`/api/features/${f.id}/vote`, put(1));
+    // Read as Corban via x-user-id (read-path personalization)
     const single = await (
-      await app.request(`/api/features/${f.id}`, { headers: { 'x-user-id': staleId } })
+      await app.request(`/api/features/${f.id}`, { headers: { ...auth, 'x-user-id': userId } })
     ).json();
     expect(single).toMatchObject({ score: 1, boosts: 1, cools: 0, myVote: 1 });
   });
@@ -224,7 +232,7 @@ describe('GET /api/features/:id', () => {
   it('returns the feature with its documents', async () => {
     const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
     await db.insert(documents).values({ featureId: f.id, type: 'prd', title: 'F PRD' });
-    const res = await app.request(`/api/features/${f.id}`);
+    const res = await app.request(`/api/features/${f.id}`, { headers: auth });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.title).toBe('F');
@@ -236,7 +244,7 @@ describe('GET /api/features/:id', () => {
   });
 
   it('404 on unknown id', async () => {
-    const res = await app.request('/api/features/00000000-0000-4000-8000-000000000000');
+    const res = await app.request('/api/features/00000000-0000-4000-8000-000000000000', { headers: auth });
     expect(res.status).toBe(404);
     expect((await res.json()).error).toBe('not_found');
   });
@@ -327,10 +335,10 @@ describe('DELETE /api/features/:id', () => {
     const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
     await db.insert(documents).values({ featureId: f.id, type: 'prd', title: 'doc' });
 
-    const del = await app.request(`/api/features/${f.id}`, { method: 'DELETE' });
+    const del = await app.request(`/api/features/${f.id}`, { method: 'DELETE', headers: auth });
     expect(del.status).toBe(204);
 
-    const get = await app.request(`/api/features/${f.id}`);
+    const get = await app.request(`/api/features/${f.id}`, { headers: auth });
     expect(get.status).toBe(404);
 
     const docs = await db.select().from(documents).where(eq(documents.featureId, f.id));
@@ -340,6 +348,7 @@ describe('DELETE /api/features/:id', () => {
   it('404 on unknown id', async () => {
     const res = await app.request('/api/features/00000000-0000-4000-8000-000000000000', {
       method: 'DELETE',
+      headers: auth,
     });
     expect(res.status).toBe(404);
   });
@@ -357,7 +366,7 @@ describe('GET /api/features/:id/activity', () => {
         createdAt: new Date(Date.now() - (55 - i) * 1000),
       });
     }
-    const res = await app.request(`/api/features/${f.id}/activity`);
+    const res = await app.request(`/api/features/${f.id}/activity`, { headers: auth });
     expect(res.status).toBe(200);
     const list = await res.json();
     expect(list).toHaveLength(50);
@@ -368,7 +377,7 @@ describe('GET /api/features/:id/activity', () => {
   });
 
   it('404 on unknown feature', async () => {
-    const res = await app.request('/api/features/00000000-0000-4000-8000-000000000000/activity');
+    const res = await app.request('/api/features/00000000-0000-4000-8000-000000000000/activity', { headers: auth });
     expect(res.status).toBe(404);
   });
 });
@@ -381,7 +390,7 @@ describe('PUT /api/features/:id/collaborators', () => {
 
     const res = await app.request(`/api/features/${f.id}/collaborators`, {
       method: 'PUT',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ userIds: [other.id] }),
     });
     expect(res.status).toBe(204);
@@ -397,7 +406,7 @@ describe('PUT /api/features/:id/collaborators', () => {
     const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
     const bad = await app.request(`/api/features/${f.id}/collaborators`, {
       method: 'PUT',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ userIds: ['nope'] }),
     });
     expect(bad.status).toBe(400);
@@ -406,7 +415,7 @@ describe('PUT /api/features/:id/collaborators', () => {
       '/api/features/00000000-0000-4000-8000-000000000000/collaborators',
       {
         method: 'PUT',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...auth },
         body: JSON.stringify({ userIds: [] }),
       },
     );
@@ -460,13 +469,13 @@ describe('GET /api/features — blockerIds', () => {
     const [blocked] = await db.insert(features).values({ productId, title: 'Realtime', horizon: 'later' }).returning();
     await db.insert(featureDependencies).values({ blockerId: blocker.id, blockedId: blocked.id });
 
-    const list = await (await app.request('/api/features')).json();
+    const list = await (await app.request('/api/features', { headers: auth })).json();
     const blockedRow = list.find((x: { id: string }) => x.id === blocked.id);
     expect(blockedRow.blockerIds).toEqual([blocker.id]);
     const blockerRow = list.find((x: { id: string }) => x.id === blocker.id);
     expect(blockerRow.blockerIds).toEqual([]);
 
-    const detail = await (await app.request(`/api/features/${blocked.id}`)).json();
+    const detail = await (await app.request(`/api/features/${blocked.id}`, { headers: auth })).json();
     expect(detail.blockerIds).toEqual([blocker.id]);
   });
 });
@@ -480,7 +489,7 @@ describe('GET /api/features/:id/collaborators', () => {
       { featureId: f.id, userId: other.id },
     ]);
 
-    const res = await app.request(`/api/features/${f.id}/collaborators`);
+    const res = await app.request(`/api/features/${f.id}/collaborators`, { headers: auth });
     expect(res.status).toBe(200);
     const list = await res.json();
     expect(list).toHaveLength(2);
@@ -490,11 +499,11 @@ describe('GET /api/features/:id/collaborators', () => {
 
   it('returns [] when there are none and 404 on unknown feature', async () => {
     const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
-    const empty = await app.request(`/api/features/${f.id}/collaborators`);
+    const empty = await app.request(`/api/features/${f.id}/collaborators`, { headers: auth });
     expect(empty.status).toBe(200);
     expect(await empty.json()).toEqual([]);
 
-    const missing = await app.request('/api/features/00000000-0000-4000-8000-000000000000/collaborators');
+    const missing = await app.request('/api/features/00000000-0000-4000-8000-000000000000/collaborators', { headers: auth });
     expect(missing.status).toBe(404);
   });
 });

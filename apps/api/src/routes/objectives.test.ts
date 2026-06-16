@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
-import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
+import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { users, objectives, products, features } from '@productmap/db';
+import { objectives, products, features } from '@productmap/db';
 
 let userId: string;
+let auth: Record<string, string> = {};
 
 beforeAll(async () => {
   await setupTestDb();
@@ -16,13 +17,14 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await truncateAll();
-  const [u] = await db.insert(users).values({ name: 'Corban', color: '#2b557e' }).returning();
-  userId = u.id;
+  const actor = await createTestUser({ role: 'admin', name: 'Corban', email: 'corban@test.co' });
+  userId = actor.id;
+  auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
 });
 
 const json = (method: string, body: unknown) => ({
   method,
-  headers: { 'content-type': 'application/json' },
+  headers: { 'content-type': 'application/json', ...auth },
   body: JSON.stringify(body),
 });
 
@@ -55,7 +57,7 @@ describe('objectives CRUD', () => {
     // distinct created_at values — a bulk insert stamps one shared now()
     await db.insert(objectives).values({ title: 'First', createdAt: new Date('2026-06-01T00:00:00Z') });
     await db.insert(objectives).values({ title: 'Second', createdAt: new Date('2026-06-02T00:00:00Z') });
-    const res = await app.request('/api/objectives');
+    const res = await app.request('/api/objectives', { headers: auth });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.map((o: { title: string }) => o.title)).toEqual(['First', 'Second']);
@@ -64,7 +66,7 @@ describe('objectives CRUD', () => {
   it('gets, patches and deletes an objective', async () => {
     const [o] = await db.insert(objectives).values({ title: 'Retention' }).returning();
 
-    const got = await app.request(`/api/objectives/${o.id}`);
+    const got = await app.request(`/api/objectives/${o.id}`, { headers: auth });
     expect(got.status).toBe(200);
     expect((await got.json()).title).toBe('Retention');
 
@@ -72,16 +74,16 @@ describe('objectives CRUD', () => {
     expect(patched.status).toBe(200);
     expect(await patched.json()).toMatchObject({ title: 'Retention', metric: 'D30', target: '40%' });
 
-    const deleted = await app.request(`/api/objectives/${o.id}`, { method: 'DELETE' });
+    const deleted = await app.request(`/api/objectives/${o.id}`, { method: 'DELETE', headers: auth });
     expect(deleted.status).toBe(204);
-    expect((await app.request(`/api/objectives/${o.id}`)).status).toBe(404);
+    expect((await app.request(`/api/objectives/${o.id}`, { headers: auth })).status).toBe(404);
   });
 
   it('404s on unknown objective for get/patch/delete', async () => {
     const missing = '00000000-0000-4000-8000-000000000000';
-    expect((await app.request(`/api/objectives/${missing}`)).status).toBe(404);
+    expect((await app.request(`/api/objectives/${missing}`, { headers: auth })).status).toBe(404);
     expect((await app.request(`/api/objectives/${missing}`, json('PATCH', { title: 'x' }))).status).toBe(404);
-    expect((await app.request(`/api/objectives/${missing}`, { method: 'DELETE' })).status).toBe(404);
+    expect((await app.request(`/api/objectives/${missing}`, { method: 'DELETE', headers: auth })).status).toBe(404);
   });
 });
 
@@ -156,7 +158,7 @@ describe('objectives dream-tier-2 properties + joins', () => {
       { productId: p.id, title: 'F3', horizon: 'later' },
     ]);
 
-    const res = await app.request('/api/objectives');
+    const res = await app.request('/api/objectives', { headers: auth });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toHaveLength(2);

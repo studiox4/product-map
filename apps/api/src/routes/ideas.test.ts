@@ -3,11 +3,11 @@ import { simulateReadableStream } from 'ai';
 import { MockLanguageModelV3 } from 'ai/test';
 import type { LanguageModelV3StreamPart } from '@ai-sdk/provider';
 import { asc, eq } from 'drizzle-orm';
-import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
+import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 
 const { app } = await import('../app');
 const { db } = await import('../db');
-const { products, features, users, activity, documents, ideas, templates } = await import(
+const { products, features, activity, documents, ideas, templates } = await import(
   '@productmap/db'
 );
 const { setAiModelFactory } = await import('../lib/ai');
@@ -19,6 +19,7 @@ function clearAwsEnv() {
 }
 
 let userId: string;
+let auth: Record<string, string> = {};
 
 beforeAll(async () => {
   await setupTestDb();
@@ -28,8 +29,10 @@ beforeEach(async () => {
   clearAwsEnv();
   await truncateAll();
   await db.insert(products).values({ name: 'ProductMap', vision: 'v', aboutMd: '' });
-  const [u] = await db.insert(users).values({ name: 'Corban', color: '#2b557e' }).returning();
-  userId = u.id;
+  // Actor IS the Corban user — attribution checks compare against userId
+  const actor = await createTestUser({ role: 'admin', name: 'Corban', email: 'corban@test.co' });
+  userId = actor.id;
+  auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
 });
 
 afterEach(() => {
@@ -43,7 +46,7 @@ afterAll(async () => {
 
 const json = (body: unknown, method = 'POST') => ({
   method,
-  headers: { 'content-type': 'application/json' },
+  headers: { 'content-type': 'application/json', ...auth },
   body: JSON.stringify(body),
 });
 
@@ -153,17 +156,17 @@ describe('idea lifecycle (create → list → update)', () => {
     await createIdea({ title: 'Dark mode', source: 'support' });
     await app.request(`/api/ideas/${idea.id}`, json({ status: 'triaged' }, 'PATCH'));
 
-    const all = await (await app.request('/api/ideas')).json();
+    const all = await (await app.request('/api/ideas', { headers: auth })).json();
     expect(all).toHaveLength(2);
     expect(all[0]).toMatchObject({ score: 0, boosts: 0, cools: 0, myVote: 0 });
 
-    const triaged = await (await app.request('/api/ideas?status=triaged')).json();
+    const triaged = await (await app.request('/api/ideas?status=triaged', { headers: auth })).json();
     expect(triaged).toHaveLength(1);
     expect(triaged[0].id).toBe(idea.id);
   });
 
   it('rejects an unknown status filter with 400', async () => {
-    const res = await app.request('/api/ideas?status=bogus');
+    const res = await app.request('/api/ideas?status=bogus', { headers: auth });
     expect(res.status).toBe(400);
   });
 
@@ -190,9 +193,9 @@ describe('idea lifecycle (create → list → update)', () => {
 
   it('deletes an idea with 204', async () => {
     const idea = await createIdea();
-    const res = await app.request(`/api/ideas/${idea.id}`, { method: 'DELETE' });
+    const res = await app.request(`/api/ideas/${idea.id}`, { method: 'DELETE', headers: auth });
     expect(res.status).toBe(204);
-    expect(await (await app.request('/api/ideas')).json()).toHaveLength(0);
+    expect(await (await app.request('/api/ideas', { headers: auth })).json()).toHaveLength(0);
   });
 });
 
@@ -213,12 +216,11 @@ describe('PUT /api/ideas/:id/vote', () => {
 
   it('reflects my vote in the list for the requesting user', async () => {
     const idea = await createIdea();
-    await app.request(`/api/ideas/${idea.id}/vote`, {
-      ...json({ value: 1 }, 'PUT'),
-      headers: { 'content-type': 'application/json', 'x-user-id': userId },
-    });
+    // Vote write uses cookie auth (Corban)
+    await app.request(`/api/ideas/${idea.id}/vote`, json({ value: 1 }, 'PUT'));
+    // GET read-path uses x-user-id for personalization (still valid on read)
     const [row] = await (
-      await app.request('/api/ideas', { headers: { 'x-user-id': userId } })
+      await app.request('/api/ideas', { headers: { ...auth, 'x-user-id': userId } })
     ).json();
     expect(row).toMatchObject({ score: 1, boosts: 1, myVote: 1 });
   });
@@ -339,7 +341,7 @@ describe('POST /api/ideas/:id/promote', () => {
 
     // The doc now shows up under the feature's docs.
     const featureDocs = await (
-      await app.request(`/api/documents?featureId=${feature.id}`)
+      await app.request(`/api/documents?featureId=${feature.id}`, { headers: auth })
     ).json();
     expect(featureDocs.map((d: { id: string }) => d.id)).toContain(pitch.id);
   });
@@ -348,7 +350,7 @@ describe('POST /api/ideas/:id/promote', () => {
 describe('idea creator + pitchDoc joins (GET list/detail)', () => {
   it('list rows carry creator {id,name,color} and pitchDoc null when unpitched', async () => {
     await createIdea();
-    const [row] = await (await app.request('/api/ideas')).json();
+    const [row] = await (await app.request('/api/ideas', { headers: auth })).json();
     expect(row.creator).toEqual({ id: userId, name: 'Corban', color: '#2b557e' });
     expect(row.pitchDoc).toBeNull();
   });
@@ -358,10 +360,10 @@ describe('idea creator + pitchDoc joins (GET list/detail)', () => {
     const idea = await createIdea();
     const pitch = await (await app.request(`/api/ideas/${idea.id}/pitch`, json({}))).json();
 
-    const [row] = await (await app.request('/api/ideas')).json();
+    const [row] = await (await app.request('/api/ideas', { headers: auth })).json();
     expect(row.pitchDoc).toEqual({ id: pitch.id, title: pitch.title, status: 'draft' });
 
-    const detail = await (await app.request(`/api/ideas/${idea.id}`)).json();
+    const detail = await (await app.request(`/api/ideas/${idea.id}`, { headers: auth })).json();
     expect(detail.creator).toEqual({ id: userId, name: 'Corban', color: '#2b557e' });
     expect(detail.pitchDoc).toEqual({ id: pitch.id, title: pitch.title, status: 'draft' });
   });
