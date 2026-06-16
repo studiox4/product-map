@@ -1,5 +1,8 @@
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
+import { authRoutes } from './routes/auth';
+import { requireAuth, requireAdmin } from './middleware/auth';
+import { isSameOrigin } from './lib/rate-limit';
 import { activityRoutes } from './routes/activity';
 import { featuresRoutes } from './routes/features';
 import { productsRoutes } from './routes/products';
@@ -25,6 +28,24 @@ import { plansRoutes } from './routes/plans';
 
 export const app = new Hono()
   .get('/api/healthz', (c) => c.json({ ok: true }))
+  .route('/api/auth', authRoutes)
+  // Global gate: CSRF origin check on mutations + auth on everything except the
+  // public allowlist. (/api/auth/* runs its own origin+rate guard, so it's
+  // allowlisted here.) SameSite=Lax cookies are the baseline CSRF defense; this
+  // origin check is defense-in-depth and satisfies the spec for all routes.
+  .use('/api/*', async (c, next) => {
+    const p = c.req.path;
+    const isPublic =
+      p === '/api/healthz' ||
+      p.startsWith('/api/auth/') ||
+      p.startsWith('/api/share/');
+    if (c.req.method !== 'GET' && !isPublic && !isSameOrigin(c)) {
+      return c.json({ error: 'forbidden_origin' }, 403);
+    }
+    if (isPublic) return next();
+    return requireAuth(c as never, next);
+  })
+  .use('/api/admin/*', requireAdmin)
   .route('/api/users', usersRoutes)
   .route('/api/features', featuresRoutes)
   .route('/api/activity', activityRoutes)
