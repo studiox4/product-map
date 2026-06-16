@@ -21,6 +21,7 @@ const SettingsPage = lazy(() => import('@/routes/Settings'));
 const WorkspaceTab = lazy(() => import('@/components/settings/WorkspaceTab'));
 const ProfileTab = lazy(() => import('@/components/settings/ProfileTab'));
 const TemplatesTab = lazy(() => import('@/components/settings/TemplatesTab'));
+const UsersTab = lazy(() => import('@/components/settings/UsersTab'));
 const TemplateEditorPage = lazy(() => import('@/routes/TemplateEditor'));
 const SharePage = lazy(() => import('@/routes/SharePage'));
 // Releases + Outcomes (Dream tier D7/D9 — releases+outcomes agent route lines).
@@ -145,6 +146,7 @@ export default function App() {
               <Route path="templates" element={<TemplatesTab />} />
               <Route path="workspace" element={<WorkspaceTab />} />
               <Route path="profile" element={<ProfileTab />} />
+              <Route path="users" element={<UsersTab />} />
               {/* Unknown tabs fall back to Templates. */}
               <Route path="*" element={<Navigate to="/settings/templates" replace />} />
             </Route>

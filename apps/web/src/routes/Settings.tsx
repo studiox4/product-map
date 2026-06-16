@@ -1,21 +1,29 @@
 import { Suspense } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutTemplate, Settings as SettingsIcon, UserRound, Wrench } from 'lucide-react';
+import { LayoutTemplate, Settings as SettingsIcon, UserRound, Users, Wrench } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/lib/auth';
 
-const TABS = [
+const BASE_TABS = [
   { to: '/settings/templates', label: 'Templates', icon: LayoutTemplate },
   { to: '/settings/workspace', label: 'Workspace', icon: Wrench },
   { to: '/settings/profile', label: 'Profile', icon: UserRound },
 ];
 
+const ADMIN_TABS = [
+  { to: '/settings/users', label: 'Users', icon: Users },
+];
+
 /**
  * Settings section shell (settings spec): left pill tab rail
- * (Templates / Workspace / Profile), content card to the right.
+ * (Templates / Workspace / Profile [/ Users for admins]), content card to the right.
  * Tab content renders through the nested routes in App.tsx.
  */
 export function SettingsPage() {
+  const { me } = useAuth();
+  const tabs = me?.role === 'admin' ? [...BASE_TABS, ...ADMIN_TABS] : BASE_TABS;
+
   return (
     <div className="space-y-6">
       <header className="flex items-center gap-2">
@@ -24,7 +32,7 @@ export function SettingsPage() {
       </header>
       <div className="flex flex-col gap-8 md:flex-row">
         <nav aria-label="Settings sections" className="flex shrink-0 gap-1.5 md:w-44 md:flex-col">
-          {TABS.map(({ to, label, icon: Icon }) => (
+          {tabs.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}

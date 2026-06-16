@@ -1653,3 +1653,29 @@ export function useChangePassword() {
       fetchJson<User>('/api/auth/change-password', { method: 'POST', body: JSON.stringify(input) }),
   });
 }
+
+// ---- admin user management (phase-1-auth task 18) ----
+
+export interface AdminUser { id: string; name: string; color: string; role: 'admin' | 'member'; }
+
+export function useAdminUsers() {
+  return useQuery({ queryKey: ['admin', 'users'], queryFn: () => fetchJson<AdminUser[]>('/api/admin/users') });
+}
+
+export function useAdminCreateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { email: string; name: string; role: 'admin' | 'member' }) =>
+      fetchJson<{ user: AdminUser; tempPassword: string }>('/api/admin/users', { method: 'POST', body: JSON.stringify(input) }),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['admin', 'users'] }),
+  });
+}
+
+export function useAdminUpdateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...patch }: { id: string; role?: 'admin' | 'member'; isActive?: boolean; resetPassword?: boolean }) =>
+      fetchJson<{ user: AdminUser; tempPassword?: string }>(`/api/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['admin', 'users'] }),
+  });
+}
