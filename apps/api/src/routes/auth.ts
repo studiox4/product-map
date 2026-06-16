@@ -13,6 +13,11 @@ import { publicUser } from '../lib/auth/serialize';
 import { RateLimiter, clientIp, isSameOrigin } from '../lib/rate-limit';
 import { requireAuth, type AuthEnv } from '../middleware/auth';
 
+// Dummy hash used to equalize timing when no user row exists (prevents
+// user-enumeration via response-time side-channel). Computed once at module
+// load so the first request isn't anomalously slow.
+const DUMMY_HASH: Promise<string> = hashPassword('__productmap_dummy_sentinel__');
+
 // Interactive credential checks (login/register) — the brute-force surface.
 const credLimiter = new RateLimiter({ max: 30, windowMs: 60_000 });
 // /refresh is automated (fires on 401 across tabs) — separate, loose bucket.
@@ -51,7 +56,10 @@ export const authRoutes = new Hono<AuthEnv>()
   .post('/login', zValidator('json', loginInput, badInput), async (c) => {
     const { email, password } = c.req.valid('json');
     const [row] = await db.select().from(users).where(eq(users.email, email));
-    const ok = row && row.isActive && (await verifyPassword(row.passwordHash ?? '', password));
+    // Always run a full argon2 verify to prevent user-enumeration via timing.
+    const hashToCheck = row?.passwordHash ?? (await DUMMY_HASH);
+    const passwordOk = await verifyPassword(hashToCheck, password);
+    const ok = row && row.isActive && passwordOk;
     if (!ok) return c.json({ error: 'invalid_credentials' }, 401);
     await setAuthCookies(c, row);
     return c.json(publicUser(row));

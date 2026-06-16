@@ -1,6 +1,6 @@
 import { beforeAll, beforeEach, afterAll, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
+import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 
 const { app } = await import('../app');
 const { db } = await import('../db');
@@ -48,8 +48,11 @@ async function seedWorkspace() {
   return { product, release, featureA, featureB, doc };
 }
 
-async function createToken(): Promise<string> {
-  const res = await app.request('/api/share/roadmap', { method: 'POST' });
+async function createToken(cookie: string): Promise<string> {
+  const res = await app.request('/api/share/roadmap', {
+    method: 'POST',
+    headers: { cookie, origin: 'http://localhost', host: 'localhost' },
+  });
   expect(res.status).toBe(201);
   const { url } = await res.json();
   const token = url.split('/').pop() as string;
@@ -57,8 +60,21 @@ async function createToken(): Promise<string> {
 }
 
 describe('POST /api/share/roadmap', () => {
-  it('creates a token with NO x-user-id header and returns a share url', async () => {
-    const res = await app.request('/api/share/roadmap', { method: 'POST' });
+  it('mint without auth cookie → 401', async () => {
+    const res = await app.request('/api/share/roadmap', {
+      method: 'POST',
+      headers: { origin: 'http://localhost', host: 'localhost' },
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it('mint with admin cookie → 201 and returns a share url', async () => {
+    const admin = await createTestUser({ role: 'admin' });
+    const cookie = await authCookie(admin);
+    const res = await app.request('/api/share/roadmap', {
+      method: 'POST',
+      headers: { cookie, origin: 'http://localhost', host: 'localhost' },
+    });
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.url).toMatch(/^\/share\/[A-Za-z0-9_-]{10,}$/);
@@ -71,17 +87,22 @@ describe('POST /api/share/roadmap', () => {
   });
 
   it('each call mints a distinct token', async () => {
-    const a = await createToken();
-    const b = await createToken();
+    const admin = await createTestUser({ role: 'admin' });
+    const cookie = await authCookie(admin);
+    const a = await createToken(cookie);
+    const b = await createToken(cookie);
     expect(a).not.toBe(b);
   });
 });
 
 describe('GET /api/share/:token/data', () => {
-  it('returns the read-only aggregate with NO auth headers', async () => {
+  it('returns the read-only aggregate with NO auth headers (public read)', async () => {
     const { product, featureA, featureB, doc, release } = await seedWorkspace();
-    const token = await createToken();
+    const admin = await createTestUser({ role: 'admin' });
+    const cookie = await authCookie(admin);
+    const token = await createToken(cookie);
 
+    // The GET is intentionally unauthenticated — this is the share page read path.
     const res = await app.request(`/api/share/${token}/data`);
     expect(res.status).toBe(200);
     const data = await res.json();
@@ -119,9 +140,14 @@ describe('GET /api/share/:token/data', () => {
 
   it('404 after revoke', async () => {
     await seedWorkspace();
-    const token = await createToken();
+    const admin = await createTestUser({ role: 'admin' });
+    const cookie = await authCookie(admin);
+    const token = await createToken(cookie);
 
-    const del = await app.request(`/api/share/${token}`, { method: 'DELETE' });
+    const del = await app.request(`/api/share/${token}`, {
+      method: 'DELETE',
+      headers: { cookie, origin: 'http://localhost', host: 'localhost' },
+    });
     expect(del.status).toBe(200);
 
     const res = await app.request(`/api/share/${token}/data`);
@@ -130,18 +156,40 @@ describe('GET /api/share/:token/data', () => {
 });
 
 describe('DELETE /api/share/:token', () => {
-  it('revokes (sets revoked_at) and 404s on repeat or unknown', async () => {
-    const token = await createToken();
+  it('revoke without auth cookie → 401', async () => {
+    const admin = await createTestUser({ role: 'admin' });
+    const cookie = await authCookie(admin);
+    const token = await createToken(cookie);
+    const res = await app.request(`/api/share/${token}`, {
+      method: 'DELETE',
+      headers: { origin: 'http://localhost', host: 'localhost' },
+    });
+    expect(res.status).toBe(401);
+  });
 
-    const del = await app.request(`/api/share/${token}`, { method: 'DELETE' });
+  it('revokes (sets revoked_at) and 404s on repeat or unknown', async () => {
+    const admin = await createTestUser({ role: 'admin' });
+    const cookie = await authCookie(admin);
+    const token = await createToken(cookie);
+
+    const del = await app.request(`/api/share/${token}`, {
+      method: 'DELETE',
+      headers: { cookie, origin: 'http://localhost', host: 'localhost' },
+    });
     expect(del.status).toBe(200);
     const [row] = await db.select().from(shareTokens).where(eq(shareTokens.token, token));
     expect(row.revokedAt).not.toBeNull();
 
-    const again = await app.request(`/api/share/${token}`, { method: 'DELETE' });
+    const again = await app.request(`/api/share/${token}`, {
+      method: 'DELETE',
+      headers: { cookie, origin: 'http://localhost', host: 'localhost' },
+    });
     expect(again.status).toBe(404);
 
-    const unknown = await app.request('/api/share/nope', { method: 'DELETE' });
+    const unknown = await app.request('/api/share/nope', {
+      method: 'DELETE',
+      headers: { cookie, origin: 'http://localhost', host: 'localhost' },
+    });
     expect(unknown.status).toBe(404);
   });
 });

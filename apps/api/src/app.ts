@@ -35,10 +35,11 @@ export const app = new Hono()
   // origin check is defense-in-depth and satisfies the spec for all routes.
   .use('/api/*', async (c, next) => {
     const p = c.req.path;
+    const isAuthPath = p.startsWith('/api/auth/');
     const isPublic =
+      isAuthPath ||
       p === '/api/healthz' ||
-      p.startsWith('/api/auth/') ||
-      p.startsWith('/api/share/');
+      (p.startsWith('/api/share/') && c.req.method === 'GET');
     if (c.req.method !== 'GET' && !isPublic && !isSameOrigin(c)) {
       return c.json({ error: 'forbidden_origin' }, 403);
     }
