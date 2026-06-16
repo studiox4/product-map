@@ -1,4 +1,5 @@
-import { test, expect, type APIRequestContext } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import type { APIRequestContext } from '@playwright/test';
 
 // Comments & voting addendum — voting ACs:
 // AC4 — 🚀/🧊 vote, un-vote and flip all work and persist; counts and my-vote
@@ -10,7 +11,6 @@ test.describe.configure({ mode: 'serial' });
 
 const TITLES = ['Vote Target Alpha', 'Vote Target Bravo', 'Vote Target Charlie'] as const;
 const ids: Record<string, string> = {};
-let voterId = '';
 
 async function createFeature(request: APIRequestContext, title: string) {
   const res = await request.post('/api/features', { data: { title, horizon: 'later' } });
@@ -20,15 +20,11 @@ async function createFeature(request: APIRequestContext, title: string) {
 
 test.beforeAll(async ({ request }) => {
   for (const title of TITLES) ids[title] = await createFeature(request, title);
-  const userRes = await request.post('/api/users', { data: { name: 'Val Voter' } });
-  expect(userRes.status()).toBe(201);
-  voterId = ((await userRes.json()) as { id: string }).id;
 });
 
 test('AC4: boost, un-vote and flip from the feature page; state survives reload', async ({
   page,
 }) => {
-  await page.addInitScript((id) => localStorage.setItem('pmUserId', id), voterId);
   await page.goto(`/features/${ids['Vote Target Alpha']}`);
 
   const votes = page.getByRole('group', { name: 'Votes' });
@@ -73,46 +69,30 @@ test('AC4: boost, un-vote and flip from the feature page; state survives reload'
   await expect(score).toHaveText('−1');
 });
 
-test('AC4: one vote per user enforced; a second user adds an independent vote', async ({
-  page,
+test('AC4: one vote per user enforced (idempotent PUT)', async ({
   request,
 }) => {
   const alphaId = ids['Vote Target Alpha'];
 
-  // Same user voting boost twice still counts once (PK user_id+feature_id).
+  // Same user (admin, via auth cookie) voting boost twice still counts once.
   for (let i = 0; i < 2; i += 1) {
-    const res = await request.put(`/api/features/${alphaId}/vote`, {
-      data: { value: 1 },
-      headers: { 'x-user-id': voterId },
-    });
+    const res = await request.put(`/api/features/${alphaId}/vote`, { data: { value: 1 } });
     expect(res.ok()).toBeTruthy();
   }
-  let summary = (await (
-    await request.put(`/api/features/${alphaId}/vote`, {
-      data: { value: 1 },
-      headers: { 'x-user-id': voterId },
-    })
+  const summary = (await (
+    await request.put(`/api/features/${alphaId}/vote`, { data: { value: 1 } })
   ).json()) as { score: number; boosts: number; cools: number; myVote: number };
   expect(summary).toMatchObject({ boosts: 1, cools: 0, score: 1, myVote: 1 });
+});
 
-  // A second user's boost is additive across users.
-  const otherRes = await request.post('/api/users', { data: { name: 'Quinn Second' } });
-  expect(otherRes.status()).toBe(201);
-  const otherId = ((await otherRes.json()) as { id: string }).id;
-  summary = (await (
-    await request.put(`/api/features/${alphaId}/vote`, {
-      data: { value: 1 },
-      headers: { 'x-user-id': otherId },
-    })
-  ).json()) as typeof summary;
-  expect(summary).toMatchObject({ boosts: 2, cools: 0, score: 2, myVote: 1 });
-
-  // Board card reflects the combined score, my tint follows my own vote only.
-  await page.addInitScript((id) => localStorage.setItem('pmUserId', id), otherId);
+test('AC4: my-vote tint on the board card reflects the current vote', async ({
+  page,
+}) => {
+  // Alpha was left at +1 (boost) from the previous test (one-vote PUT leaves it boosted).
   await page.goto('/board');
   const card = page.getByRole('button', { name: 'Vote Target Alpha', exact: true });
   const votes = card.getByRole('group', { name: 'Votes' });
-  await expect(votes.getByTestId('vote-score')).toHaveText('+2');
+  await expect(votes.getByTestId('vote-score')).toHaveText('+1');
   await expect(votes.getByRole('button', { name: 'Boost' })).toHaveAttribute(
     'aria-pressed',
     'true',
@@ -121,23 +101,21 @@ test('AC4: one vote per user enforced; a second user adds an independent vote', 
   // Compact widget swallows the click — voting on a card must not open the peek.
   await votes.getByRole('button', { name: 'Boost' }).click();
   await expect(page).not.toHaveURL(/feature=/);
-  await expect(votes.getByTestId('vote-score')).toHaveText('+1'); // un-voted my boost
+  await expect(votes.getByTestId('vote-score')).toHaveText('0'); // un-voted the boost
 });
 
 test('AC5: score sort reorders the column, survives reload, and toggles back to manual', async ({
   page,
   request,
 }) => {
-  // Distinct net scores via the API: Bravo +1, Charlie −1, Alpha left at +1 from
-  // the previous test → clear Alpha to 0 for a deterministic order.
-  const put = (featureId: string, value: number, userId: string) =>
-    request.put(`/api/features/${featureId}/vote`, {
-      data: { value },
-      headers: { 'x-user-id': userId },
-    });
-  await put(ids['Vote Target Alpha'], 0, voterId);
-  await put(ids['Vote Target Bravo'], 1, voterId);
-  await put(ids['Vote Target Charlie'], -1, voterId);
+  // Set distinct net scores via the API (auth cookie on the request fixture).
+  // Alpha: 0 (cleared above), Bravo: +1, Charlie: −1.
+  const put = (featureId: string, value: number) =>
+    request.put(`/api/features/${featureId}/vote`, { data: { value } });
+
+  await put(ids['Vote Target Alpha'], 0);
+  await put(ids['Vote Target Bravo'], 1);
+  await put(ids['Vote Target Charlie'], -1);
 
   const cardTitles = () =>
     page

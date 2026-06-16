@@ -66,6 +66,8 @@ test('W1-1: theme toggle cycles to dark, applies Studio Ink, persists across rel
 
 test('W1-2: ⌘K opens the palette and fuzzy-finds features and docs', async ({ page }) => {
   await page.goto('/');
+  // Wait for the page to be interactive before sending the keyboard shortcut.
+  await expect(page.getByRole('heading', { level: 1, name: 'ProductMap' })).toBeVisible();
   await page.keyboard.press('ControlOrMeta+k');
   const input = page.getByPlaceholder(/type a command or search/i);
   await expect(input).toBeVisible();
@@ -88,6 +90,7 @@ test('W1-2: create-feature-in-Later via palette works end-to-end', async ({
 }) => {
   const title = `Palette-born feature ${Date.now()}`;
   await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1, name: 'ProductMap' })).toBeVisible();
   await page.keyboard.press('ControlOrMeta+k');
   const input = page.getByPlaceholder(/type a command or search/i);
   await input.fill('new feature in later');

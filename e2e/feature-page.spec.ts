@@ -92,7 +92,9 @@ test('AC2: people rail lists the creator and supports add/remove collaborator', 
   page,
   request,
 }) => {
-  const res = await request.post('/api/users', { data: { name: 'Sasha Verify' } });
+  const res = await request.post('/api/admin/users', {
+    data: { email: 'sasha.verify@test.local', name: 'Sasha Verify', role: 'member' },
+  });
   expect(res.status()).toBe(201);
 
   await page.goto(`/features/${featureId}`);

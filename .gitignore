@@ -6,6 +6,7 @@ dist/
 *.tsbuildinfo
 test-results/
 playwright-report/
+e2e/.auth/
 .vite/
 .pnpm-store/
 .playwright-mcp/

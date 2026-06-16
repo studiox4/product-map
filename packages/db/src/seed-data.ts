@@ -56,7 +56,9 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
   const [corban, priya, marcus, elena] = await db
     .insert(users)
     .values([
-      { name: 'Corban', color: '#2b557e', createdAt: daysAgo(92), email: 'admin@productmap.local', role: 'admin', passwordHash: await hash('devpassword123') },
+      // Stable UUID so the auth JWT (which encodes this id) remains valid across
+      // reset-demo calls during e2e runs. Do NOT change this constant.
+      { id: '00000000-0000-0000-0000-000000000001', name: 'Corban', color: '#2b557e', createdAt: daysAgo(92), email: 'admin@productmap.local', role: 'admin', passwordHash: await hash('devpassword123') },
       { name: 'Priya Shah', color: '#3c6b46', createdAt: daysAgo(82) },
       { name: 'Marcus Webb', color: '#9a6428', createdAt: daysAgo(73) },
       { name: 'Elena Rodriguez', color: '#6d3f9e', createdAt: daysAgo(56) },
