@@ -5,8 +5,9 @@ import { userUpdate } from '@productmap/shared';
 import { users } from '@productmap/db';
 import { db } from '../db';
 import { publicUser } from '../lib/auth/serialize';
+import { type CurrentUserEnv } from '../middleware/current-user';
 
-export const usersRoutes = new Hono()
+export const usersRoutes = new Hono<CurrentUserEnv>()
   .get('/', async (c) => {
     return c.json((await db.select().from(users).orderBy(asc(users.createdAt))).map(publicUser));
   })
@@ -18,6 +19,8 @@ export const usersRoutes = new Hono()
       }
     }),
     async (c) => {
+      const me = c.get('currentUser');
+      if (me.id !== c.req.param('id') && me.role !== 'admin') return c.json({ error: 'forbidden' }, 403);
       const id = c.req.param('id');
       const updates = c.req.valid('json');
       const set: Partial<typeof users.$inferInsert> = {};

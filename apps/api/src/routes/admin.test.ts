@@ -1,6 +1,6 @@
 // Integration tests for POST /api/admin/reset-demo (truncate + reseed; dev only).
 // helpers must be imported before ../app so DATABASE_URL points at productmap_test.
-import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
+import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
 import { users, products, features, documents, templates, activity } from '@productmap/db';
@@ -71,5 +71,34 @@ describe('POST /api/admin/reset-demo', () => {
     const res = await app.request('/api/admin/reset-demo', { method: 'POST' });
     expect(res.status).toBe(403);
     expect((await res.json()).error).toBe('forbidden');
+  });
+});
+
+describe('admin user management', () => {
+  it('admin can list, create, and deactivate users', async () => {
+    const admin = await createTestUser({ role: 'admin', email: 'admin@x.co' });
+    const headers = { cookie: await authCookie(admin), 'content-type': 'application/json', origin: 'http://localhost', host: 'localhost' };
+
+    const created = await app.request('/api/admin/users', {
+      method: 'POST', headers, body: JSON.stringify({ email: 'new@x.co', name: 'New', role: 'member' }),
+    });
+    expect(created.status).toBe(201);
+    const body = await created.json();
+    expect(body.tempPassword).toBeTruthy();
+    expect(body.user.email).toBeUndefined(); // user is scrubbed
+
+    const list = await app.request('/api/admin/users', { headers: { cookie: headers.cookie } });
+    expect((await list.json()).length).toBe(2);
+
+    const patched = await app.request(`/api/admin/users/${body.user.id}`, {
+      method: 'PATCH', headers, body: JSON.stringify({ isActive: false }),
+    });
+    expect(patched.status).toBe(200);
+  });
+
+  it('non-admin is forbidden', async () => {
+    const member = await createTestUser({ role: 'member', email: 'm@x.co' });
+    const res = await app.request('/api/admin/users', { headers: { cookie: await authCookie(member) } });
+    expect(res.status).toBe(403);
   });
 });
