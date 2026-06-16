@@ -219,6 +219,16 @@ function UserRow({
     );
   }
 
+  function reactivate() {
+    updateUser.mutate(
+      { id: user.id, isActive: true },
+      {
+        onSuccess: () => toast.success(`${user.name} reactivated`),
+        onError: (err) => toast.error(apiErrorMessage(err, 'Could not reactivate user.')),
+      },
+    );
+  }
+
   function resetPassword() {
     updateUser.mutate(
       { id: user.id, resetPassword: true },
@@ -237,7 +247,17 @@ function UserRow({
   return (
     <li className="flex items-center gap-3 py-3">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-ink">{user.name}</p>
+        <div className="flex items-center gap-2">
+          <p className="truncate text-sm font-medium text-ink">{user.name}</p>
+          {!user.isActive && (
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-ink">
+              Deactivated
+            </span>
+          )}
+        </div>
+        {user.email ? (
+          <p className="truncate text-xs text-muted-ink">{user.email}</p>
+        ) : null}
         <p className="text-xs text-muted-ink capitalize">{user.role}</p>
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
@@ -259,16 +279,28 @@ function UserRow({
         >
           Reset pw
         </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          disabled={busy}
-          onClick={deactivate}
-          aria-label={`Deactivate ${user.name}`}
-          className="text-destructive hover:text-destructive"
-        >
-          Deactivate
-        </Button>
+        {user.isActive ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={busy}
+            onClick={deactivate}
+            aria-label={`Deactivate ${user.name}`}
+            className="text-destructive hover:text-destructive"
+          >
+            Deactivate
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={busy}
+            onClick={reactivate}
+            aria-label={`Reactivate ${user.name}`}
+          >
+            Reactivate
+          </Button>
+        )}
       </div>
     </li>
   );

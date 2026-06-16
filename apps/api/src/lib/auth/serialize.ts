@@ -11,3 +11,17 @@ export interface PublicUser {
 export function publicUser(u: UserRow): PublicUser {
   return { id: u.id, name: u.name, color: u.color, role: u.role };
 }
+
+export interface AdminUserView {
+  id: string;
+  name: string;
+  color: string;
+  role: 'admin' | 'member';
+  email: string | null;
+  isActive: boolean;
+}
+
+/** Admin-only serializer: includes email and isActive (safe behind requireAdmin). */
+export function adminUser(u: UserRow): AdminUserView {
+  return { id: u.id, name: u.name, color: u.color, role: u.role, email: u.email, isActive: u.isActive };
+}

@@ -90,7 +90,8 @@ describe('admin user management', () => {
     expect(created.status).toBe(201);
     const body = await created.json();
     expect(body.tempPassword).toBeTruthy();
-    expect(body.user.email).toBeUndefined(); // user is scrubbed
+    expect(body.user.email).toBe('new@x.co'); // admin view includes email
+    expect(body.user.isActive).toBe(true);
 
     // actor + new user = 2
     const list = await app.request('/api/admin/users', { headers: { cookie: auth.cookie } });

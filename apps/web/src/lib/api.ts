@@ -1656,7 +1656,7 @@ export function useChangePassword() {
 
 // ---- admin user management (phase-1-auth task 18) ----
 
-export interface AdminUser { id: string; name: string; color: string; role: 'admin' | 'member'; }
+export interface AdminUser { id: string; name: string; color: string; role: 'admin' | 'member'; email: string | null; isActive: boolean; }
 
 export function useAdminUsers() {
   return useQuery({ queryKey: ['admin', 'users'], queryFn: () => fetchJson<AdminUser[]>('/api/admin/users') });

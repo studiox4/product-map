@@ -7,7 +7,7 @@ import { adminCreateUserInput, adminUpdateUserInput, USER_COLORS } from '@produc
 import { users } from '@productmap/db';
 import { db } from '../db';
 import { hashPassword } from '../lib/auth/password';
-import { publicUser } from '../lib/auth/serialize';
+import { publicUser, adminUser } from '../lib/auth/serialize';
 import { markdownToTiptap } from '../lib/markdown';
 
 // POST /api/admin/reset-demo — truncate everything and re-run the demo seed.
@@ -22,7 +22,7 @@ export const adminRoutes = new Hono()
   })
   .get('/users', async (c) => {
     const rows = await db.select().from(users).orderBy(asc(users.createdAt));
-    return c.json(rows.map(publicUser));
+    return c.json(rows.map(adminUser));
   })
   .post('/users', zValidator('json', adminCreateUserInput, (r, c) =>
     r.success ? undefined : c.json({ error: 'validation', issues: r.error.issues }, 400)), async (c) => {
@@ -32,7 +32,7 @@ export const adminRoutes = new Hono()
     const [row] = await db.insert(users).values({
       email, name, role, color: USER_COLORS[count % USER_COLORS.length], passwordHash: await hashPassword(tempPassword),
     }).returning();
-    return c.json({ user: publicUser(row), tempPassword }, 201);
+    return c.json({ user: adminUser(row), tempPassword }, 201);
   })
   .patch('/users/:id', zValidator('json', adminUpdateUserInput, (r, c) =>
     r.success ? undefined : c.json({ error: 'validation', issues: r.error.issues }, 400)), async (c) => {
@@ -46,5 +46,5 @@ export const adminRoutes = new Hono()
     let tempPassword: string | undefined;
     if (resetPassword) { tempPassword = nanoid(16); set.passwordHash = await hashPassword(tempPassword); set.tokenVersion = (set.tokenVersion ?? existing.tokenVersion) + 1; }
     const [row] = await db.update(users).set(set).where(eq(users.id, id)).returning();
-    return c.json({ user: publicUser(row), ...(tempPassword ? { tempPassword } : {}) });
+    return c.json({ user: adminUser(row), ...(tempPassword ? { tempPassword } : {}) });
   });
