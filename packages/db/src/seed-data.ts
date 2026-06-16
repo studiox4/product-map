@@ -5,6 +5,7 @@
 // The story: the ProductMap team (Corban, Priya, Marcus, Elena) has been
 // dogfooding its own roadmap for ~3 months. Docs, comments, votes and the
 // activity history are all written as that team would have left them.
+import { hash } from '@node-rs/argon2';
 import { sql } from 'drizzle-orm';
 import { TEMPLATES } from '@productmap/templates';
 import {
@@ -55,7 +56,7 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
   const [corban, priya, marcus, elena] = await db
     .insert(users)
     .values([
-      { name: 'Corban', color: '#2b557e', createdAt: daysAgo(92) },
+      { name: 'Corban', color: '#2b557e', createdAt: daysAgo(92), email: 'admin@productmap.local', role: 'admin', passwordHash: await hash('devpassword123') },
       { name: 'Priya Shah', color: '#3c6b46', createdAt: daysAgo(82) },
       { name: 'Marcus Webb', color: '#9a6428', createdAt: daysAgo(73) },
       { name: 'Elena Rodriguez', color: '#6d3f9e', createdAt: daysAgo(56) },
@@ -1296,4 +1297,5 @@ Both asks are attached to contracts in flight this quarter. Six months ago we ha
   console.log(
     `seeded: 1 product, ${featureRows.length} features, ${docRows.length + 2} documents (incl. idea pitch + release notes), 6 templates, 4 users, 8 comment threads, 18 votes, 3-month activity history, 5 ideas, 4 evidence, 2 decisions, 2 dependencies, 1 release, 2 objectives, 1 saved plan`,
   );
+  console.log('[seed] Login: admin@productmap.local / devpassword123 (dev only)');
 }
