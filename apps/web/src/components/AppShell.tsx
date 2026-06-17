@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { ChevronDown, Lightbulb, Search, Settings, Sparkles } from 'lucide-react';
+import { ChevronDown, Lightbulb, Map, Search, Settings, Sparkles } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,7 +9,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Toaster } from '@/components/ui/sonner';
 import ThemeToggle from '@/components/ThemeToggle';
-import { BrandMark } from '@/components/BrandMark';
 import CommandPalette from '@/components/command/CommandPalette';
 import ShortcutsOverlay from '@/components/command/ShortcutsOverlay';
 import CopilotPanel from '@/components/copilot/CopilotPanel';
@@ -69,7 +68,7 @@ export function AppShell() {
             to={appRoutes.dashboard}
             className="flex items-center gap-2 rounded-full font-display text-lg font-bold tracking-tight text-ink outline-none transition-opacity duration-150 ease-out hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <BrandMark className="h-5 w-5" />
+            <Map className="h-4 w-4 text-action" aria-hidden />
             ProductMap
           </Link>
           <ProjectSwitcher />
