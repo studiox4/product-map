@@ -3,7 +3,7 @@ import { simulateReadableStream } from 'ai';
 import { MockLanguageModelV3 } from 'ai/test';
 import type { LanguageModelV3StreamPart } from '@ai-sdk/provider';
 import { eq } from 'drizzle-orm';
-import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
+import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 
 const { app } = await import('../app');
 const { db } = await import('../db');
@@ -16,6 +16,8 @@ function clearAwsEnv() {
   for (const key of AWS_ENV) delete process.env[key];
 }
 
+let auth: Record<string, string> = {};
+
 beforeAll(async () => {
   await setupTestDb();
 });
@@ -24,6 +26,8 @@ beforeEach(async () => {
   clearAwsEnv();
   await truncateAll();
   await db.execute('truncate table templates cascade' as never);
+  const actor = await createTestUser({ role: 'admin' });
+  auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
 });
 
 afterEach(() => {
@@ -118,7 +122,7 @@ function enableAi(captured: Captured = {}) {
 
 describe('GET /api/ai/status', () => {
   it('returns enabled:false when no AWS credentials are configured', async () => {
-    const res = await app.request('/api/ai/status');
+    const res = await app.request('/api/ai/status', { headers: auth });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ enabled: false });
   });
@@ -129,7 +133,7 @@ describe('GET /api/ai/status', () => {
     ['AWS_ACCESS_KEY_ID', 'AKIATEST'],
   ])('returns enabled:true when %s is set', async (key, value) => {
     process.env[key] = value;
-    const res = await app.request('/api/ai/status');
+    const res = await app.request('/api/ai/status', { headers: auth });
     expect(await res.json()).toEqual({ enabled: true });
   });
 });
@@ -139,7 +143,7 @@ describe('POST /api/ai/generate-doc', () => {
     const feature = await seedFeature();
     const res = await app.request('/api/ai/generate-doc', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ docType: 'prd', featureId: feature.id, brief: 'A great editor' }),
     });
     expect(res.status).toBe(503);
@@ -150,7 +154,7 @@ describe('POST /api/ai/generate-doc', () => {
     enableAi();
     const res = await app.request('/api/ai/generate-doc', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ docType: 'nope', featureId: 'not-a-uuid', brief: '' }),
     });
     expect(res.status).toBe(400);
@@ -160,7 +164,7 @@ describe('POST /api/ai/generate-doc', () => {
     enableAi();
     const res = await app.request('/api/ai/generate-doc', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({
         docType: 'prd',
         featureId: '00000000-0000-4000-8000-000000000000',
@@ -175,7 +179,7 @@ describe('POST /api/ai/generate-doc', () => {
     const feature = await seedFeature();
     const res = await app.request('/api/ai/generate-doc', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({
         docType: 'prd',
         featureId: feature.id,
@@ -194,7 +198,7 @@ describe('POST /api/ai/generate-doc', () => {
     const brief = 'An editor PMs will actually enjoy using';
     const res = await app.request('/api/ai/generate-doc', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ docType: 'prd', featureId: feature.id, brief }),
     });
     expect(res.status).toBe(200);
@@ -227,7 +231,7 @@ describe('POST /api/ai/generate-doc', () => {
 
     const res = await app.request('/api/ai/generate-doc', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ docType: 'prd', featureId: feature.id, brief: 'x' }),
     });
     expect(res.status).toBe(200);
@@ -249,7 +253,7 @@ describe('POST /api/ai/generate-doc', () => {
 
     const res = await app.request('/api/ai/generate-doc', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({
         docType: 'prd',
         featureId: feature.id,
@@ -267,7 +271,7 @@ describe('POST /api/ai/generate-doc', () => {
 
 describe('POST /api/ai/digest', () => {
   it('503 when AI disabled', async () => {
-    const res = await app.request('/api/ai/digest', { method: 'POST' });
+    const res = await app.request('/api/ai/digest', { method: 'POST', headers: auth });
     expect(res.status).toBe(503);
     expect((await res.json()).error).toBe('ai_disabled');
   });
@@ -294,7 +298,7 @@ describe('POST /api/ai/digest', () => {
       },
     ]);
 
-    const res = await app.request('/api/ai/digest', { method: 'POST' });
+    const res = await app.request('/api/ai/digest', { method: 'POST', headers: auth });
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/event-stream');
     const text = await res.text();

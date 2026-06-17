@@ -9,7 +9,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Toaster } from '@/components/ui/sonner';
 import ThemeToggle from '@/components/ThemeToggle';
-import WelcomeDialog from '@/components/WelcomeDialog';
 import CommandPalette from '@/components/command/CommandPalette';
 import ShortcutsOverlay from '@/components/command/ShortcutsOverlay';
 import CopilotPanel from '@/components/copilot/CopilotPanel';
@@ -158,7 +157,6 @@ export function AppShell() {
         <Outlet />
       </main>
       <Toaster position="bottom-right" />
-      <WelcomeDialog />
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       <ShortcutsOverlay open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       {aiEnabled ? (

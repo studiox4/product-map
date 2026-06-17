@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
-import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
+import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { products, features, users, activity, featureDependencies } from '@productmap/db';
+import { products, features, activity, featureDependencies } from '@productmap/db';
 import { asc, eq } from 'drizzle-orm';
 
 let productId: string;
@@ -10,6 +10,7 @@ let userId: string;
 let featureA: string;
 let featureB: string;
 let featureC: string;
+let auth: Record<string, string> = {};
 
 beforeAll(async () => {
   await setupTestDb();
@@ -21,10 +22,11 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await truncateAll();
+  const actor = await createTestUser({ role: 'admin', name: 'Corban', email: 'corban@test.co' });
+  userId = actor.id;
+  auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
   const [p] = await db.insert(products).values({ name: 'ProductMap', vision: 'v', aboutMd: '' }).returning();
   productId = p.id;
-  const [u] = await db.insert(users).values({ name: 'Corban', color: '#2b557e' }).returning();
-  userId = u.id;
   const [a] = await db.insert(features).values({ productId, title: 'Auth', horizon: 'now' }).returning();
   featureA = a.id;
   const [b] = await db.insert(features).values({ productId, title: 'Realtime', horizon: 'next' }).returning();
@@ -35,7 +37,7 @@ beforeEach(async () => {
 
 const put = (body: unknown) => ({
   method: 'PUT',
-  headers: { 'content-type': 'application/json' },
+  headers: { 'content-type': 'application/json', ...auth },
   body: JSON.stringify(body),
 });
 
@@ -49,7 +51,7 @@ async function activityRows(fid: string) {
 
 describe('GET /api/features/:id/dependencies', () => {
   it('returns empty blockers and blocked for an unlinked feature', async () => {
-    const res = await app.request(`/api/features/${featureA}/dependencies`);
+    const res = await app.request(`/api/features/${featureA}/dependencies`, { headers: auth });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ blockers: [], blocked: [] });
   });
@@ -59,7 +61,7 @@ describe('GET /api/features/:id/dependencies', () => {
       { blockerId: featureA, blockedId: featureB },
       { blockerId: featureB, blockedId: featureC },
     ]);
-    const res = await app.request(`/api/features/${featureB}/dependencies`);
+    const res = await app.request(`/api/features/${featureB}/dependencies`, { headers: auth });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.blockers.map((f: { id: string }) => f.id)).toEqual([featureA]);
@@ -68,7 +70,7 @@ describe('GET /api/features/:id/dependencies', () => {
   });
 
   it('404s on unknown feature', async () => {
-    const res = await app.request('/api/features/00000000-0000-4000-8000-000000000000/dependencies');
+    const res = await app.request('/api/features/00000000-0000-4000-8000-000000000000/dependencies', { headers: auth });
     expect(res.status).toBe(404);
   });
 });

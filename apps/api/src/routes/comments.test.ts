@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
-import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
+import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
 import { products, features, documents, users, comments, activity, featureCollaborators } from '@productmap/db';
@@ -11,6 +11,8 @@ let otherId: string;
 let featureId: string;
 let docFeatureId: string;
 let documentId: string;
+let auth: Record<string, string> = {};
+let otherAuth: Record<string, string> = {};
 
 beforeAll(async () => {
   await setupTestDb();
@@ -22,12 +24,16 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await truncateAll();
+  // Actor IS the Corban user — attribution checks compare against userId
+  const actor = await createTestUser({ role: 'admin', name: 'Corban', email: 'corban@test.co' });
+  userId = actor.id;
+  auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
+  // Ada is a secondary user for 403 / doc-comment tests
+  const other = await createTestUser({ role: 'member', name: 'Ada', email: 'ada@test.co', color: '#3c6b46' });
+  otherId = other.id;
+  otherAuth = { cookie: await authCookie(other), origin: 'http://localhost', host: 'localhost' };
   const [p] = await db.insert(products).values({ name: 'ProductMap', vision: 'v', aboutMd: '' }).returning();
   productId = p.id;
-  const [u] = await db.insert(users).values({ name: 'Corban', color: '#2b557e' }).returning();
-  userId = u.id;
-  const [o] = await db.insert(users).values({ name: 'Ada', color: '#3c6b46' }).returning();
-  otherId = o.id;
   const [f] = await db.insert(features).values({ productId, title: 'Gantt roadmap', horizon: 'next' }).returning();
   featureId = f.id;
   const [df] = await db.insert(features).values({ productId, title: 'Rich markdown editor', horizon: 'now' }).returning();
@@ -36,14 +42,14 @@ beforeEach(async () => {
   documentId = d.id;
 });
 
-const post = (body: unknown, asUser?: string) => ({
+const post = (body: unknown, asAuth?: Record<string, string>) => ({
   method: 'POST',
-  headers: { 'content-type': 'application/json', ...(asUser ? { 'x-user-id': asUser } : {}) },
+  headers: { 'content-type': 'application/json', ...(asAuth ?? auth) },
   body: JSON.stringify(body),
 });
-const patch = (body: unknown, asUser?: string) => ({
+const patch = (body: unknown, asAuth?: Record<string, string>) => ({
   method: 'PATCH',
-  headers: { 'content-type': 'application/json', ...(asUser ? { 'x-user-id': asUser } : {}) },
+  headers: { 'content-type': 'application/json', ...(asAuth ?? auth) },
   body: JSON.stringify(body),
 });
 
@@ -81,7 +87,7 @@ describe('POST /api/comments', () => {
   });
 
   it('creates a doc comment and attributes activity to the doc’s feature', async () => {
-    const res = await app.request('/api/comments', post({ documentId, body: 'Add shortcuts?' }, otherId));
+    const res = await app.request('/api/comments', post({ documentId, body: 'Add shortcuts?' }, otherAuth));
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.documentId).toBe(documentId);
@@ -137,7 +143,7 @@ describe('POST /api/comments', () => {
 describe('GET /api/comments', () => {
   it('returns threads with nested replies, unresolved first, newest roots first', async () => {
     const oldRoot = await (await app.request('/api/comments', post({ featureId, body: 'old root' }))).json();
-    await app.request('/api/comments', post({ featureId, parentId: oldRoot.id, body: 'first reply' }, otherId));
+    await app.request('/api/comments', post({ featureId, parentId: oldRoot.id, body: 'first reply' }, otherAuth));
     await app.request('/api/comments', post({ featureId, parentId: oldRoot.id, body: 'second reply' }));
     const newRoot = await (await app.request('/api/comments', post({ featureId, body: 'new root' }))).json();
     const resolvedRoot = await (
@@ -145,7 +151,7 @@ describe('GET /api/comments', () => {
     ).json();
     await app.request(`/api/comments/${resolvedRoot.id}/resolve`, patch({ resolved: true }));
 
-    const res = await app.request(`/api/comments?featureId=${featureId}`);
+    const res = await app.request(`/api/comments?featureId=${featureId}`, { headers: auth });
     expect(res.status).toBe(200);
     const threads = await res.json();
     expect(threads.map((t: { body: string }) => t.body)).toEqual(['new root', 'old root', 'resolved root']);
@@ -159,16 +165,16 @@ describe('GET /api/comments', () => {
   it('filters by documentId and keeps surfaces separate', async () => {
     await app.request('/api/comments', post({ featureId, body: 'feature comment' }));
     await app.request('/api/comments', post({ documentId, body: 'doc comment' }));
-    const res = await app.request(`/api/comments?documentId=${documentId}`);
+    const res = await app.request(`/api/comments?documentId=${documentId}`, { headers: auth });
     const threads = await res.json();
     expect(threads).toHaveLength(1);
     expect(threads[0].body).toBe('doc comment');
   });
 
   it('400 when neither or both query params are given', async () => {
-    expect((await app.request('/api/comments')).status).toBe(400);
+    expect((await app.request('/api/comments', { headers: auth })).status).toBe(400);
     expect(
-      (await app.request(`/api/comments?featureId=${featureId}&documentId=${documentId}`)).status,
+      (await app.request(`/api/comments?featureId=${featureId}&documentId=${documentId}`, { headers: auth })).status,
     ).toBe(400);
   });
 });
@@ -185,7 +191,7 @@ describe('PATCH /api/comments/:id', () => {
 
   it('403 for non-authors and 404 on unknown id', async () => {
     const root = await (await app.request('/api/comments', post({ featureId, body: 'mine' }))).json();
-    const res = await app.request(`/api/comments/${root.id}`, patch({ body: 'hijack' }, otherId));
+    const res = await app.request(`/api/comments/${root.id}`, patch({ body: 'hijack' }, otherAuth));
     expect(res.status).toBe(403);
     const missing = await app.request(
       '/api/comments/00000000-0000-4000-8000-000000000000',
@@ -199,7 +205,7 @@ describe('PATCH /api/comments/:id/resolve', () => {
   it('resolves and reopens a root, recording comment_resolved activity', async () => {
     const root = await (await app.request('/api/comments', post({ featureId, body: 'root' }))).json();
 
-    const res = await app.request(`/api/comments/${root.id}/resolve`, patch({ resolved: true }, otherId));
+    const res = await app.request(`/api/comments/${root.id}/resolve`, patch({ resolved: true }, otherAuth));
     expect(res.status).toBe(200);
     const resolved = await res.json();
     expect(resolved.resolvedAt).not.toBeNull();
@@ -235,9 +241,9 @@ describe('PATCH /api/comments/:id/resolve', () => {
 describe('DELETE /api/comments/:id', () => {
   it('author deletes a root → 204 and replies cascade', async () => {
     const root = await (await app.request('/api/comments', post({ featureId, body: 'root' }))).json();
-    await app.request('/api/comments', post({ featureId, parentId: root.id, body: 'reply' }, otherId));
+    await app.request('/api/comments', post({ featureId, parentId: root.id, body: 'reply' }, otherAuth));
 
-    const res = await app.request(`/api/comments/${root.id}`, { method: 'DELETE' });
+    const res = await app.request(`/api/comments/${root.id}`, { method: 'DELETE', headers: auth });
     expect(res.status).toBe(204);
     const remaining = await db.select().from(comments).where(eq(comments.featureId, featureId));
     expect(remaining).toHaveLength(0);
@@ -247,11 +253,12 @@ describe('DELETE /api/comments/:id', () => {
     const root = await (await app.request('/api/comments', post({ featureId, body: 'root' }))).json();
     const res = await app.request(`/api/comments/${root.id}`, {
       method: 'DELETE',
-      headers: { 'x-user-id': otherId },
+      headers: otherAuth,
     });
     expect(res.status).toBe(403);
     const missing = await app.request('/api/comments/00000000-0000-4000-8000-000000000000', {
       method: 'DELETE',
+      headers: auth,
     });
     expect(missing.status).toBe(404);
   });

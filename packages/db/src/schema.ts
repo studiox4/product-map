@@ -26,11 +26,17 @@ export const releaseStatusEnum = pgEnum('release_status', ['planned', 'shipped']
 export const featureSizeEnum = pgEnum('feature_size', ['s', 'm', 'l']);
 export const objectiveStatusEnum = pgEnum('objective_status', ['on_track', 'at_risk', 'achieved', 'dropped']);
 export const planStatusEnum = pgEnum('plan_status', ['draft', 'applied', 'archived']);
+export const userRoleEnum = pgEnum('user_role', ['admin', 'member']);
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: text('name').notNull(),
   color: text('color').notNull(),
+  email: text('email').unique(),
+  passwordHash: text('password_hash'),
+  role: userRoleEnum('role').notNull().default('member'),
+  tokenVersion: integer('token_version').notNull().default(0),
+  isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 export const products = pgTable('products', {

@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
-import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
+import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { products, features, users, documents, releases, activity, templates } from '@productmap/db';
+import { products, features, documents, releases, activity, templates } from '@productmap/db';
 import { markdownToTiptap } from '../lib/markdown';
 import { asc, eq } from 'drizzle-orm';
 
@@ -11,6 +11,7 @@ let userId: string;
 let releaseId: string;
 let featureA: string;
 let featureB: string;
+let auth: Record<string, string> = {};
 
 beforeAll(async () => {
   await setupTestDb();
@@ -22,10 +23,11 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await truncateAll();
+  const actor = await createTestUser({ role: 'admin', name: 'Corban', email: 'corban@test.co' });
+  userId = actor.id;
+  auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
   const [p] = await db.insert(products).values({ name: 'ProductMap', vision: 'v', aboutMd: '' }).returning();
   productId = p.id;
-  const [u] = await db.insert(users).values({ name: 'Corban', color: '#2b557e' }).returning();
-  userId = u.id;
   const [r] = await db
     .insert(releases)
     .values({ name: 'v0.2 — Team ready', targetDate: '2026-07-01' })
@@ -45,13 +47,13 @@ beforeEach(async () => {
 
 const json = (method: string, body: unknown) => ({
   method,
-  headers: { 'content-type': 'application/json' },
+  headers: { 'content-type': 'application/json', ...auth },
   body: JSON.stringify(body),
 });
 
 describe('releases CRUD', () => {
   it('lists releases with featureCount', async () => {
-    const res = await app.request('/api/releases');
+    const res = await app.request('/api/releases', { headers: auth });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toHaveLength(1);
@@ -72,7 +74,7 @@ describe('releases CRUD', () => {
   });
 
   it('gets a release with its features', async () => {
-    const res = await app.request(`/api/releases/${releaseId}`);
+    const res = await app.request(`/api/releases/${releaseId}`, { headers: auth });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.name).toBe('v0.2 — Team ready');
@@ -89,7 +91,7 @@ describe('releases CRUD', () => {
   });
 
   it('deletes a release and nulls feature linkage', async () => {
-    const res = await app.request(`/api/releases/${releaseId}`, { method: 'DELETE' });
+    const res = await app.request(`/api/releases/${releaseId}`, { method: 'DELETE', headers: auth });
     expect(res.status).toBe(204);
     const [f] = await db.select().from(features).where(eq(features.id, featureA));
     expect(f.releaseId).toBeNull();
@@ -97,9 +99,9 @@ describe('releases CRUD', () => {
 
   it('404s on unknown release for get/patch/delete', async () => {
     const missing = '00000000-0000-4000-8000-000000000000';
-    expect((await app.request(`/api/releases/${missing}`)).status).toBe(404);
+    expect((await app.request(`/api/releases/${missing}`, { headers: auth })).status).toBe(404);
     expect((await app.request(`/api/releases/${missing}`, json('PATCH', { name: 'x' }))).status).toBe(404);
-    expect((await app.request(`/api/releases/${missing}`, { method: 'DELETE' })).status).toBe(404);
+    expect((await app.request(`/api/releases/${missing}`, { method: 'DELETE', headers: auth })).status).toBe(404);
   });
 });
 
@@ -168,7 +170,7 @@ describe('PATCH /api/releases/:id status transitions', () => {
 
 describe('POST /api/releases/:id/ship (alias of PATCH status)', () => {
   it('ships the release and records release_status_changed activity on each feature', async () => {
-    const res = await app.request(`/api/releases/${releaseId}/ship`, { method: 'POST' });
+    const res = await app.request(`/api/releases/${releaseId}/ship`, { method: 'POST', headers: auth });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.status).toBe('shipped');
@@ -185,8 +187,8 @@ describe('POST /api/releases/:id/ship (alias of PATCH status)', () => {
   });
 
   it('is idempotent: shipping twice logs no duplicate activity', async () => {
-    await app.request(`/api/releases/${releaseId}/ship`, { method: 'POST' });
-    const res = await app.request(`/api/releases/${releaseId}/ship`, { method: 'POST' });
+    await app.request(`/api/releases/${releaseId}/ship`, { method: 'POST', headers: auth });
+    const res = await app.request(`/api/releases/${releaseId}/ship`, { method: 'POST', headers: auth });
     expect(res.status).toBe(200);
     expect((await res.json()).status).toBe('shipped');
     const acts = await db.select().from(activity);
@@ -194,7 +196,7 @@ describe('POST /api/releases/:id/ship (alias of PATCH status)', () => {
   });
 
   it('404s on unknown release', async () => {
-    const res = await app.request('/api/releases/00000000-0000-4000-8000-000000000000/ship', { method: 'POST' });
+    const res = await app.request('/api/releases/00000000-0000-4000-8000-000000000000/ship', { method: 'POST', headers: auth });
     expect(res.status).toBe(404);
   });
 });
@@ -211,7 +213,7 @@ describe('POST /api/releases/:id/notes-doc', () => {
   });
 
   it('creates a release_notes doc from the default template and links notesDocId', async () => {
-    const res = await app.request(`/api/releases/${releaseId}/notes-doc`, { method: 'POST' });
+    const res = await app.request(`/api/releases/${releaseId}/notes-doc`, { method: 'POST', headers: auth });
     expect(res.status).toBe(201);
     const doc = await res.json();
     expect(doc).toMatchObject({
@@ -230,8 +232,8 @@ describe('POST /api/releases/:id/notes-doc', () => {
   });
 
   it('returns the existing doc (200) when one is already linked', async () => {
-    const first = await (await app.request(`/api/releases/${releaseId}/notes-doc`, { method: 'POST' })).json();
-    const res = await app.request(`/api/releases/${releaseId}/notes-doc`, { method: 'POST' });
+    const first = await (await app.request(`/api/releases/${releaseId}/notes-doc`, { method: 'POST', headers: auth })).json();
+    const res = await app.request(`/api/releases/${releaseId}/notes-doc`, { method: 'POST', headers: auth });
     expect(res.status).toBe(200);
     expect((await res.json()).id).toBe(first.id);
     const docs = await db.select().from(documents);
@@ -240,7 +242,7 @@ describe('POST /api/releases/:id/notes-doc', () => {
 
   it('creates a blank doc when no default template exists', async () => {
     await db.delete(templates);
-    const res = await app.request(`/api/releases/${releaseId}/notes-doc`, { method: 'POST' });
+    const res = await app.request(`/api/releases/${releaseId}/notes-doc`, { method: 'POST', headers: auth });
     expect(res.status).toBe(201);
     const doc = await res.json();
     expect(doc.contentMd).toBe('');
@@ -248,7 +250,7 @@ describe('POST /api/releases/:id/notes-doc', () => {
   });
 
   it('404s on unknown release', async () => {
-    const res = await app.request('/api/releases/00000000-0000-4000-8000-000000000000/notes-doc', { method: 'POST' });
+    const res = await app.request('/api/releases/00000000-0000-4000-8000-000000000000/notes-doc', { method: 'POST', headers: auth });
     expect(res.status).toBe(404);
   });
 });
@@ -281,8 +283,8 @@ describe('POST /api/releases/:id/generate-notes', () => {
   });
 
   it('overwrites the notes doc with markdown assembled from member features + final docs', async () => {
-    const created = await (await app.request(`/api/releases/${releaseId}/notes-doc`, { method: 'POST' })).json();
-    const res = await app.request(`/api/releases/${releaseId}/generate-notes`, { method: 'POST' });
+    const created = await (await app.request(`/api/releases/${releaseId}/notes-doc`, { method: 'POST', headers: auth })).json();
+    const res = await app.request(`/api/releases/${releaseId}/generate-notes`, { method: 'POST', headers: auth });
     expect(res.status).toBe(200);
     const doc = await res.json();
     expect(doc.id).toBe(created.id);
@@ -301,7 +303,7 @@ describe('POST /api/releases/:id/generate-notes', () => {
   });
 
   it('creates the notes doc first when none exists', async () => {
-    const res = await app.request(`/api/releases/${releaseId}/generate-notes`, { method: 'POST' });
+    const res = await app.request(`/api/releases/${releaseId}/generate-notes`, { method: 'POST', headers: auth });
     expect(res.status).toBe(200);
     const doc = await res.json();
     expect(doc.type).toBe('release_notes');
@@ -313,6 +315,7 @@ describe('POST /api/releases/:id/generate-notes', () => {
   it('404s on unknown release', async () => {
     const res = await app.request('/api/releases/00000000-0000-4000-8000-000000000000/generate-notes', {
       method: 'POST',
+      headers: auth,
     });
     expect(res.status).toBe(404);
   });
@@ -411,7 +414,7 @@ describe('GET /api/releases/:id/notes.md', () => {
         contentMd: '\n\nUp/down votes with per-user toggles.\n\nMore detail.',
       },
     ]);
-    const res = await app.request(`/api/releases/${releaseId}/notes.md`);
+    const res = await app.request(`/api/releases/${releaseId}/notes.md`, { headers: auth });
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/markdown');
     const md = await res.text();
@@ -425,7 +428,7 @@ describe('GET /api/releases/:id/notes.md', () => {
   });
 
   it('renders a heading-only section for features without final docs', async () => {
-    const res = await app.request(`/api/releases/${releaseId}/notes.md`);
+    const res = await app.request(`/api/releases/${releaseId}/notes.md`, { headers: auth });
     expect(res.status).toBe(200);
     const md = await res.text();
     expect(md).toContain('## Comments & review');
@@ -433,7 +436,7 @@ describe('GET /api/releases/:id/notes.md', () => {
   });
 
   it('404s on unknown release', async () => {
-    const res = await app.request('/api/releases/00000000-0000-4000-8000-000000000000/notes.md');
+    const res = await app.request('/api/releases/00000000-0000-4000-8000-000000000000/notes.md', { headers: auth });
     expect(res.status).toBe(404);
   });
 });

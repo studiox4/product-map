@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach } from 'vitest';
 import { MockLanguageModelV3 } from 'ai/test';
 import { asc, eq } from 'drizzle-orm';
-import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
+import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 
 const { app } = await import('../app');
 const { db } = await import('../db');
@@ -12,6 +12,7 @@ let productId: string;
 let userId: string;
 let otherId: string;
 let featureId: string;
+let auth: Record<string, string> = {};
 
 const MISSING_ID = '00000000-0000-4000-8000-000000000000';
 const AWS_ENV = ['AWS_REGION', 'AWS_PROFILE', 'AWS_ACCESS_KEY_ID', 'BEDROCK_MODEL_ID'] as const;
@@ -31,10 +32,12 @@ afterAll(async () => {
 beforeEach(async () => {
   clearAwsEnv();
   await truncateAll();
+  // Actor IS the Corban user — attribution checks compare against userId
+  const actor = await createTestUser({ role: 'admin', name: 'Corban', email: 'corban@test.co' });
+  userId = actor.id;
+  auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
   const [p] = await db.insert(products).values({ name: 'ProductMap', vision: 'v', aboutMd: '' }).returning();
   productId = p.id;
-  const [u] = await db.insert(users).values({ name: 'Corban', color: '#2b557e' }).returning();
-  userId = u.id;
   const [o] = await db.insert(users).values({ name: 'Ada', color: '#3c6b46' }).returning();
   otherId = o.id;
   const [f] = await db.insert(features).values({ productId, title: 'Gantt roadmap', horizon: 'next' }).returning();
@@ -46,9 +49,9 @@ afterEach(() => {
   clearAwsEnv();
 });
 
-const post = (body: unknown, asUser?: string) => ({
+const post = (body: unknown) => ({
   method: 'POST',
-  headers: { 'content-type': 'application/json', ...(asUser ? { 'x-user-id': asUser } : {}) },
+  headers: { 'content-type': 'application/json', ...auth },
   body: JSON.stringify(body),
 });
 
@@ -60,7 +63,7 @@ describe('POST /api/decisions', () => {
   it('creates a feature decision with 201, decided-by join and decision_logged activity (AC3)', async () => {
     const res = await app.request(
       '/api/decisions',
-      post({ featureId, title: 'Week view ships first', decisionMd: 'We ship week view first.' }, userId),
+      post({ featureId, title: 'Week view ships first', decisionMd: 'We ship week view first.' }),
     );
     expect(res.status).toBe(201);
     const body = await res.json();
@@ -135,11 +138,11 @@ describe('GET /api/decisions', () => {
     await app.request('/api/decisions', post({ featureId, title: 'First', decisionMd: 'a' }));
     await app.request('/api/decisions', post({ featureId: other.id, title: 'Second', decisionMd: 'b' }));
 
-    const all = await (await app.request('/api/decisions')).json();
+    const all = await (await app.request('/api/decisions', { headers: auth })).json();
     expect(all).toHaveLength(2);
     expect(all[0].decidedByName).toBe('Corban');
 
-    const filtered = await (await app.request(`/api/decisions?featureId=${featureId}`)).json();
+    const filtered = await (await app.request(`/api/decisions?featureId=${featureId}`, { headers: auth })).json();
     expect(filtered).toHaveLength(1);
     expect(filtered[0].title).toBe('First');
   });
@@ -150,11 +153,11 @@ describe('DELETE /api/decisions/:id', () => {
     const created = await (
       await app.request('/api/decisions', post({ featureId, title: 'T', decisionMd: 'D' }))
     ).json();
-    const res = await app.request(`/api/decisions/${created.id}`, { method: 'DELETE' });
+    const res = await app.request(`/api/decisions/${created.id}`, { method: 'DELETE', headers: auth });
     expect(res.status).toBe(204);
     expect(await db.select().from(decisions).where(eq(decisions.id, created.id))).toHaveLength(0);
 
-    const missing = await app.request(`/api/decisions/${MISSING_ID}`, { method: 'DELETE' });
+    const missing = await app.request(`/api/decisions/${MISSING_ID}`, { method: 'DELETE', headers: auth });
     expect(missing.status).toBe(404);
   });
 });

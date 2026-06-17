@@ -11,6 +11,7 @@ import {
   resolveBody,
   voteBody,
 } from './schemas';
+import { registerInput, loginInput, changePasswordInput, MIN_PASSWORD_LENGTH } from './index';
 
 const UUID = '4b6f9f6e-3f1a-4c8e-9a64-6a3d2c1b0e9f';
 
@@ -135,5 +136,24 @@ describe('generateDoc', () => {
       brief: 'a'.repeat(2001),
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe('auth schemas', () => {
+  it('registerInput requires email, name, and a password >= MIN_PASSWORD_LENGTH', () => {
+    const ok = registerInput.safeParse({ email: 'a@b.co', name: 'A', password: 'x'.repeat(MIN_PASSWORD_LENGTH) });
+    expect(ok.success).toBe(true);
+    expect(registerInput.safeParse({ email: 'a@b.co', name: 'A', password: 'short' }).success).toBe(false);
+    expect(registerInput.safeParse({ email: 'not-an-email', name: 'A', password: 'x'.repeat(MIN_PASSWORD_LENGTH) }).success).toBe(false);
+  });
+
+  it('loginInput requires email + password', () => {
+    expect(loginInput.safeParse({ email: 'a@b.co', password: 'whatever' }).success).toBe(true);
+    expect(loginInput.safeParse({ email: 'a@b.co' }).success).toBe(false);
+  });
+
+  it('changePasswordInput requires current + valid new password', () => {
+    expect(changePasswordInput.safeParse({ currentPassword: 'old', newPassword: 'x'.repeat(MIN_PASSWORD_LENGTH) }).success).toBe(true);
+    expect(changePasswordInput.safeParse({ currentPassword: 'old', newPassword: 'short' }).success).toBe(false);
   });
 });

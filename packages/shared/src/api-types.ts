@@ -5,7 +5,7 @@ import type {
 } from './constants';
 
 export interface Product { id: string; name: string; vision: string; aboutMd: string; }
-export interface User { id: string; name: string; color: string; createdAt: string; }
+export interface User { id: string; name: string; color: string; role: 'admin' | 'member'; createdAt?: string; }
 export type VoteValue = 1 | -1;
 export interface VoteSummary { score: number; boosts: number; cools: number; myVote: VoteValue | 0; }
 export interface Feature extends VoteSummary {

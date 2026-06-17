@@ -5,7 +5,6 @@ import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { USER_COLORS, type User } from '@productmap/shared';
-import { USER_ID_KEY } from '@/lib/api';
 import ProfileTab from './ProfileTab';
 
 // Node's experimental webstorage shadows jsdom's localStorage in this env
@@ -34,25 +33,32 @@ const ada: User = {
   id: 'u1',
   name: 'Ada Lovelace',
   color: USER_COLORS[0],
+  role: 'member',
   createdAt: '2026-06-09T00:00:00Z',
 };
 
 let userPatch: unknown = null;
+let changePasswordBody: unknown = null;
 
 const server = setupServer(
-  http.get('/api/users', () => HttpResponse.json([ada])),
+  http.get('/api/auth/me', () => HttpResponse.json(ada)),
   http.patch('/api/users/:id', async ({ request, params }) => {
     userPatch = { id: params.id, body: await request.json() };
     const body = (userPatch as { body: Record<string, unknown> }).body;
     return HttpResponse.json({ ...ada, ...body });
   }),
+  http.post('/api/auth/change-password', async ({ request }) => {
+    changePasswordBody = await request.json();
+    return HttpResponse.json(ada);
+  }),
+  http.post('/api/auth/logout', () => new HttpResponse(null, { status: 204 })),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
   userPatch = null;
+  changePasswordBody = null;
   localStorage.clear();
-  localStorage.setItem(USER_ID_KEY, 'u1');
 });
 afterEach(() => {
   server.resetHandlers();
@@ -110,5 +116,64 @@ describe('ProfileTab', () => {
     expect(save.disabled).toBe(true);
     await userEvent.clear(name);
     expect(save.disabled).toBe(true);
+  });
+
+  it('submits change-password form and shows success message', async () => {
+    renderTab();
+    // Wait for the profile to load first.
+    await screen.findByRole('textbox', { name: 'Your name' });
+
+    const currentPwInput = screen.getByLabelText('Current password');
+    const newPwInput = screen.getByLabelText('New password');
+
+    await userEvent.type(currentPwInput, 'oldpassword');
+    await userEvent.type(newPwInput, 'newpassword123');
+    await userEvent.click(screen.getByRole('button', { name: 'Update password' }));
+
+    await waitFor(() =>
+      expect(changePasswordBody).toEqual({
+        currentPassword: 'oldpassword',
+        newPassword: 'newpassword123',
+      }),
+    );
+    await screen.findByText('Password updated.');
+  });
+
+  it('shows error message on change-password failure', async () => {
+    server.use(
+      http.post('/api/auth/change-password', () =>
+        HttpResponse.json({ message: 'Current password is wrong.' }, { status: 400 }),
+      ),
+    );
+    renderTab();
+    await screen.findByRole('textbox', { name: 'Your name' });
+
+    await userEvent.type(screen.getByLabelText('Current password'), 'wrongpass');
+    await userEvent.type(screen.getByLabelText('New password'), 'newpassword123');
+    await userEvent.click(screen.getByRole('button', { name: 'Update password' }));
+
+    await screen.findByText('Current password is wrong.');
+  });
+
+  it('renders a Sign out button', async () => {
+    renderTab();
+    await screen.findByRole('textbox', { name: 'Your name' });
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeTruthy();
+  });
+
+  it('calls logout endpoint when sign out clicked', async () => {
+    let logoutCalled = false;
+    server.use(
+      http.post('/api/auth/logout', () => {
+        logoutCalled = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    renderTab();
+    await screen.findByRole('textbox', { name: 'Your name' });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+
+    await waitFor(() => expect(logoutCalled).toBe(true));
   });
 });

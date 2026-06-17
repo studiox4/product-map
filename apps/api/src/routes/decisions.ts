@@ -8,7 +8,8 @@ import { z } from 'zod';
 import { decisionCreate, suggestDecisionBody } from '@productmap/shared';
 import { comments, decisions, features, users } from '@productmap/db';
 import { db } from '../db';
-import { currentUser, type CurrentUserEnv } from '../middleware/current-user';
+import { type CurrentUserEnv } from '../middleware/current-user';
+import { loadUser } from '../middleware/auth';
 import { recordActivity, addCollaborator } from '../lib/activity';
 import { createAiModel } from '../lib/ai';
 
@@ -40,7 +41,6 @@ const decisionSuggestion = z.object({
 });
 
 export const decisionsRoutes = new Hono<CurrentUserEnv>()
-  .use('*', currentUser)
   .get('/decisions', async (c) => {
     const featureId = c.req.query('featureId');
     const base = db
@@ -91,6 +91,7 @@ export const decisionsRoutes = new Hono<CurrentUserEnv>()
         })
         .returning();
 
+      const fullUser = await loadUser(user.id);
       if (row.featureId) {
         await recordActivity(row.featureId, user.id, 'decision_logged', {
           decisionId: row.id,
@@ -98,7 +99,7 @@ export const decisionsRoutes = new Hono<CurrentUserEnv>()
         });
         await addCollaborator(row.featureId, user.id);
       }
-      return c.json({ ...row, decidedByName: user.name, decidedByColor: user.color }, 201);
+      return c.json({ ...row, decidedByName: fullUser?.name ?? null, decidedByColor: fullUser?.color ?? null }, 201);
     },
   )
   .delete('/decisions/:id', async (c) => {

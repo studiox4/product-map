@@ -4,7 +4,8 @@ import { asc, eq, sql } from 'drizzle-orm';
 import { commentCreate, commentUpdate, resolveBody } from '@productmap/shared';
 import { comments, documents, features, users } from '@productmap/db';
 import { db } from '../db';
-import { currentUser, type CurrentUserEnv } from '../middleware/current-user';
+import { type CurrentUserEnv } from '../middleware/current-user';
+import { loadUser } from '../middleware/auth';
 import { recordActivity, addCollaborator } from '../lib/activity';
 
 const commentColumns = {
@@ -44,7 +45,6 @@ async function withAuthor(row: CommentRow) {
 }
 
 export const commentsRoutes = new Hono<CurrentUserEnv>()
-  .use('*', currentUser)
   .get('/', async (c) => {
     const featureId = c.req.query('featureId');
     const documentId = c.req.query('documentId');
@@ -106,6 +106,7 @@ export const commentsRoutes = new Hono<CurrentUserEnv>()
         if (!feature) return c.json({ error: 'not_found' }, 404);
       }
 
+      const fullUser = await loadUser(user.id);
       const [row] = await db
         .insert(comments)
         .values({
@@ -125,7 +126,7 @@ export const commentsRoutes = new Hono<CurrentUserEnv>()
         });
         await addCollaborator(activityFeatureId, user.id);
       }
-      return c.json({ ...row, authorName: user.name, authorColor: user.color }, 201);
+      return c.json({ ...row, authorName: fullUser?.name ?? '', authorColor: fullUser?.color ?? '' }, 201);
     },
   )
   .patch(
@@ -179,12 +180,13 @@ export const commentsRoutes = new Hono<CurrentUserEnv>()
       if (!existing) return c.json({ error: 'not_found' }, 404);
       if (existing.authorId !== user?.id) return c.json({ error: 'forbidden' }, 403);
       if (updates.body === undefined) return c.json(await withAuthor(existing));
+      const fullUser = await loadUser(user.id);
       const [row] = await db
         .update(comments)
         .set({ body: updates.body, updatedAt: sql`now()` })
         .where(eq(comments.id, id))
         .returning();
-      return c.json({ ...row, authorName: user.name, authorColor: user.color });
+      return c.json({ ...row, authorName: fullUser?.name ?? '', authorColor: fullUser?.color ?? '' });
     },
   )
   .delete('/:id', async (c) => {

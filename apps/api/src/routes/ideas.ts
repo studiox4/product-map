@@ -11,7 +11,7 @@ import {
 } from '@productmap/shared';
 import { activity, documents, features, ideas, ideaVotes, products, templates, users } from '@productmap/db';
 import { db } from '../db';
-import { currentUser, type CurrentUserEnv } from '../middleware/current-user';
+import { type CurrentUserEnv } from '../middleware/current-user';
 import { recordActivity, addCollaborator } from '../lib/activity';
 import { EMPTY_VOTE_SUMMARY, requestUserId } from '../lib/votes';
 import { createAiModel, generateDocStream } from '../lib/ai';
@@ -135,7 +135,6 @@ async function draftAiBrief(
 }
 
 export const ideasRoutes = new Hono<CurrentUserEnv>()
-  .use('*', currentUser)
   // GET /api/ideas?status= — newest first, with vote summaries
   .get('/', async (c) => {
     const status = c.req.query('status');
@@ -149,7 +148,7 @@ export const ideasRoutes = new Hono<CurrentUserEnv>()
       .where(status ? eq(ideas.status, status as (typeof IDEA_STATUSES)[number]) : undefined)
       .orderBy(desc(ideas.createdAt));
     const ids = rows.map((r) => r.idea.id);
-    const voteMap = await ideaVoteSummaries(ids, await requestUserId(c));
+    const voteMap = await ideaVoteSummaries(ids, requestUserId(c));
     const pitchMap = await pitchDocMetas(ids);
     return c.json(
       rows.map((r) => ({
@@ -194,7 +193,7 @@ export const ideasRoutes = new Hono<CurrentUserEnv>()
       ...row.idea,
       creator: toCreator(row),
       pitchDoc: (await pitchDocMetas([id])).get(id) ?? null,
-      ...(await ideaVoteSummaryFor(id, await requestUserId(c))),
+      ...(await ideaVoteSummaryFor(id, requestUserId(c))),
     });
   })
   .patch(

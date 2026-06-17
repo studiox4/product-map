@@ -2,7 +2,7 @@ import { z } from 'zod';
 import {
   HORIZONS, FEATURE_STATUSES, DOC_TYPES, DOC_STATUSES,
   IDEA_STATUSES, EVIDENCE_KINDS, FEATURE_SIZES,
-  RELEASE_STATUSES, OBJECTIVE_STATUSES,
+  RELEASE_STATUSES, OBJECTIVE_STATUSES, MIN_PASSWORD_LENGTH,
 } from './constants';
 
 export const featureCreate = z.object({
@@ -182,4 +182,36 @@ export const reviewDocBody = z.object({
 });
 export const copilotChatBody = z.object({
   question: z.string().min(1).max(2000),
+});
+
+// --- Auth schemas ---
+const password = z.string().min(MIN_PASSWORD_LENGTH).max(200);
+const email = z.string().email().max(320).transform((s) => s.toLowerCase());
+
+export const registerInput = z.object({
+  email,
+  name: z.string().min(1).max(80),
+  password,
+});
+
+export const loginInput = z.object({
+  email,
+  password: z.string().min(1).max(200),
+});
+
+export const changePasswordInput = z.object({
+  currentPassword: z.string().min(1).max(200),
+  newPassword: password,
+});
+
+export const adminCreateUserInput = z.object({
+  email,
+  name: z.string().min(1).max(80),
+  role: z.enum(['admin', 'member']).default('member'),
+});
+
+export const adminUpdateUserInput = z.object({
+  role: z.enum(['admin', 'member']).optional(),
+  isActive: z.boolean().optional(),
+  resetPassword: z.boolean().optional(),
 });

@@ -1,11 +1,13 @@
 // Integration tests for templates routes (workspace template manager).
 // helpers must be imported before ../app so DATABASE_URL points at productmap_test.
-import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
+import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { templates, users } from '@productmap/db';
+import { templates } from '@productmap/db';
 import { eq } from 'drizzle-orm';
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
+
+let auth: Record<string, string> = {};
 
 beforeAll(async () => {
   await setupTestDb();
@@ -17,12 +19,13 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await truncateAll();
-  await db.insert(users).values({ name: 'Corban', color: '#2b557e' });
+  const actor = await createTestUser({ role: 'admin' });
+  auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
 });
 
 const json = (method: string, body?: unknown) => ({
   method,
-  headers: { 'content-type': 'application/json' },
+  headers: { 'content-type': 'application/json', ...auth },
   body: body === undefined ? undefined : JSON.stringify(body),
 });
 
@@ -81,15 +84,15 @@ describe('GET /api/templates', () => {
     await app.request(`/api/templates/${zeta.id}/default`, json('POST'));
     await app.request(`/api/templates/${archived.id}/archive`, json('POST', { archived: true }));
 
-    const res = await app.request('/api/templates?type=prd');
+    const res = await app.request('/api/templates?type=prd', { headers: auth });
     expect(res.status).toBe(200);
     const list = await res.json();
     expect(list.map((t: { name: string }) => t.name)).toEqual(['Zeta', 'Alpha']);
 
-    const withArchived = await (await app.request('/api/templates?type=prd&includeArchived=true')).json();
+    const withArchived = await (await app.request('/api/templates?type=prd&includeArchived=true', { headers: auth })).json();
     expect(withArchived.map((t: { name: string }) => t.name)).toEqual(['Zeta', 'Alpha', 'Old']);
 
-    const all = await (await app.request('/api/templates')).json();
+    const all = await (await app.request('/api/templates', { headers: auth })).json();
     expect(all).toHaveLength(3);
   });
 });

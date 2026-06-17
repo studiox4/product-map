@@ -4,6 +4,8 @@ import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { app } from './app';
+import { assertConfig } from './config';
+assertConfig(); // fail fast if AUTH_SECRET missing in production
 
 // Repo root is two levels up from apps/api.
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');

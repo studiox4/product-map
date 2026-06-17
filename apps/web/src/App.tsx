@@ -3,6 +3,9 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AppShell from '@/components/AppShell';
 import Landing from '@/routes/Landing';
+import Login from '@/routes/Login';
+import Register from '@/routes/Register';
+import { AuthProvider, RequireAuth } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 
 // Lazy routes owned by parallel tasks (3B-D); stubs render "coming soon" until they land.
@@ -18,6 +21,7 @@ const SettingsPage = lazy(() => import('@/routes/Settings'));
 const WorkspaceTab = lazy(() => import('@/components/settings/WorkspaceTab'));
 const ProfileTab = lazy(() => import('@/components/settings/ProfileTab'));
 const TemplatesTab = lazy(() => import('@/components/settings/TemplatesTab'));
+const UsersTab = lazy(() => import('@/components/settings/UsersTab'));
 const TemplateEditorPage = lazy(() => import('@/routes/TemplateEditor'));
 const SharePage = lazy(() => import('@/routes/SharePage'));
 // Releases + Outcomes (Dream tier D7/D9 — releases+outcomes agent route lines).
@@ -48,9 +52,13 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <Routes>
-          <Route element={<AppShell />}>
-            <Route path="/" element={<Landing />} />
+        <AuthProvider>
+          <Routes>
+            {/* Public routes — no auth required. */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route element={<RequireAuth><AppShell /></RequireAuth>}>
+              <Route path="/" element={<Landing />} />
             {/* Idea Inbox (inbox agent route line). */}
             <Route
               path="/inbox"
@@ -138,6 +146,7 @@ export default function App() {
               <Route path="templates" element={<TemplatesTab />} />
               <Route path="workspace" element={<WorkspaceTab />} />
               <Route path="profile" element={<ProfileTab />} />
+              <Route path="users" element={<UsersTab />} />
               {/* Unknown tabs fall back to Templates. */}
               <Route path="*" element={<Navigate to="/settings/templates" replace />} />
             </Route>
@@ -160,16 +169,19 @@ export default function App() {
               </Suspense>
             }
           />
-          {/* Chrome-free reader view (spec 2.3) — outside AppShell on purpose. */}
+          {/* Chrome-free reader view (spec 2.3) — outside AppShell on purpose, but auth-gated. */}
           <Route
             path="/docs/:id/read"
             element={
-              <Suspense fallback={<RouteFallback />}>
-                <ReaderView />
-              </Suspense>
+              <RequireAuth>
+                <Suspense fallback={<RouteFallback />}>
+                  <ReaderView />
+                </Suspense>
+              </RequireAuth>
             }
           />
-        </Routes>
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
   );

@@ -68,8 +68,8 @@ function makeObjective(overrides: Partial<Objective> & { id: string; title: stri
 }
 
 const users: User[] = [
-  { id: 'u1', name: 'Priya Patel', color: '#2b557e', createdAt: '2026-06-01T00:00:00.000Z' },
-  { id: 'u2', name: 'Marcus Chen', color: '#3c6b46', createdAt: '2026-06-01T00:00:00.000Z' },
+  { id: 'u1', name: 'Priya Patel', color: '#2b557e', role: 'member', createdAt: '2026-06-01T00:00:00.000Z' },
+  { id: 'u2', name: 'Marcus Chen', color: '#3c6b46', role: 'member', createdAt: '2026-06-01T00:00:00.000Z' },
 ];
 
 let objectives: Objective[];

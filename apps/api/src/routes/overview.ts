@@ -71,7 +71,7 @@ export const overviewRoutes = new Hono().get('/', async (c) => {
 
   const voteMap = await voteSummaries(
     featureRows.map((f) => f.id),
-    await requestUserId(c),
+    requestUserId(c),
   );
 
   const featuresWithDocs: FeatureWithDocs[] = featureRows.map((f) => ({

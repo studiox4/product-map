@@ -14,6 +14,7 @@
     "@hono/node-server": "^1.13.7",
     "@hono/zod-validator": "^0.4.2",
     "@joplin/turndown-plugin-gfm": "^1.0.61",
+    "@node-rs/argon2": "2.0.2",
     "@productmap/db": "workspace:*",
     "@productmap/shared": "workspace:*",
     "@productmap/templates": "workspace:*",

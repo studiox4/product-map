@@ -47,6 +47,7 @@ test('AC1: settings reachable from the nav gear and ⌘K; three tabs render', as
 
   // ⌘K → "Settings" nav entry.
   await page.goto('/board');
+  await expect(page.getByTestId('column-now')).toBeVisible();
   await page.keyboard.press('ControlOrMeta+k');
   const input = page.getByPlaceholder(/type a command or search/i);
   await input.fill('settings');

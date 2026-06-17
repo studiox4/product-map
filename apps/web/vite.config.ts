@@ -12,8 +12,16 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': `http://localhost:${process.env.API_PORT ?? 3411}`,
-      '/uploads': `http://localhost:${process.env.API_PORT ?? 3411}`,
+      '/api': {
+        target: `http://localhost:${process.env.API_PORT ?? 3411}`,
+        // Preserve the Host header so the API's isSameOrigin check sees
+        // host === new URL(origin).host (both localhost:5173 in dev).
+        changeOrigin: false,
+      },
+      '/uploads': {
+        target: `http://localhost:${process.env.API_PORT ?? 3411}`,
+        changeOrigin: false,
+      },
     },
   },
 });

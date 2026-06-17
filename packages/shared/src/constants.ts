@@ -57,3 +57,6 @@ export const DOC_STATUS_COLORS: Record<DocStatus, string> = {
   final:     'bg-sage-soft text-sage',
 };
 export const USER_COLORS = ['#2b557e', '#3c6b46', '#9a6428', '#6d3f9e', '#0e7490', '#9a5a3c']; // assigned round-robin
+
+/** Minimum password length, enforced in shared schemas and reused on the client. */
+export const MIN_PASSWORD_LENGTH = 10;

@@ -2,7 +2,7 @@ import { beforeAll, beforeEach, afterAll, afterEach, describe, expect, it } from
 import { simulateReadableStream } from 'ai';
 import { MockLanguageModelV3 } from 'ai/test';
 import type { LanguageModelV3StreamPart } from '@ai-sdk/provider';
-import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
+import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 
 const { app } = await import('../app');
 const { db } = await import('../db');
@@ -15,6 +15,8 @@ function clearAwsEnv() {
   for (const key of AWS_ENV) delete process.env[key];
 }
 
+let auth: Record<string, string> = {};
+
 beforeAll(async () => {
   await setupTestDb();
 });
@@ -22,6 +24,8 @@ beforeAll(async () => {
 beforeEach(async () => {
   clearAwsEnv();
   await truncateAll();
+  const actor = await createTestUser({ role: 'admin' });
+  auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
 });
 
 afterEach(() => {
@@ -105,7 +109,7 @@ describe('POST /api/ai/review-doc', () => {
   it('503 when AI disabled', async () => {
     const res = await app.request('/api/ai/review-doc', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ documentId: '00000000-0000-4000-8000-000000000000' }),
     });
     expect(res.status).toBe(503);
@@ -116,7 +120,7 @@ describe('POST /api/ai/review-doc', () => {
     enableAi();
     const res = await app.request('/api/ai/review-doc', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ documentId: 'not-a-uuid' }),
     });
     expect(res.status).toBe(400);
@@ -126,7 +130,7 @@ describe('POST /api/ai/review-doc', () => {
     enableAi();
     const res = await app.request('/api/ai/review-doc', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ documentId: '00000000-0000-4000-8000-000000000000' }),
     });
     expect(res.status).toBe(404);
@@ -148,7 +152,7 @@ describe('POST /api/ai/review-doc', () => {
 
     const res = await app.request('/api/ai/review-doc', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ documentId: doc.id }),
     });
     expect(res.status).toBe(200);
@@ -183,7 +187,7 @@ describe('POST /api/ai/chat', () => {
   it('503 when AI disabled', async () => {
     const res = await app.request('/api/ai/chat', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ question: 'What is shipping next?' }),
     });
     expect(res.status).toBe(503);
@@ -193,7 +197,7 @@ describe('POST /api/ai/chat', () => {
     enableAi();
     const res = await app.request('/api/ai/chat', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ question: '' }),
     });
     expect(res.status).toBe(400);
@@ -228,7 +232,7 @@ describe('POST /api/ai/chat', () => {
 
     const res = await app.request('/api/ai/chat', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ question: 'telemetry pipeline' }),
     });
     expect(res.status).toBe(200);
@@ -266,7 +270,7 @@ describe('POST /api/ai/chat', () => {
 
     const res = await app.request('/api/ai/chat', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ question: 'kraken' }),
     });
     expect(res.status).toBe(200);
@@ -383,7 +387,7 @@ describe('GET /api/copilot/nudges', () => {
       },
     ]);
 
-    const res = await app.request('/api/copilot/nudges');
+    const res = await app.request('/api/copilot/nudges', { headers: auth });
     expect(res.status).toBe(200);
     const nudges = await res.json();
 
@@ -427,7 +431,7 @@ describe('GET /api/copilot/nudges', () => {
   });
 
   it('works with AI disabled and returns [] for an empty workspace', async () => {
-    const res = await app.request('/api/copilot/nudges');
+    const res = await app.request('/api/copilot/nudges', { headers: auth });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual([]);
   });

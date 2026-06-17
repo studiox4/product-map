@@ -11,9 +11,18 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   projects: [
+    // Authenticate once after the DB seed; saves cookies to e2e/.auth/admin.json.
+    {
+      name: 'setup',
+      testMatch: /.*\.setup\.ts/,
+    },
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'e2e/.auth/admin.json',
+      },
+      dependencies: ['setup'],
     },
   ],
   webServer: [

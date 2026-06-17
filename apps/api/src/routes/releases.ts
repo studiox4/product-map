@@ -5,7 +5,7 @@ import { and, asc, count, eq, inArray, isNull, notInArray, sql } from 'drizzle-o
 import { releaseCreate, releaseUpdate, releaseFeaturesPut } from '@productmap/shared';
 import { releases, features, documents, templates } from '@productmap/db';
 import { db } from '../db';
-import { currentUser, type CurrentUserEnv } from '../middleware/current-user';
+import { type CurrentUserEnv } from '../middleware/current-user';
 import { recordActivity } from '../lib/activity';
 import { markdownToTiptap } from '../lib/markdown';
 
@@ -113,7 +113,6 @@ function firstParagraph(contentMd: string): string {
 }
 
 export const releasesRoutes = new Hono<CurrentUserEnv>()
-  .use('*', currentUser)
   .get('/', async (c) => {
     const rows = await db
       .select({

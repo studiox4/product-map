@@ -196,11 +196,6 @@ function ChangelogEntry({ release, features }: { release: Release; features: Fea
           ))}
         </ul>
       )}
-      {release.notesMd && (
-        <p className="mt-3 whitespace-pre-wrap text-sm text-muted-foreground">
-          {release.notesMd}
-        </p>
-      )}
     </article>
   );
 }

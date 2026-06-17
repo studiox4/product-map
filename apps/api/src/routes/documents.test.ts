@@ -1,6 +1,6 @@
 // Integration tests for documents routes + markdown export (Task 2B).
 // helpers must be imported before ../app so DATABASE_URL points at productmap_test.
-import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
+import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
 import { products, features, users, activity, featureCollaborators, templates, ideas, releases, documents } from '@productmap/db';
@@ -12,6 +12,7 @@ let productId: string;
 let featureId: string;
 let userId: string;
 let defaultTemplateId: string;
+let auth: Record<string, string> = {};
 
 beforeAll(async () => {
   await setupTestDb();
@@ -23,6 +24,10 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await truncateAll();
+  // Actor IS the Corban user — attribution checks compare against userId
+  const actor = await createTestUser({ role: 'admin', name: 'Corban', email: 'corban@test.co' });
+  userId = actor.id;
+  auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
   const [product] = await db
     .insert(products)
     .values({ name: 'ProductMap', vision: 'v', aboutMd: '' })
@@ -33,8 +38,6 @@ beforeEach(async () => {
     .values({ productId, title: 'Rich Markdown Editor', horizon: 'now' })
     .returning();
   featureId = feature.id;
-  const [u] = await db.insert(users).values({ name: 'Corban', color: '#2b557e' }).returning();
-  userId = u.id;
   // Default PRD template in the DB — doc creation resolves templates from here.
   const [tpl] = await db
     .insert(templates)
@@ -69,7 +72,7 @@ async function activityRows() {
 async function createDoc(overrides: Record<string, unknown> = {}) {
   const res = await app.request('/api/documents', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', ...auth },
     body: JSON.stringify({
       featureId,
       type: 'prd',
@@ -177,7 +180,7 @@ describe('POST /api/documents', () => {
   it('rejects invalid body with 400 validation', async () => {
     const res = await app.request('/api/documents', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ featureId, type: 'nope', title: '' }),
     });
     expect(res.status).toBe(400);
@@ -197,7 +200,7 @@ describe('GET /api/documents', () => {
   it('lists document metas filtered by featureId', async () => {
     await createDoc();
     await createDoc({ type: 'tech_spec', title: 'Editor tech spec' });
-    const res = await app.request(`/api/documents?featureId=${featureId}`);
+    const res = await app.request(`/api/documents?featureId=${featureId}`, { headers: auth });
     expect(res.status).toBe(200);
     const list = await res.json();
     expect(list).toHaveLength(2);
@@ -207,7 +210,7 @@ describe('GET /api/documents', () => {
 
   it('?all=true returns DocumentListItems with featureTitle, featureHorizon and wordCount', async () => {
     await createDoc(); // templated PRD → non-trivial word count
-    const res = await app.request('/api/documents?all=true');
+    const res = await app.request('/api/documents?all=true', { headers: auth });
     expect(res.status).toBe(200);
     const list = await res.json();
     expect(list).toHaveLength(1);
@@ -231,7 +234,7 @@ describe('GET /api/documents', () => {
         contentMd: 'one two three',
       })
       .returning();
-    const list = await (await app.request('/api/documents?all=true')).json();
+    const list = await (await app.request('/api/documents?all=true', { headers: auth })).json();
     const item = list.find((d: { id: string }) => d.id === doc.id);
     expect(item).toBeDefined();
     expect(item.ownerLabel).toEqual({ kind: 'idea', id: idea.id, title: 'SSO via OIDC' });
@@ -249,7 +252,7 @@ describe('GET /api/documents', () => {
       .insert(releases)
       .values({ name: 'v0.3', notesDocId: doc.id })
       .returning();
-    const list = await (await app.request('/api/documents?all=true')).json();
+    const list = await (await app.request('/api/documents?all=true', { headers: auth })).json();
     const item = list.find((d: { id: string }) => d.id === doc.id);
     expect(item).toBeDefined();
     expect(item.ownerLabel).toEqual({ kind: 'release', id: release.id, title: 'v0.3' });
@@ -269,7 +272,7 @@ describe('GET /api/documents', () => {
         contentMd: '',
       })
       .returning();
-    const list = await (await app.request('/api/documents?all=true')).json();
+    const list = await (await app.request('/api/documents?all=true', { headers: auth })).json();
     const item = list.find((d: { id: string }) => d.id === doc.id);
     expect(item.ownerLabel).toEqual({ kind: 'feature', id: featureId, title: 'Rich Markdown Editor' });
     expect(item.ideaId).toBe(idea.id);
@@ -277,9 +280,9 @@ describe('GET /api/documents', () => {
 
   it('?all=true wordCount counts whitespace-separated words of contentMd', async () => {
     const doc = await (await createDoc({ fromTemplate: false })).json();
-    const full = await (await app.request(`/api/documents/${doc.id}`)).json();
+    const full = await (await app.request(`/api/documents/${doc.id}`, { headers: auth })).json();
     expect(full.contentMd).toBe('');
-    const res = await app.request('/api/documents?all=true');
+    const res = await app.request('/api/documents?all=true', { headers: auth });
     const [item] = await res.json();
     expect(item.wordCount).toBe(0);
   });
@@ -299,11 +302,11 @@ describe('PATCH /api/documents/:id', () => {
     };
     const patch = await app.request(`/api/documents/${doc.id}`, {
       method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ contentJson: typed }),
     });
     expect(patch.status).toBe(200);
-    const get = await app.request(`/api/documents/${doc.id}`);
+    const get = await app.request(`/api/documents/${doc.id}`, { headers: auth });
     expect(get.status).toBe(200);
     const full = await get.json();
     expect(full.contentMd).toContain('hello typed text');
@@ -314,14 +317,14 @@ describe('PATCH /api/documents/:id', () => {
     expect(doc.status).toBe('draft');
     const r1 = await app.request(`/api/documents/${doc.id}`, {
       method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ status: 'in_review' }),
     });
     expect(r1.status).toBe(200);
     expect((await r1.json()).status).toBe('in_review');
     const r2 = await app.request(`/api/documents/${doc.id}`, {
       method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ status: 'final' }),
     });
     expect((await r2.json()).status).toBe('final');
@@ -332,18 +335,18 @@ describe('PATCH /api/documents/:id', () => {
     expect(doc.cover).toBeNull();
     const r1 = await app.request(`/api/documents/${doc.id}`, {
       method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ cover: 'dawn' }),
     });
     expect(r1.status).toBe(200);
     expect((await r1.json()).cover).toBe('dawn');
     // persists on follow-up GET
-    const get = await app.request(`/api/documents/${doc.id}`);
+    const get = await app.request(`/api/documents/${doc.id}`, { headers: auth });
     expect((await get.json()).cover).toBe('dawn');
     // null clears it
     const r2 = await app.request(`/api/documents/${doc.id}`, {
       method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ cover: null }),
     });
     expect((await r2.json()).cover).toBeNull();
@@ -353,7 +356,7 @@ describe('PATCH /api/documents/:id', () => {
     const doc = await (await createDoc()).json();
     await app.request(`/api/documents/${doc.id}`, {
       method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ status: 'in_review', title: 'Editor PRD v2' }),
     });
     const acts = await activityRows();
@@ -364,12 +367,14 @@ describe('PATCH /api/documents/:id', () => {
     expect(acts).toHaveLength(3);
   });
 
-  it('sets updatedBy from x-user-id and content-only saves record no activity', async () => {
+  it('sets updatedBy from auth cookie and content-only saves record no activity', async () => {
     const doc = await (await createDoc({ fromTemplate: false })).json();
-    const [other] = await db.insert(users).values({ name: 'Ada', color: '#3c6b46' }).returning();
+    const other = await createTestUser({ role: 'member', name: 'Ada', email: 'ada@test.co', color: '#3c6b46' });
+    const otherCookie = await authCookie(other);
+    const otherAuth = { cookie: otherCookie, origin: 'http://localhost', host: 'localhost' };
     const res = await app.request(`/api/documents/${doc.id}`, {
       method: 'PATCH',
-      headers: { 'content-type': 'application/json', 'x-user-id': other.id },
+      headers: { 'content-type': 'application/json', ...otherAuth },
       body: JSON.stringify({ contentJson: { type: 'doc', content: [] } }),
     });
     expect(res.status).toBe(200);
@@ -381,7 +386,7 @@ describe('PATCH /api/documents/:id', () => {
   it('404 for unknown id', async () => {
     const res = await app.request('/api/documents/00000000-0000-0000-0000-000000000000', {
       method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ title: 'x' }),
     });
     expect(res.status).toBe(404);
@@ -391,9 +396,9 @@ describe('PATCH /api/documents/:id', () => {
 describe('DELETE /api/documents/:id', () => {
   it('204 then GET 404', async () => {
     const doc = await (await createDoc()).json();
-    const del = await app.request(`/api/documents/${doc.id}`, { method: 'DELETE' });
+    const del = await app.request(`/api/documents/${doc.id}`, { method: 'DELETE', headers: auth });
     expect(del.status).toBe(204);
-    const get = await app.request(`/api/documents/${doc.id}`);
+    const get = await app.request(`/api/documents/${doc.id}`, { headers: auth });
     expect(get.status).toBe(404);
   });
 });
@@ -401,7 +406,7 @@ describe('DELETE /api/documents/:id', () => {
 describe('GET /api/documents/:id/export.md', () => {
   it('returns markdown attachment whose body equals contentMd', async () => {
     const doc = await (await createDoc()).json();
-    const res = await app.request(`/api/documents/${doc.id}/export.md`);
+    const res = await app.request(`/api/documents/${doc.id}/export.md`, { headers: auth });
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/markdown');
     expect(res.headers.get('content-disposition')).toContain('attachment');
@@ -413,7 +418,7 @@ describe('GET /api/documents/:id/export.md', () => {
 describe('GET /api/export.zip', () => {
   it('returns a zip with <feature-slug>/<doc-slug>.md entries', async () => {
     const doc = await (await createDoc()).json();
-    const res = await app.request('/api/export.zip');
+    const res = await app.request('/api/export.zip', { headers: auth });
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('zip');
     const buf = Buffer.from(await res.arrayBuffer());

@@ -1,10 +1,12 @@
 // Integration tests for POST /api/admin/reset-demo (truncate + reseed; dev only).
 // helpers must be imported before ../app so DATABASE_URL points at productmap_test.
-import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
+import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
 import { users, products, features, documents, templates, activity } from '@productmap/db';
 import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach } from 'vitest';
+
+let auth: Record<string, string> = {};
 
 beforeAll(async () => {
   await setupTestDb();
@@ -16,6 +18,8 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await truncateAll();
+  const actor = await createTestUser({ role: 'admin', email: 'admin@test.co' });
+  auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
 });
 
 afterEach(() => {
@@ -27,7 +31,7 @@ describe('POST /api/admin/reset-demo', () => {
     // Pre-existing junk that must be wiped.
     await db.insert(users).values({ name: 'Stale', color: '#9a5a3c' });
 
-    const res = await app.request('/api/admin/reset-demo', { method: 'POST' });
+    const res = await app.request('/api/admin/reset-demo', { method: 'POST', headers: auth });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
 
@@ -60,16 +64,48 @@ describe('POST /api/admin/reset-demo', () => {
   });
 
   it('is idempotent — running twice leaves a single seed', async () => {
-    await app.request('/api/admin/reset-demo', { method: 'POST' });
-    await app.request('/api/admin/reset-demo', { method: 'POST' });
+    // JWT auth is claims-only (no DB check), so cookie remains valid after truncate.
+    await app.request('/api/admin/reset-demo', { method: 'POST', headers: auth });
+    await app.request('/api/admin/reset-demo', { method: 'POST', headers: auth });
     expect(await db.select().from(users)).toHaveLength(4);
     expect(await db.select().from(templates)).toHaveLength(6);
   });
 
   it('403 when NODE_ENV is production', async () => {
     process.env.NODE_ENV = 'production';
-    const res = await app.request('/api/admin/reset-demo', { method: 'POST' });
+    const res = await app.request('/api/admin/reset-demo', { method: 'POST', headers: auth });
     expect(res.status).toBe(403);
     expect((await res.json()).error).toBe('forbidden');
+  });
+});
+
+describe('admin user management', () => {
+  it('admin can list, create, and deactivate users', async () => {
+    // Use the actor from beforeEach (already in auth)
+    const headers = { ...auth, 'content-type': 'application/json' };
+
+    const created = await app.request('/api/admin/users', {
+      method: 'POST', headers, body: JSON.stringify({ email: 'new@x.co', name: 'New', role: 'member' }),
+    });
+    expect(created.status).toBe(201);
+    const body = await created.json();
+    expect(body.tempPassword).toBeTruthy();
+    expect(body.user.email).toBe('new@x.co'); // admin view includes email
+    expect(body.user.isActive).toBe(true);
+
+    // actor + new user = 2
+    const list = await app.request('/api/admin/users', { headers: { cookie: auth.cookie } });
+    expect((await list.json()).length).toBe(2);
+
+    const patched = await app.request(`/api/admin/users/${body.user.id}`, {
+      method: 'PATCH', headers, body: JSON.stringify({ isActive: false }),
+    });
+    expect(patched.status).toBe(200);
+  });
+
+  it('non-admin is forbidden', async () => {
+    const member = await createTestUser({ role: 'member', email: 'm@x.co' });
+    const res = await app.request('/api/admin/users', { headers: { cookie: await authCookie(member) } });
+    expect(res.status).toBe(403);
   });
 });

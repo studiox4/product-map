@@ -1,6 +1,6 @@
 // Integration tests for GET /api/activity (workspace-wide feed for the Time Machine).
 // helpers must be imported before ../app so DATABASE_URL points at productmap_test.
-import { setupTestDb, truncateAll, closeTestDb } from '../test/helpers';
+import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
 import { products, features, users, activity } from '@productmap/db';
@@ -9,6 +9,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 let userId: string;
 let editorId: string;
 let ganttId: string;
+let auth: Record<string, string> = {};
 
 const daysAgo = (n: number) => new Date(Date.now() - n * 24 * 60 * 60 * 1000);
 
@@ -22,6 +23,8 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await truncateAll();
+  const actor = await createTestUser({ role: 'admin' });
+  auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
   const [product] = await db
     .insert(products)
     .values({ name: 'ProductMap', vision: 'v', aboutMd: '' })
@@ -74,7 +77,7 @@ async function seedHistory() {
 describe('GET /api/activity', () => {
   it('returns workspace-wide activity ascending with joined actor and feature title', async () => {
     await seedHistory();
-    const res = await app.request('/api/activity');
+    const res = await app.request('/api/activity', { headers: auth });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toHaveLength(3);
@@ -109,13 +112,13 @@ describe('GET /api/activity', () => {
 
   it('filters with ?since= (inclusive lower bound)', async () => {
     await seedHistory();
-    const res = await app.request(`/api/activity?since=${daysAgo(21).toISOString()}`);
+    const res = await app.request(`/api/activity?since=${daysAgo(21).toISOString()}`, { headers: auth });
     const body = await res.json();
     expect(body.map((a: { kind: string }) => a.kind)).toEqual(['horizon_changed', 'dates_changed']);
   });
 
   it('400 on a malformed since', async () => {
-    const res = await app.request('/api/activity?since=not-a-date');
+    const res = await app.request('/api/activity?since=not-a-date', { headers: auth });
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe('validation');
   });
@@ -129,7 +132,7 @@ describe('GET /api/activity', () => {
       createdAt: new Date(Date.now() - (1010 - i) * 60_000),
     }));
     await db.insert(activity).values(rows);
-    const res = await app.request('/api/activity');
+    const res = await app.request('/api/activity', { headers: auth });
     const body = await res.json();
     expect(body).toHaveLength(1000);
   });

@@ -1,4 +1,4 @@
-import { test, expect, type APIRequestContext } from '@playwright/test';
+import { test, expect, request as playwrightRequest } from '@playwright/test';
 
 // Comments & voting addendum — comments ACs:
 // AC1 — comment on a doc from the editor sheet and on a feature from its page;
@@ -8,7 +8,7 @@ import { test, expect, type APIRequestContext } from '@playwright/test';
 // AC3 — attention panel shows "N open comments" per feature (doc + feature
 //       combined); resolves drop the count; zero unresolved → item gone.
 // AC6 — author shows name + avatar color; only authors see edit/delete on
-//       their own comments (different localStorage user hides them).
+//       their own comments; the API enforces the same gate (401 without auth).
 
 test.describe.configure({ mode: 'serial' });
 
@@ -16,11 +16,6 @@ const FEATURE_TITLE = 'Comments Verification Feature';
 let featureId = '';
 let docId = '';
 
-async function createUser(request: APIRequestContext, name: string) {
-  const res = await request.post('/api/users', { data: { name } });
-  expect(res.status()).toBe(201);
-  return (await res.json()) as { id: string; name: string; color: string };
-}
 
 test.beforeAll(async ({ request }) => {
   const featureRes = await request.post('/api/features', {
@@ -183,52 +178,44 @@ test('AC6: author identity renders and edit/delete is gated to own comments', as
   page,
   request,
 }) => {
-  const author = await createUser(request, 'Avery Author');
-  const viewer = await createUser(request, 'Vic Viewer');
-
-  // Comment as Avery (x-user-id header mirrors the web client).
-  const created = await request.post('/api/comments', {
-    data: { featureId, body: 'Gated actions thread' },
-    headers: { 'x-user-id': author.id },
-  });
-  expect(created.status()).toBe(201);
-
-  // Viewing as Avery: name, avatar color and the ⋯ actions menu are present.
-  // Let the app's silent identity adoption settle first, or it can overwrite
-  // the id we set (it only writes when localStorage.pmUserId is empty).
+  // The logged-in user (admin "Corban") posts a comment via the UI.
   await page.goto(`/features/${featureId}`);
-  await expect
-    .poll(() => page.evaluate(() => localStorage.getItem('pmUserId')))
-    .not.toBeNull();
-  await page.evaluate((id) => localStorage.setItem('pmUserId', id), author.id);
-  await page.reload();
-  const thread = page.getByRole('article', { name: 'Thread by Avery Author' });
-  await expect(thread.getByText('Avery Author')).toBeVisible();
-  const avatar = thread.locator('span[aria-label="Avery Author"]').first();
+  const comments = page.locator('section[aria-label="Comments"]');
+  await comments.getByLabel('Add a comment…').fill('Gated actions thread');
+  await comments.getByRole('button', { name: 'Comment', exact: true }).click();
+
+  const thread = comments.getByRole('article', { name: 'Thread by Corban' });
+  await expect(thread).toBeVisible();
+
+  // Author name and colored avatar dot render.
+  await expect(thread.getByText('Corban')).toBeVisible();
+  const avatar = thread.locator('span[aria-label="Corban"]').first();
   await expect(avatar).toBeVisible();
-  await expect(avatar).toHaveCSS('background-color', /^rgb\(/); // colored avatar dot
+  await expect(avatar).toHaveCSS('background-color', /^rgb\(/);
+
+  // The logged-in author sees the ⋯ actions menu.
   await expect(thread.getByRole('button', { name: 'Comment actions' })).toBeVisible();
 
-  // Edit own comment through the menu.
+  // Author can edit their own comment through the menu.
   await thread.getByRole('button', { name: 'Comment actions' }).click();
   await page.getByRole('menuitem', { name: 'Edit' }).click();
   await thread.getByLabel('Edit comment…').fill('Gated actions thread (edited)');
   await thread.getByRole('button', { name: 'Save' }).click();
   await expect(thread.getByText('Gated actions thread (edited)')).toBeVisible();
 
-  // Switching localStorage.pmUserId to a different user hides edit/delete.
-  await page.evaluate((id) => localStorage.setItem('pmUserId', id), viewer.id);
-  await page.reload();
-  const threadAsViewer = page.getByRole('article', { name: 'Thread by Avery Author' });
-  await expect(threadAsViewer.getByText('Gated actions thread (edited)')).toBeVisible();
-  await expect(threadAsViewer.getByRole('button', { name: 'Comment actions' })).toBeHidden();
-  // The API enforces it too.
+  // API enforces the gate: an unauthenticated DELETE returns 401.
   const listRes = await request.get(`/api/comments?featureId=${featureId}`);
-  const threads = (await listRes.json()) as { id: string; body: string }[];
-  const target = threads.find((t) => t.body.includes('Gated actions'));
+  const allThreads = (await listRes.json()) as { id: string; body: string }[];
+  const target = allThreads.find((t) => t.body.includes('Gated actions'));
   expect(target).toBeTruthy();
-  const forbidden = await request.delete(`/api/comments/${target!.id}`, {
-    headers: { 'x-user-id': viewer.id },
+
+  // A request context without the auth cookie is rejected.
+  const anonCtx = await playwrightRequest.newContext({
+    baseURL: 'http://localhost:5173',
+    // Explicitly empty storage state — no auth cookies.
+    storageState: { cookies: [], origins: [] },
   });
-  expect(forbidden.status()).toBe(403);
+  const unauthenticated = await anonCtx.delete(`/api/comments/${target!.id}`);
+  expect(unauthenticated.status()).toBe(401);
+  await anonCtx.dispose();
 });
