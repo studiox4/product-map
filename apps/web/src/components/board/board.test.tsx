@@ -165,10 +165,10 @@ function renderBoard(opts: { entries?: string[]; withMover?: string } = {}) {
   return render(
     <QueryClientProvider client={qc}>
       <ProjectProvider>
-        <MemoryRouter initialEntries={opts.entries ?? ['/board']}>
+        <MemoryRouter initialEntries={opts.entries ?? ['/app/board']}>
           <Routes>
             <Route
-              path="/board"
+              path="/app/board"
               element={
                 <>
                   <Board />
@@ -176,7 +176,7 @@ function renderBoard(opts: { entries?: string[]; withMover?: string } = {}) {
                 </>
               }
             />
-            <Route path="/docs/:id" element={<div>doc page</div>} />
+            <Route path="/app/docs/:id" element={<div>doc page</div>} />
           </Routes>
         </MemoryRouter>
       </ProjectProvider>
@@ -236,14 +236,14 @@ describe('Board', () => {
   });
 
   it('?feature= deep link opens the detail panel', async () => {
-    renderBoard({ entries: ['/board?feature=f1'] });
+    renderBoard({ entries: ['/app/board?feature=f1'] });
     expect(await screen.findByDisplayValue('Rich markdown editor')).toBeTruthy();
     // docs listed in panel
     expect(await screen.findByText('Editor PRD')).toBeTruthy();
   });
 
   it('new-doc dialog: opens, Esc closes, focus returns to trigger', async () => {
-    renderBoard({ entries: ['/board?feature=f1'] });
+    renderBoard({ entries: ['/app/board?feature=f1'] });
     await screen.findByDisplayValue('Rich markdown editor');
     const trigger = screen.getByRole('button', { name: /new doc/i });
     await user().click(trigger);
@@ -258,7 +258,7 @@ describe('Board', () => {
   });
 
   it('creating a doc navigates to the editor route', async () => {
-    renderBoard({ entries: ['/board?feature=f1'] });
+    renderBoard({ entries: ['/app/board?feature=f1'] });
     await screen.findByDisplayValue('Rich markdown editor');
     await user().click(screen.getByRole('button', { name: /new doc/i }));
     await screen.findByRole('dialog', { name: /new doc/i });
@@ -267,7 +267,7 @@ describe('Board', () => {
   });
 
   it('inverted dates show an inline validation error', async () => {
-    renderBoard({ entries: ['/board?feature=f1'] });
+    renderBoard({ entries: ['/app/board?feature=f1'] });
     await screen.findByDisplayValue('Rich markdown editor');
     const start = screen.getByLabelText(/start date/i) as HTMLInputElement;
     const end = screen.getByLabelText(/end date/i) as HTMLInputElement;

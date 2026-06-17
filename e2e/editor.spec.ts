@@ -16,7 +16,7 @@ test('AC7: uploaded image renders inline and persists across reload', async ({
     fromTemplate: false,
   });
 
-  await page.goto(`/docs/${doc.id}`);
+  await page.goto(`/app/docs/${doc.id}`);
   const body = page.locator('[aria-label="Document body"]');
   await expect(body).toBeVisible();
   await body.click();

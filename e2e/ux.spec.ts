@@ -18,9 +18,9 @@ async function throttleApi(page: Page, ms = 700) {
 test('AC-UX1: landing, board and roadmap show skeletons while loading', async ({ page }) => {
   await throttleApi(page);
   for (const [path, testId] of [
-    ['/', 'landing-skeleton'],
-    ['/board', 'board-skeleton'],
-    ['/roadmap', 'roadmap-skeleton'],
+    ['/app', 'landing-skeleton'],
+    ['/app/board', 'board-skeleton'],
+    ['/app/roadmap', 'roadmap-skeleton'],
   ] as const) {
     await page.goto(path, { waitUntil: 'commit' });
     await expect(page.getByTestId(testId)).toBeVisible();
@@ -34,7 +34,7 @@ test('AC-UX1: doc editor shows a skeleton while loading', async ({ page, request
   expect(docId).toBeTruthy();
 
   await throttleApi(page);
-  await page.goto(`/docs/${docId}`, { waitUntil: 'commit' });
+  await page.goto(`/app/docs/${docId}`, { waitUntil: 'commit' });
   await expect(page.locator('.shimmer').first()).toBeVisible();
   await expect(page.locator('[aria-label="Document body"]')).toBeVisible({ timeout: 15_000 });
 });
@@ -42,7 +42,7 @@ test('AC-UX1: doc editor shows a skeleton while loading', async ({ page, request
 test('AC-UX2: drag shows grab cursor, drop highlight, and moves optimistically', async ({
   page,
 }) => {
-  await page.goto('/board');
+  await page.goto('/app/board');
   const card = page.getByRole('button', { name: 'Now-next-later board', exact: true });
   await expect(card).toBeVisible();
 
@@ -89,7 +89,7 @@ test('AC-UX3: an empty column shows an empty state with an Add feature action', 
     expect(res.status()).toBe(204);
   }
 
-  await page.goto('/board');
+  await page.goto('/app/board');
   const nowColumn = page.getByTestId('column-now');
   await expect(nowColumn.getByText('Nothing here yet')).toBeVisible();
   await expect(nowColumn.getByRole('button', { name: 'Add feature' })).toBeVisible();
@@ -97,7 +97,7 @@ test('AC-UX3: an empty column shows an empty state with an Add feature action', 
 
 test('AC-UX6: Esc closes the new-doc dialog and returns focus', async ({ page, request }) => {
   const feature = await getFeatureByTitle(request, 'ECS deployment');
-  await page.goto(`/board?feature=${feature.id}`);
+  await page.goto(`/app/board?feature=${feature.id}`);
 
   const newDocButton = page.getByRole('button', { name: 'New doc' });
   await newDocButton.click();
@@ -121,7 +121,7 @@ test('AC-UX6: slash menu filters and is navigable with arrows + Enter, Esc close
     fromTemplate: false,
   });
 
-  await page.goto(`/docs/${doc.id}`);
+  await page.goto(`/app/docs/${doc.id}`);
   const body = page.locator('[aria-label="Document body"]');
   await body.click();
 

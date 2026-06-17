@@ -22,7 +22,7 @@ test('AC2: card click opens the peek fast; Open feature lands on the full page',
   expect(res.status()).toBe(201);
   featureId = ((await res.json()) as { id: string }).id;
 
-  await page.goto('/board');
+  await page.goto('/app/board');
   const card = page.getByRole('button', { name: FEATURE_TITLE, exact: true });
   await expect(card).toBeVisible();
 
@@ -35,7 +35,7 @@ test('AC2: card click opens the peek fast; Open feature lands on the full page',
   expect(Date.now() - t0).toBeLessThan(3000);
 
   await page.getByRole('button', { name: /Open feature/ }).click();
-  await expect(page).toHaveURL(new RegExp(`/features/${featureId}$`));
+  await expect(page).toHaveURL(new RegExp(`/app/features/${featureId}$`));
 
   // Full page anatomy: title, description, docs grid, activity, people, dates, horizon.
   await expect(page.getByLabel('Feature title')).toHaveValue(FEATURE_TITLE);
@@ -53,7 +53,7 @@ test('AC2: card click opens the peek fast; Open feature lands on the full page',
 });
 
 test('AC3: editing the description renders markdown and records activity', async ({ page }) => {
-  await page.goto(`/features/${featureId}`);
+  await page.goto(`/app/features/${featureId}`);
 
   await page.getByRole('button', { name: 'Add a description…' }).click();
   const textarea = page.getByLabel('Feature description');
@@ -71,7 +71,7 @@ test('AC3: editing the description renders markdown and records activity', async
 });
 
 test('AC3: status, horizon and date edits each write an activity entry', async ({ page }) => {
-  await page.goto(`/features/${featureId}`);
+  await page.goto(`/app/features/${featureId}`);
   const activity = page.locator('section[aria-label="Activity"]');
 
   // Status via the header pill select.
@@ -100,7 +100,7 @@ test('AC2: people rail lists the creator and supports add/remove collaborator', 
   });
   expect(res.status()).toBe(201);
 
-  await page.goto(`/features/${featureId}`);
+  await page.goto(`/app/features/${featureId}`);
   const people = page.locator('section[aria-label="People"]');
   await expect(people.getByText('Creator')).toBeVisible();
 
@@ -115,13 +115,13 @@ test('AC2: people rail lists the creator and supports add/remove collaborator', 
 test('delete lives on the full page: confirm dialog → back to board, card gone', async ({
   page,
 }) => {
-  await page.goto(`/features/${featureId}`);
+  await page.goto(`/app/features/${featureId}`);
   await page.getByRole('button', { name: 'Delete feature' }).click();
 
   const dialog = page.getByRole('dialog', { name: 'Delete feature?' });
   await expect(dialog).toBeVisible();
   await dialog.getByRole('button', { name: 'Delete', exact: true }).click();
 
-  await expect(page).toHaveURL(/\/board$/);
+  await expect(page).toHaveURL(/\/app\/board$/);
   await expect(page.getByRole('button', { name: FEATURE_TITLE, exact: true })).toBeHidden();
 });

@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { ArrowLeft, Info, Loader2, Check, AlertCircle } from 'lucide-react';
 import type { Template } from '@productmap/shared';
 import { useTemplates, useUpdateTemplate, apiErrorMessage } from '@/lib/api';
+import { appRoutes } from '@/lib/routes';
 import { DocTypeChip } from '@/components/DocTypeChip';
 import { Editor } from '@/components/editor/Editor';
 import { useAutosave, type AutosaveState } from '@/components/editor/useAutosave';
@@ -91,7 +92,7 @@ function TemplateChrome({ template }: { template: Template }) {
     <div className="mx-auto w-full max-w-[860px] px-4 pb-16 pt-6 sm:px-6">
       <div className="flex items-center gap-3 rounded-full bg-surface px-5 py-3 shadow-card">
         <Button asChild variant="ghost" size="sm" className="shrink-0 text-muted-ink">
-          <Link to="/settings">
+          <Link to={appRoutes.settings}>
             <ArrowLeft className="mr-1 h-4 w-4" aria-hidden="true" />
             Settings
           </Link>
@@ -189,7 +190,7 @@ export default function TemplateEditorPage() {
         <div className="rounded-2xl border border-transparent bg-surface p-6 shadow-card">
           <p className="text-sm text-body-ink">Couldn't load this template.</p>
           <Button asChild className="mt-4" variant="outline">
-            <Link to="/settings">Back to settings</Link>
+            <Link to={appRoutes.settings}>Back to settings</Link>
           </Button>
         </div>
       </div>

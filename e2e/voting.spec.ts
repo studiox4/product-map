@@ -27,7 +27,7 @@ test.beforeAll(async ({ request }) => {
 test('AC4: boost, un-vote and flip from the feature page; state survives reload', async ({
   page,
 }) => {
-  await page.goto(`/features/${ids['Vote Target Alpha']}`);
+  await page.goto(`/app/features/${ids['Vote Target Alpha']}`);
 
   const votes = page.getByRole('group', { name: 'Votes' });
   const boost = votes.getByRole('button', { name: 'Boost' });
@@ -92,7 +92,7 @@ test('AC4: my-vote tint on the board card reflects the current vote', async ({
   page,
 }) => {
   // Alpha was left at +1 (boost) from the previous test (one-vote PUT leaves it boosted).
-  await page.goto('/board');
+  await page.goto('/app/board');
   const card = page.getByRole('button', { name: 'Vote Target Alpha', exact: true });
   const votes = card.getByRole('group', { name: 'Votes' });
   await expect(votes.getByTestId('vote-score')).toHaveText('+1');
@@ -127,7 +127,7 @@ test('AC5: score sort reorders the column, survives reload, and toggles back to 
       .locator('[role="button"][aria-label^="Vote Target"] > p')
       .allTextContents();
 
-  await page.goto('/board');
+  await page.goto('/app/board');
   const order = page.getByRole('group', { name: 'Board order' });
   await expect(order.getByRole('button', { name: 'manual' })).toHaveAttribute(
     'aria-pressed',

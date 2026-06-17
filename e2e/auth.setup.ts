@@ -19,7 +19,7 @@ setup('authenticate as admin', async ({ page }) => {
   await page.getByRole('button', { name: 'Sign in' }).click();
 
   // Successful login redirects to the landing page.
-  await expect(page).toHaveURL('/', { timeout: 10_000 });
+  await expect(page).toHaveURL('/app', { timeout: 10_000 });
   await expect(page.getByRole('heading', { level: 1, name: 'ProductMap' })).toBeVisible();
 
   // Persist the httpOnly auth cookies so all subsequent specs start authenticated.

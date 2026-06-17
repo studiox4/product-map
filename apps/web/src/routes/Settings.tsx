@@ -4,16 +4,17 @@ import { FolderKanban, LayoutTemplate, Settings as SettingsIcon, UserRound, User
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
+import { appRoutes } from '@/lib/routes';
 
 const BASE_TABS = [
-  { to: '/settings/templates', label: 'Templates', icon: LayoutTemplate },
-  { to: '/settings/workspace', label: 'Workspace', icon: Wrench },
-  { to: '/settings/project', label: 'Project', icon: FolderKanban },
-  { to: '/settings/profile', label: 'Profile', icon: UserRound },
+  { to: appRoutes.settingsTab('templates'), label: 'Templates', icon: LayoutTemplate },
+  { to: appRoutes.settingsTab('workspace'), label: 'Workspace', icon: Wrench },
+  { to: appRoutes.settingsTab('project'), label: 'Project', icon: FolderKanban },
+  { to: appRoutes.settingsTab('profile'), label: 'Profile', icon: UserRound },
 ];
 
 const ADMIN_TABS = [
-  { to: '/settings/users', label: 'Users', icon: Users },
+  { to: appRoutes.settingsTab('users'), label: 'Users', icon: Users },
 ];
 
 /**

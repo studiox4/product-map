@@ -17,12 +17,12 @@ async function main() {
   const docId = editorFeature.documents[0].id;
 
   const targets: [string, string][] = [
-    ['landing', '/'],
-    ['board', '/board'],
-    ['roadmap', '/roadmap'],
-    ['docs', '/docs'],
-    ['editor', `/docs/${docId}`],
-    ['feature', `/features/${editorFeature.id}`],
+    ['landing', '/app'],
+    ['board', '/app/board'],
+    ['roadmap', '/app/roadmap'],
+    ['docs', '/app/docs'],
+    ['editor', `/app/docs/${docId}`],
+    ['feature', `/app/features/${editorFeature.id}`],
   ];
 
   for (const theme of ['light', 'dark'] as const) {

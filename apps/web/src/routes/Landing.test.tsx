@@ -146,9 +146,9 @@ function renderLanding() {
         <MemoryRouter initialEntries={['/']}>
           <Routes>
             <Route path="/" element={<Landing />} />
-            <Route path="/board" element={<div>board page</div>} />
-            <Route path="/roadmap" element={<div>roadmap page</div>} />
-            <Route path="/docs/:id" element={<div>doc page</div>} />
+            <Route path="/app/board" element={<div>board page</div>} />
+            <Route path="/app/roadmap" element={<div>roadmap page</div>} />
+            <Route path="/app/docs/:id" element={<div>doc page</div>} />
           </Routes>
           <LocationProbe />
         </MemoryRouter>
@@ -189,21 +189,21 @@ describe('Landing', () => {
     renderLanding();
     await screen.findByRole('heading', { name: 'Needs attention' });
     await userEvent.click(screen.getByRole('button', { name: /Rich markdown editor — PRD/ }));
-    expect(screen.getByTestId('location').textContent).toBe('/docs/d1');
+    expect(screen.getByTestId('location').textContent).toBe('/app/docs/d1');
   });
 
   it('attention feature item navigates to board with feature param', async () => {
     renderLanding();
     await screen.findByRole('heading', { name: 'Needs attention' });
     await userEvent.click(screen.getByRole('button', { name: /ECS deployment/ }));
-    expect(screen.getByTestId('location').textContent).toBe('/board?feature=f8');
+    expect(screen.getByTestId('location').textContent).toBe('/app/board?feature=f8');
   });
 
   it('horizon panel feature click deep-links to board detail', async () => {
     renderLanding();
     const now = (await screen.findByRole('heading', { name: 'Now' })).closest('section')!;
     await userEvent.click(within(now).getByRole('button', { name: /Rich markdown editor/ }));
-    expect(screen.getByTestId('location').textContent).toBe('/board?feature=f1');
+    expect(screen.getByTestId('location').textContent).toBe('/app/board?feature=f1');
   });
 
   it('shows an error card with retry when overview fails', async () => {

@@ -109,11 +109,11 @@ function renderDocs() {
   return render(
     <QueryClientProvider client={qc}>
       <ProjectProvider>
-        <MemoryRouter initialEntries={['/docs']}>
+        <MemoryRouter initialEntries={['/app/docs']}>
           <Routes>
-            <Route path="/docs" element={<DocsPage />} />
-            <Route path="/docs/:id" element={<div>editor route</div>} />
-            <Route path="/features/:id" element={<div>feature route</div>} />
+            <Route path="/app/docs" element={<DocsPage />} />
+            <Route path="/app/docs/:id" element={<div>editor route</div>} />
+            <Route path="/app/features/:id" element={<div>feature route</div>} />
           </Routes>
         </MemoryRouter>
       </ProjectProvider>
@@ -134,7 +134,7 @@ describe('DocsPage', () => {
     expect(rowTitles()).toEqual(['Editor tech spec', 'Editor PRD', 'Gantt PRD']);
     expect(screen.getByRole('link', { name: 'Gantt roadmap' })).toHaveProperty(
       'pathname',
-      '/features/f2',
+      '/app/features/f2',
     );
   });
 
@@ -195,7 +195,7 @@ describe('DocsPage', () => {
     // open in editor link
     expect(within(sheet).getByRole('link', { name: /open in editor/i })).toHaveProperty(
       'pathname',
-      '/docs/d1',
+      '/app/docs/d1',
     );
   });
 
@@ -269,14 +269,14 @@ describe('DocsPage', () => {
 
     expect(screen.getByRole('link', { name: 'Bulk export to CSV' })).toHaveProperty(
       'pathname',
-      '/inbox',
+      '/app/inbox',
     );
     expect(
       (screen.getByRole('link', { name: 'Bulk export to CSV' }) as HTMLAnchorElement).search,
     ).toBe('?idea=i1');
     expect(screen.getByRole('link', { name: 'June release' })).toHaveProperty(
       'pathname',
-      '/releases/r1',
+      '/app/releases/r1',
     );
     const orphanRow = screen.getByText('Orphaned notes').closest('tr')!;
     expect(within(orphanRow).getByText('—')).toBeTruthy();

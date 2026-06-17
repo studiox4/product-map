@@ -137,11 +137,11 @@ function renderPage() {
   return render(
     <QueryClientProvider client={qc}>
       <ProjectProvider>
-        <MemoryRouter initialEntries={['/features/f1']}>
+        <MemoryRouter initialEntries={['/app/features/f1']}>
           <Routes>
-            <Route path="/features/:id" element={<FeaturePage />} />
-            <Route path="/board" element={<div>board page</div>} />
-            <Route path="/docs/:id" element={<div>doc page</div>} />
+            <Route path="/app/features/:id" element={<FeaturePage />} />
+            <Route path="/app/board" element={<div>board page</div>} />
+            <Route path="/app/docs/:id" element={<div>doc page</div>} />
           </Routes>
         </MemoryRouter>
       </ProjectProvider>

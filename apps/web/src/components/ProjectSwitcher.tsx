@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useActiveProject } from '@/lib/project';
 import { cn } from '@/lib/utils';
+import { appRoutes } from '@/lib/routes';
 
 /**
  * Nav project switcher. Trigger shows the active project's name; the menu lists
@@ -48,7 +49,7 @@ export function ProjectSwitcher() {
         ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild className="cursor-pointer">
-          <Link to="/?new=1">
+          <Link to={`${appRoutes.dashboard}?new=1`}>
             <Plus className="h-3.5 w-3.5" aria-hidden />
             New project…
           </Link>

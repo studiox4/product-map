@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { hashKey } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/api';
 import { useProjectId } from '@/lib/project';
+import { appPatterns } from '@/lib/routes';
 
 export type RecentKind = 'feature' | 'doc';
 
@@ -62,8 +63,8 @@ export function useTrackRecents(): void {
   const qc = useQueryClient();
 
   useEffect(() => {
-    const featureMatch = matchPath('/features/:id', location.pathname);
-    const docMatch = matchPath('/docs/:id', location.pathname);
+    const featureMatch = matchPath(appPatterns.feature, location.pathname);
+    const docMatch = matchPath(appPatterns.doc, location.pathname);
     const target = featureMatch?.params.id
       ? { kind: 'feature' as const, id: featureMatch.params.id, key: queryKeys.feature(pid, featureMatch.params.id) }
       : docMatch?.params.id

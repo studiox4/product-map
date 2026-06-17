@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useCreateProject, apiErrorMessage } from '@/lib/api';
 import { useActiveProject } from '@/lib/project';
+import { appRoutes } from '@/lib/routes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -52,7 +53,7 @@ export function NewProjectDialog() {
         onSuccess: (project) => {
           setProjectId(project.id);
           setName('');
-          navigate('/', { replace: true });
+          navigate(appRoutes.dashboard, { replace: true });
         },
         onError: (err) => toast.error(apiErrorMessage(err, 'Could not create project.')),
       },

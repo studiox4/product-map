@@ -38,7 +38,7 @@ test('AC1: comment + one-level reply on the feature page; reply-to-reply is API-
   page,
   request,
 }) => {
-  await page.goto(`/features/${featureId}`);
+  await page.goto(`/app/features/${featureId}`);
 
   const comments = page.locator('section[aria-label="Comments"]');
   await expect(comments.getByText('No comments yet — start the discussion.')).toBeVisible();
@@ -77,7 +77,7 @@ test('AC1: comment + one-level reply on the feature page; reply-to-reply is API-
 test('AC1: comment on a doc from the editor sheet; toolbar badge counts unresolved', async ({
   page,
 }) => {
-  await page.goto(`/docs/${docId}`);
+  await page.goto(`/app/docs/${docId}`);
 
   // Comment pill with no badge yet → opens the non-modal sheet.
   // (Anchored regex: the ToC rail also renders heading buttons starting "Comments…".)
@@ -103,7 +103,7 @@ test('AC1: comment on a doc from the editor sheet; toolbar badge counts unresolv
 test('AC2: resolve collapses into the resolved group, reopen restores, both hit the feed', async ({
   page,
 }) => {
-  await page.goto(`/features/${featureId}`);
+  await page.goto(`/app/features/${featureId}`);
   const comments = page.locator('section[aria-label="Comments"]');
   const thread = comments.getByRole('article', { name: /^Thread by / });
   await expect(thread).toBeVisible();
@@ -137,7 +137,7 @@ test('AC3: attention panel counts unresolved threads (feature + doc) and clears 
   page,
 }) => {
   // One unresolved feature thread + one unresolved doc thread → 2 open comments.
-  await page.goto('/');
+  await page.goto('/app');
   const attention = page.locator('section', {
     has: page.getByRole('heading', { name: 'Needs attention' }),
   });
@@ -146,7 +146,7 @@ test('AC3: attention panel counts unresolved threads (feature + doc) and clears 
 
   // Click-through lands on the feature page comments section.
   await item.click();
-  await expect(page).toHaveURL(new RegExp(`/features/${featureId}#comments`));
+  await expect(page).toHaveURL(new RegExp(`/app/features/${featureId}#comments`));
 
   // Resolve the feature thread → count drops to 1.
   const comments = page.locator('section[aria-label="Comments"]');
@@ -156,13 +156,13 @@ test('AC3: attention panel counts unresolved threads (feature + doc) and clears 
     .click();
   await expect(comments.getByRole('button', { name: /1 resolved/ })).toBeVisible();
 
-  await page.goto('/');
+  await page.goto('/app');
   await expect(
     attention.getByRole('button', { name: `${FEATURE_TITLE} 1 open comment` }),
   ).toBeVisible();
 
   // Resolve the doc thread too → zero unresolved → item gone.
-  await page.goto(`/docs/${docId}`);
+  await page.goto(`/app/docs/${docId}`);
   await page.getByRole('button', { name: 'Comments (1 unresolved)' }).click();
   const sheet = page.getByRole('dialog', { name: 'Comments' });
   await sheet
@@ -171,7 +171,7 @@ test('AC3: attention panel counts unresolved threads (feature + doc) and clears 
     .click();
   await expect(sheet.getByRole('button', { name: /1 resolved/ })).toBeVisible();
 
-  await page.goto('/');
+  await page.goto('/app');
   await expect(page.getByRole('heading', { name: 'Needs attention' })).toBeVisible();
   await expect(
     attention.getByRole('button', { name: new RegExp(`${FEATURE_TITLE} \\d+ open comment`) }),
@@ -183,7 +183,7 @@ test('AC6: author identity renders and edit/delete is gated to own comments', as
   request,
 }) => {
   // The logged-in user (admin "Corban") posts a comment via the UI.
-  await page.goto(`/features/${featureId}`);
+  await page.goto(`/app/features/${featureId}`);
   const comments = page.locator('section[aria-label="Comments"]');
   await comments.getByLabel('Add a comment…').fill('Gated actions thread');
   await comments.getByRole('button', { name: 'Comment', exact: true }).click();

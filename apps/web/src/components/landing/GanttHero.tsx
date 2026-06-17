@@ -8,6 +8,7 @@ import {
   startOfDay,
 } from 'date-fns';
 import { HORIZON_COLORS, type FeatureWithDocs } from '@productmap/shared';
+import { appRoutes } from '@/lib/routes';
 
 const WIDTH = 1000;
 const GUTTER = 220;
@@ -103,7 +104,7 @@ export function GanttHero({ features }: { features: FeatureWithDocs[] }) {
                 fill={HORIZON_COLORS[f.horizon].bar}
                 style={{ filter: 'drop-shadow(0 2px 3px var(--pm-bar-shadow))' }}
                 className="cursor-pointer transition-opacity duration-150 ease-out hover:opacity-80"
-                onClick={() => navigate(`/roadmap?feature=${f.id}`)}
+                onClick={() => navigate(`${appRoutes.roadmap}?feature=${f.id}`)}
               >
                 <title>{`${f.title} (${f.startDate} → ${f.endDate})`}</title>
               </rect>

@@ -22,7 +22,7 @@ async function dragTo(page: Page, sourceSel: string, targetSel: string) {
 }
 
 test('AC3: create feature in Later — card appears without reload', async ({ page }) => {
-  await page.goto('/board');
+  await page.goto('/app/board');
   const later = page.getByTestId('column-later');
   await expect(later).toBeVisible();
 
@@ -36,7 +36,7 @@ test('AC3: create feature in Later — card appears without reload', async ({ pa
 test('AC3: PRD from template, slash-menu table + task list, saved + persists', async ({
   page,
 }) => {
-  await page.goto('/board');
+  await page.goto('/app/board');
   await page.getByRole('button', { name: FEATURE_TITLE }).click();
 
   // Detail sheet → new doc dialog, PRD preselected with prefilled title.
@@ -46,7 +46,7 @@ test('AC3: PRD from template, slash-menu table + task list, saved + persists', a
   await expect(dialog.getByLabel('Title')).toHaveValue(`${FEATURE_TITLE} — PRD`);
   await dialog.getByRole('button', { name: 'Create' }).click();
 
-  await page.waitForURL(/\/docs\//);
+  await page.waitForURL(/\/app\/docs\//);
   const body = page.locator('[aria-label="Document body"]');
   await expect(body).toBeVisible();
 
@@ -107,7 +107,7 @@ test('AC4: drag Later→Now lands in Now and syncs the landing panel', async ({
   page,
   request,
 }) => {
-  await page.goto('/board');
+  await page.goto('/app/board');
   await expect(page.getByTestId('column-later').getByText(FEATURE_TITLE)).toBeVisible();
 
   await dragTo(page, `[aria-label="${FEATURE_TITLE}"]`, '[data-testid="column-now"]');
@@ -118,7 +118,7 @@ test('AC4: drag Later→Now lands in Now and syncs the landing panel', async ({
     .toBe('now');
 
   // Landing Now panel includes it.
-  await page.goto('/');
+  await page.goto('/app');
   const nowPanel = page
     .locator('section')
     .filter({ has: page.getByRole('heading', { name: 'Now', exact: true }) });
@@ -133,7 +133,7 @@ test('AC4: after scheduling, the roadmap bar is green (now horizon)', async ({
   const end = addDaysIso(start, 14);
 
   await page.goto(
-    `/board?feature=${(await getFeatureByTitle(request, FEATURE_TITLE)).id}`,
+    `/app/board?feature=${(await getFeatureByTitle(request, FEATURE_TITLE)).id}`,
   );
   await page.locator('#feature-start-date').fill(start);
   await page.locator('#feature-end-date').fill(end);
@@ -143,7 +143,7 @@ test('AC4: after scheduling, the roadmap bar is green (now horizon)', async ({
     .toBe(end);
 
   const feature = await getFeatureByTitle(request, FEATURE_TITLE);
-  await page.goto('/roadmap');
+  await page.goto('/app/roadmap');
   const bar = page.getByTestId(`gantt-bar-${feature.id}`);
   await expect(bar).toBeVisible();
   await expect(bar).toHaveAttribute('fill', '#16a34a'); // HORIZON_COLORS.now.bar

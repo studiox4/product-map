@@ -24,6 +24,7 @@ import { DocTypeChip } from '@/components/DocTypeChip';
 import { HORIZON_LABELS } from '@/components/HorizonBadge';
 import { STATUS_LABELS } from '@/components/StatusBadge';
 import { NewDocDialog } from '@/components/board/NewDocDialog';
+import { appRoutes } from '@/lib/routes';
 import { morphStyle } from '@/lib/transitions';
 import { confettiBurst } from '@/lib/delight';
 
@@ -221,7 +222,7 @@ function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: 
               <li key={doc.id}>
                 <button
                   type="button"
-                  onClick={() => navigate(`/docs/${doc.id}`)}
+                  onClick={() => navigate(appRoutes.doc(doc.id))}
                   className="flex w-full items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-left text-sm text-body-ink shadow-sm-card transition-[box-shadow,transform] duration-150 ease-out hover:-translate-y-px hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <DocTypeChip type={doc.type} />
@@ -241,7 +242,7 @@ function PanelFields({ feature, onClose }: { feature: FeatureWithDocs; onClose: 
           className="w-full rounded-full"
           onClick={() => {
             onClose();
-            navigate(`/features/${feature.id}`);
+            navigate(appRoutes.feature(feature.id));
           }}
         >
           Open feature ↗

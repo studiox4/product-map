@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { navigateWithTransition } from '@/lib/transitions';
+import { appRoutes } from '@/lib/routes';
 
 interface DocPreviewSheetProps {
   /** List item for the doc being previewed (null closes the sheet). */
@@ -124,17 +125,17 @@ export function DocPreviewSheet({ doc, open, onOpenChange }: DocPreviewSheetProp
                 </span>
                 <StatusBadge status={doc.status} />
                 <Link
-                  to={`/features/${doc.featureId}`}
+                  to={appRoutes.feature(doc.featureId ?? '')}
                   className="rounded-full text-xs font-medium text-body-ink underline-offset-2 outline-none transition-colors duration-150 ease-out hover:text-action hover:underline focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {doc.featureTitle}
                 </Link>
                 <Button asChild size="sm" className="ml-auto rounded-full">
                   <Link
-                    to={`/docs/${doc.id}`}
+                    to={appRoutes.doc(doc.id)}
                     onClick={(e) => {
                       e.preventDefault();
-                      navigateWithTransition(() => navigate(`/docs/${doc.id}`));
+                      navigateWithTransition(() => navigate(appRoutes.doc(doc.id)));
                     }}
                   >
                     Open in editor

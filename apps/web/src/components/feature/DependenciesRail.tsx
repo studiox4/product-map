@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
 import { STATUS_LABELS } from '@/components/StatusBadge';
+import { appRoutes } from '@/lib/routes';
 
 const STATUS_DOT_CLASSES: Record<Feature['status'], string> = {
   idea: 'bg-muted-ink',
@@ -143,7 +144,7 @@ export function DependenciesRail({ feature }: { feature: FeatureWithDocs }) {
                 <li key={b.id} className="flex items-center gap-2 text-sm text-body-ink">
                   <StatusDot status={b.status} />
                   <Link
-                    to={`/features/${b.id}`}
+                    to={appRoutes.feature(b.id)}
                     className="min-w-0 flex-1 truncate rounded transition-colors duration-150 ease-out hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {b.title}
@@ -160,7 +161,7 @@ export function DependenciesRail({ feature }: { feature: FeatureWithDocs }) {
                   <li key={b.id} className="flex items-center gap-2 text-sm text-body-ink">
                     <StatusDot status={b.status} />
                     <Link
-                      to={`/features/${b.id}`}
+                      to={appRoutes.feature(b.id)}
                       className="min-w-0 flex-1 truncate rounded transition-colors duration-150 ease-out hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       {b.title}

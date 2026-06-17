@@ -38,7 +38,7 @@ async function stubViewTransitions(page: Page) {
 test('W1-1: theme toggle cycles to dark, applies Studio Ink, persists across reload', async ({
   page,
 }) => {
-  await page.goto('/');
+  await page.goto('/app');
   const html = page.locator('html');
   await expect(html).not.toHaveClass(/dark/);
 
@@ -65,7 +65,7 @@ test('W1-1: theme toggle cycles to dark, applies Studio Ink, persists across rel
 });
 
 test('W1-2: ⌘K opens the palette and fuzzy-finds features and docs', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/app');
   // Wait for the page to be interactive before sending the keyboard shortcut.
   await expect(page.getByRole('heading', { level: 1, name: 'ProductMap' })).toBeVisible();
   await page.keyboard.press('ControlOrMeta+k');
@@ -89,7 +89,7 @@ test('W1-2: create-feature-in-Later via palette works end-to-end', async ({
   request,
 }) => {
   const title = `Palette-born feature ${Date.now()}`;
-  await page.goto('/');
+  await page.goto('/app');
   await expect(page.getByRole('heading', { level: 1, name: 'ProductMap' })).toBeVisible();
   await page.keyboard.press('ControlOrMeta+k');
   const input = page.getByPlaceholder(/type a command or search/i);
@@ -101,7 +101,7 @@ test('W1-2: create-feature-in-Later via palette works end-to-end', async ({
   await page.keyboard.press('Enter');
 
   // Lands on the new feature page.
-  await expect(page).toHaveURL(/\/features\/[0-9a-f-]+$/);
+  await expect(page).toHaveURL(/\/app\/features\/[0-9a-f-]+$/);
   await expect(page.getByRole('textbox', { name: 'Feature title' })).toHaveValue(title);
 
   // Persisted server-side in the Later horizon.
@@ -115,7 +115,7 @@ test('W1-2: create-feature-in-Later via palette works end-to-end', async ({
 });
 
 test("W1-2: '?' opens the keyboard shortcuts overlay (not while typing)", async ({ page }) => {
-  await page.goto('/docs');
+  await page.goto('/app/docs');
   // While typing in the search input, '?' must NOT open the overlay.
   const search = page.getByRole('searchbox', { name: /search docs/i });
   await search.click();
@@ -131,7 +131,7 @@ test("W1-2: '?' opens the keyboard shortcuts overlay (not while typing)", async 
 });
 
 test('W1-2: j/k + Enter navigate the docs table', async ({ page }) => {
-  await page.goto('/docs');
+  await page.goto('/app/docs');
   await expect(page.getByRole('row').filter({ hasText: 'PRD' }).first()).toBeVisible();
 
   await page.keyboard.press('j');
@@ -150,7 +150,7 @@ test('W1-3: board card → peek → feature page morph nav completes', async ({
 }) => {
   const feature = await getFeatureByTitle(request, BOARD_FEATURE);
   await stubViewTransitions(page);
-  await page.goto('/board');
+  await page.goto('/app/board');
 
   const card = page.getByRole('button', { name: BOARD_FEATURE, exact: true });
   await expect(card).toBeVisible();
@@ -170,7 +170,7 @@ test('W1-3: board card → peek → feature page morph nav completes', async ({
 
   // Peek → full feature page completes.
   await peek.getByRole('button', { name: /open feature/i }).click();
-  await expect(page).toHaveURL(new RegExp(`/features/${feature.id}$`));
+  await expect(page).toHaveURL(new RegExp(`/app/features/${feature.id}$`));
   await expect(page.getByRole('textbox', { name: 'Feature title' })).toHaveValue(BOARD_FEATURE);
 });
 
@@ -189,7 +189,7 @@ test('W1-3: reduced motion skips startViewTransition entirely', async ({ page, r
     };
   });
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('/board');
+  await page.goto('/app/board');
 
   await page.getByRole('button', { name: BOARD_FEATURE, exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`feature=${feature.id}`));
@@ -198,7 +198,7 @@ test('W1-3: reduced motion skips startViewTransition entirely', async ({ page, r
 
 test('W1-4: 🚀 vote fires a particle burst from the button', async ({ page, request }) => {
   const feature = await getFeatureByTitle(request, EDITOR_FEATURE);
-  await page.goto(`/features/${feature.id}`);
+  await page.goto(`/app/features/${feature.id}`);
 
   const boost = page.getByRole('button', { name: 'Boost' }).first();
   await expect(boost).toBeVisible();
@@ -240,7 +240,7 @@ test('W1-4: hovering a board card prefetches the feature detail before click', a
 }) => {
   const features = await getFeatures(request);
   const feature = features.find((f) => f.title === EDITOR_FEATURE)!;
-  await page.goto('/board');
+  await page.goto('/app/board');
 
   const card = page.getByRole('button', { name: EDITOR_FEATURE, exact: true });
   await expect(card).toBeVisible();
@@ -254,5 +254,5 @@ test('W1-4: hovering a board card prefetches the feature detail before click', a
   );
   await card.hover();
   await prefetch;
-  await expect(page).toHaveURL(/\/board$/); // still on the board, never clicked
+  await expect(page).toHaveURL(/\/app\/board$/); // still on the board, never clicked
 });

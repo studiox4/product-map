@@ -28,7 +28,7 @@ test('AC1: idea lifecycle — create, vote, promote to Later, feature linked', a
   request,
 }) => {
   await enableAi(page);
-  await page.goto('/inbox');
+  await page.goto('/app/inbox');
 
   // Seeded ideas render with vote pills.
   await expect(page.getByText('Slack notifications for resolved threads')).toBeVisible();
@@ -87,7 +87,7 @@ test('AC2: evidence — add quote and ticket(×12), icons render, delete works',
   request,
 }) => {
   const ecs = await getFeatureByTitle(request, 'ECS deployment');
-  await page.goto(`/features/${ecs.id}`);
+  await page.goto(`/app/features/${ecs.id}`);
 
   const section = page.getByRole('region', { name: 'Evidence' });
   await expect(section).toBeVisible();
@@ -144,7 +144,7 @@ test('AC3: log decision from resolved thread (mocked AI) and manual decision', a
   );
 
   const editor = await getFeatureByTitle(request, 'Rich markdown editor');
-  await page.goto(`/features/${editor.id}`);
+  await page.goto(`/app/features/${editor.id}`);
 
   // Resolved threads are collapsed — expand, then log the decision.
   await page.getByRole('button', { name: /resolved/ }).click();
@@ -187,7 +187,7 @@ test('AC4: dependencies — badge, board chip, gantt arrow, cycle toast, ship cl
   request,
 }) => {
   // Seeded edge (board → voting) draws an arrow between two dated bars.
-  await page.goto('/roadmap');
+  await page.goto('/app/roadmap');
   // (the first <path> lives inside the <marker> def, so target the bezier)
   await expect(
     page.locator('[data-testid="gantt-dependency-arrows"] path[marker-end]').first(),
@@ -207,7 +207,7 @@ test('AC4: dependencies — badge, board chip, gantt arrow, cycle toast, ship cl
 
   try {
     // Set the blocker via the rail popover.
-    await page.goto(`/features/${blocked.id}`);
+    await page.goto(`/app/features/${blocked.id}`);
     const rail = page.getByRole('region', { name: 'Dependencies' });
     await rail.getByRole('button', { name: 'Edit' }).click();
     await page
@@ -218,12 +218,12 @@ test('AC4: dependencies — badge, board chip, gantt arrow, cycle toast, ship cl
     await expect(rail.getByText('Blocked by 1')).toBeVisible();
 
     // Board card shows the amber blocked badge.
-    await page.goto('/board');
+    await page.goto('/app/board');
     const card = page.locator('[aria-label="E2E dep blocked"]');
     await expect(card.getByLabel('Blocked')).toBeVisible();
 
     // Cycle attempt: blocker blocked-by blocked → 400 + toast.
-    await page.goto(`/features/${blocker.id}`);
+    await page.goto(`/app/features/${blocker.id}`);
     const blockerRail = page.getByRole('region', { name: 'Dependencies' });
     await blockerRail.getByRole('button', { name: 'Edit' }).click();
     await page
@@ -235,7 +235,7 @@ test('AC4: dependencies — badge, board chip, gantt arrow, cycle toast, ship cl
 
     // Shipping the blocker clears the badge.
     await request.patch(`/api/projects/${pid}/features/${blocker.id}`, { data: { status: 'shipped' } });
-    await page.goto(`/features/${blocked.id}`);
+    await page.goto(`/app/features/${blocked.id}`);
     await expect(page.getByRole('region', { name: 'Dependencies' })).toBeVisible();
     await expect(page.getByText('Blocked by 1')).toHaveCount(0);
   } finally {
@@ -248,7 +248,7 @@ test('AC4: dependencies — badge, board chip, gantt arrow, cycle toast, ship cl
 // AC5 — capacity strip: per-month load vs capacity with an overcommitted month.
 // ---------------------------------------------------------------------------
 test('AC5: capacity toggle shows monthly load and an overcommitted month', async ({ page }) => {
-  await page.goto('/roadmap');
+  await page.goto('/app/roadmap');
   await expect(page.locator('[data-testid="gantt-capacity-strip"]')).toHaveCount(0);
 
   await page.locator('[data-testid="capacity-toggle"]').click();
@@ -267,7 +267,7 @@ test('AC6: ship v0.2 via the status select — milestone turns sage', async ({
   page,
   request,
 }) => {
-  await page.goto('/releases');
+  await page.goto('/app/releases');
   await page.getByRole('link', { name: /v0\.2 — Team ready/ }).click();
 
   // Membership section lists the bundled features.
@@ -291,7 +291,7 @@ test('AC6: ship v0.2 via the status select — milestone turns sage', async ({
   }[];
   const shipped = releases.find((r) => r.status === 'shipped');
   expect(shipped).toBeTruthy();
-  await page.goto('/roadmap');
+  await page.goto('/app/roadmap');
   await expect(
     page.locator(`[data-testid="gantt-milestone-${shipped!.id}"]`),
   ).toHaveAttribute('data-release-status', 'shipped');
@@ -305,13 +305,13 @@ test('AC7: assign feature to objective via rail; outcomes groups correctly', asy
   request,
 }) => {
   const realtime = await getFeatureByTitle(request, 'Realtime collaboration (Yjs)');
-  await page.goto(`/features/${realtime.id}`);
+  await page.goto(`/app/features/${realtime.id}`);
 
   const planning = page.getByRole('region', { name: 'Planning' });
   await planning.getByLabel('Objective').click();
   await page.getByRole('option', { name: 'Win security-conscious teams' }).click();
 
-  await page.goto('/outcomes');
+  await page.goto('/app/outcomes');
   await expect(
     page.getByRole('heading', { name: 'Win security-conscious teams' }),
   ).toBeVisible();
@@ -321,10 +321,10 @@ test('AC7: assign feature to objective via rail; outcomes groups correctly', asy
   await expect(tray.getByText('Realtime collaboration (Yjs)')).toHaveCount(0);
 
   // Restore: unassign so the seeded tray stays accurate for later specs.
-  await page.goto(`/features/${realtime.id}`);
+  await page.goto(`/app/features/${realtime.id}`);
   await page.getByRole('region', { name: 'Planning' }).getByLabel('Objective').click();
   await page.getByRole('option', { name: 'No objective' }).click();
-  await page.goto('/outcomes');
+  await page.goto('/app/outcomes');
   await expect(
     page
       .getByRole('region', { name: 'Unassigned features' })
@@ -339,7 +339,7 @@ test('AC8: share link — read-only roadmap in fresh context, revoke kills it', 
   page,
   browser,
 }) => {
-  await page.goto('/settings/workspace');
+  await page.goto('/app/settings/workspace');
   await page.getByRole('button', { name: 'Create share link' }).click();
   const linkInput = page.getByLabel('Share link');
   await expect(linkInput).toBeVisible();
@@ -395,7 +395,7 @@ test('AC9a: copilot chat streams with doc citation links; nudges list real items
   const temp = (await tempRes.json()) as { id: string };
 
   try {
-    await page.goto('/');
+    await page.goto('/app');
     await page.getByRole('button', { name: 'Open copilot' }).click();
 
     // Chat: ask, get the mocked stream, citation links to the doc.
@@ -437,7 +437,7 @@ test('AC9b: AI review streams rubric sections into the side sheet', async ({
   const prd = editor.documents.find((d) => d.type === 'prd');
   expect(prd).toBeTruthy();
 
-  await page.goto(`/docs/${prd!.id}`);
+  await page.goto(`/app/docs/${prd!.id}`);
   await page.getByRole('button', { name: 'More options' }).click();
   await page.getByRole('menuitem', { name: 'AI review' }).click();
 
@@ -450,18 +450,18 @@ test('AC9b: AI review streams rubric sections into the side sheet', async ({
 test('AC9c: all AI affordances hidden when AI is disabled', async ({ page, request }) => {
   await page.route('**/api/ai/status', (route) => route.fulfill({ json: { enabled: false } }));
 
-  await page.goto('/');
+  await page.goto('/app');
   await expect(page.locator('[data-testid="pulse-heatmap"]')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Open copilot' })).toHaveCount(0);
 
   // No "Log decision" sparkle on resolved threads.
   const editor = await getFeatureByTitle(request, 'Rich markdown editor');
-  await page.goto(`/features/${editor.id}`);
+  await page.goto(`/app/features/${editor.id}`);
   await page.getByRole('button', { name: /resolved/ }).click();
   await expect(page.getByRole('button', { name: 'Log decision' })).toHaveCount(0);
 
   // No "Draft AI brief" checkbox in the promote dialog (pick a known inbox idea).
-  await page.goto('/inbox');
+  await page.goto('/app/inbox');
   // The pitch-doc link also contains the idea title — click the list row button.
   await page.getByRole('button', { name: /SSO via OIDC/ }).click();
   await page

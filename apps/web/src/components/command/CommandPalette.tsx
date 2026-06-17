@@ -39,6 +39,7 @@ import {
 import { useProjectId } from '@/lib/project';
 import { setTheme, type Theme } from '@/lib/theme';
 import { navigateWithTransition } from '@/lib/transitions';
+import { appRoutes, appPatterns } from '@/lib/routes';
 import { HORIZON_LABELS } from '@/components/HorizonBadge';
 import { NewDocDialog } from '@/components/board/NewDocDialog';
 import {
@@ -61,14 +62,14 @@ interface CommandPaletteProps {
 type Page = { kind: 'create-feature'; horizon: Horizon } | { kind: 'new-doc' };
 
 const NAV_TARGETS = [
-  { to: '/', label: 'Overview', icon: LayoutDashboard },
-  { to: '/inbox', label: 'Inbox', icon: Lightbulb },
-  { to: '/board', label: 'Board', icon: Columns3 },
-  { to: '/roadmap', label: 'Roadmap', icon: GanttChart },
-  { to: '/releases', label: 'Releases', icon: Rocket },
-  { to: '/outcomes', label: 'Outcomes', icon: Target },
-  { to: '/docs', label: 'Docs', icon: Library },
-  { to: '/settings', label: 'Settings', icon: Settings },
+  { to: appRoutes.dashboard, label: 'Overview', icon: LayoutDashboard },
+  { to: appRoutes.inbox, label: 'Inbox', icon: Lightbulb },
+  { to: appRoutes.board, label: 'Board', icon: Columns3 },
+  { to: appRoutes.roadmap, label: 'Roadmap', icon: GanttChart },
+  { to: appRoutes.releases, label: 'Releases', icon: Rocket },
+  { to: appRoutes.outcomes, label: 'Outcomes', icon: Target },
+  { to: appRoutes.docs, label: 'Docs', icon: Library },
+  { to: appRoutes.settings, label: 'Settings', icon: Settings },
 ];
 
 const THEME_OPTIONS: { theme: Theme; label: string; icon: typeof Sun }[] = [
@@ -129,16 +130,16 @@ function PaletteContent({
   const updateFeature = useUpdateFeature();
 
   // ---- context (feature page, board peek, doc editor) ----
-  const featureMatch = matchPath('/features/:id', location.pathname);
+  const featureMatch = matchPath(appPatterns.feature, location.pathname);
   const peekId =
-    location.pathname === '/board'
+    location.pathname === appPatterns.board
       ? new URLSearchParams(location.search).get('feature')
       : null;
   const contextFeatureId = featureMatch?.params.id ?? peekId ?? null;
   const contextFeature = contextFeatureId
     ? (features.find((f) => f.id === contextFeatureId) ?? null)
     : null;
-  const contextDocId = matchPath('/docs/:id', location.pathname)?.params.id ?? null;
+  const contextDocId = matchPath(appPatterns.doc, location.pathname)?.params.id ?? null;
   const vote = useVote(contextFeatureId ?? '');
 
   // Drop recents whose target no longer exists (e.g. ids from before a db reset).
@@ -166,7 +167,7 @@ function PaletteContent({
       {
         onSuccess: (feature) => {
           recordRecent({ kind: 'feature', id: feature.id, title: feature.title });
-          go(`/features/${feature.id}`);
+          go(appRoutes.feature(feature.id));
         },
         onError: () => toast.error(`Couldn't create '${title}'`),
       },
@@ -269,7 +270,7 @@ function PaletteContent({
                       key={`${entry.kind}-${entry.id}`}
                       value={`recent-${entry.kind}-${entry.id} ${entry.title}`}
                       onSelect={() =>
-                        go(entry.kind === 'feature' ? `/features/${entry.id}` : `/docs/${entry.id}`)
+                        go(entry.kind === 'feature' ? appRoutes.feature(entry.id) : appRoutes.doc(entry.id))
                       }
                     >
                       <Clock aria-hidden />
@@ -352,7 +353,7 @@ function PaletteContent({
                 <CommandItem
                   key={feature.id}
                   value={`feature-${feature.id} ${feature.title}`}
-                  onSelect={() => go(`/features/${feature.id}`)}
+                  onSelect={() => go(appRoutes.feature(feature.id))}
                 >
                   <Puzzle aria-hidden />
                   <span className="truncate">Feature: {feature.title}</span>
@@ -365,7 +366,7 @@ function PaletteContent({
                 <CommandItem
                   key={doc.id}
                   value={`doc-${doc.id} ${doc.title} ${DOC_TYPE_LABELS[doc.type]}`}
-                  onSelect={() => go(`/docs/${doc.id}`)}
+                  onSelect={() => go(appRoutes.doc(doc.id))}
                 >
                   <FileText aria-hidden />
                   <span className="truncate">
@@ -389,7 +390,7 @@ function PaletteContent({
               ))}
               <CommandItem
                 value="create-idea new idea"
-                onSelect={() => go('/inbox?new=1')}
+                onSelect={() => go(`${appRoutes.inbox}?new=1`)}
               >
                 <Lightbulb aria-hidden />
                 New idea…
