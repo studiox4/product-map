@@ -1,4 +1,4 @@
-import type { Hono } from 'hono';
+import type { Hono, Env, Schema } from 'hono';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -21,7 +21,10 @@ export interface WebStaticOptions {
  *
  * When disabled, this registers nothing (dev/test default unaffected).
  */
-export function mountWebStatic(app: Hono<any, any, any>, opts: WebStaticOptions): void {
+export function mountWebStatic<E extends Env, S extends Schema, B extends string>(
+  app: Hono<E, S, B>,
+  opts: WebStaticOptions,
+): void {
   if (!opts.enabled) return;
 
   const { distDir } = opts;
