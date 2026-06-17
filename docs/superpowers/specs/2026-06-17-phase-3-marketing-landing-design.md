@@ -54,7 +54,7 @@ Three units, each independently testable:
 - **Repo coordinates** (owner/repo for GitHub links + stars) come from a single constant (e.g. `REPO_URL` in shared or a web config), not scattered literals.
 
 ### Unit C — Prerender + production serving
-- **Prerender build step — toolchain matters.** A bare `node` import of the `Marketing` TSX tree will throw the moment a component imports CSS/SVG/asset files (it will — we reuse app tokens/primitives). So the prerender uses a proper SSR build, not a hand-rolled `node` script: either an SSR entry built with `vite build --ssr` (then `renderToString` the SSR bundle in a post-build step) or `vite-react-ssg`. The plan picks one and states the exact commands; the implementer must NOT attempt a raw `node import('./Marketing.tsx')`. The step writes a static `dist/index.html` for `/` containing:
+- **Prerender build step — toolchain matters.** A bare `node` import of the `Marketing` TSX tree will throw the moment a component imports CSS/SVG/asset files (it will — we reuse app tokens/primitives). So the prerender uses a proper SSR build, not a hand-rolled `node` script: either an SSR entry built with `vite build --ssr` (then `renderToString` the SSR bundle in a post-build step) or `vite-react-ssg`. The plan picks one and states the exact commands; the implementer must NOT attempt a raw `node import('./Marketing.tsx')`. The step writes a static **`dist/marketing.html`** (NOT `index.html` — `index.html` stays the untouched SPA app shell) containing:
   - the rendered marketing markup,
   - `<head>` Open Graph + Twitter card + description/title meta (see OG-URL note below),
   - the normal Vite asset tags (so the SPA still boots and takes over client-side).
