@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { users, projects, memberships } from '@productmap/db';
+import { users, projects, memberships, invites } from '@productmap/db';
 import { signAccess } from '../lib/auth/tokens';
 import { ACCESS_COOKIE } from '../lib/auth/cookies';
 import { hashPassword } from '../lib/auth/password';
@@ -52,7 +52,7 @@ export async function setupTestDb(): Promise<void> {
 /** Wipe all rows from every table. Call in beforeEach. */
 export async function truncateAll(): Promise<void> {
   await getPool().query(
-    'truncate table comments, votes, activity, feature_collaborators, uploads, documents, idea_votes, ideas, evidence, decisions, feature_dependencies, share_tokens, plan_entries, plans, features, releases, objectives, memberships, projects, templates, users cascade',
+    'truncate table comments, votes, activity, feature_collaborators, uploads, documents, idea_votes, ideas, evidence, decisions, feature_dependencies, invites, share_tokens, plan_entries, plans, features, releases, objectives, memberships, projects, templates, users cascade',
   );
 }
 
@@ -105,4 +105,30 @@ export async function createTestProject(name = 'Test Project') {
 /** Insert a membership linking a user to a project with the given role. */
 export async function addMembership(userId: string, projectId: string, role: 'owner' | 'editor' | 'viewer' = 'editor') {
   await hdb().insert(memberships).values({ userId, projectId, role });
+}
+
+/** Insert an invite row directly. expiresInSec defaults to +7d; pass negative to forge an expired invite. */
+export async function createTestInvite(opts: {
+  projectId: string;
+  createdBy: string;
+  role?: 'owner' | 'editor' | 'viewer';
+  email?: string | null;
+  token?: string;
+  expiresInSec?: number;
+  revoked?: boolean;
+}) {
+  const expiresAt = new Date(Date.now() + (opts.expiresInSec ?? 7 * 24 * 60 * 60) * 1000);
+  const [row] = await hdb()
+    .insert(invites)
+    .values({
+      projectId: opts.projectId,
+      createdBy: opts.createdBy,
+      role: opts.role ?? 'editor',
+      email: opts.email ?? null,
+      token: opts.token ?? `tok-${Math.random().toString(36).slice(2)}`,
+      expiresAt,
+      revokedAt: opts.revoked ? new Date() : null,
+    })
+    .returning();
+  return row;
 }
