@@ -11,6 +11,7 @@ import { commentsRoutes } from './comments';
 import { activityRoutes } from './activity';
 import { overviewRoutes } from './overview';
 import { ideasRoutes } from './ideas';
+import { decisionsRoutes } from './decisions';
 
 /**
  * Content routes scoped to /api/projects/:projectId. One method-based gate:
@@ -35,4 +36,6 @@ export const projectScopedContent = new Hono<MembershipEnv>()
   .route('/comments', commentsRoutes)
   .route('/activity', activityRoutes)
   .route('/overview', overviewRoutes)
-  .route('/ideas', ideasRoutes);
+  .route('/ideas', ideasRoutes)
+  // decisionsRoutes defines /decisions… + /ai/suggest-decision — mount at root
+  .route('/', decisionsRoutes);

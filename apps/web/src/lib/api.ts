@@ -1031,24 +1031,26 @@ import type {
   SuggestDecisionResponse,
 } from '@productmap/shared';
 
-export const copilotNudgesKey = ['copilot', 'nudges'] as const;
-export const decisionsRootKey = ['decisions'] as const;
+export const copilotNudgesKey = (pid: string) => ['p', pid, 'copilot', 'nudges'] as const;
+export const decisionsRootKey = (pid: string) => ['p', pid, 'decisions'] as const;
 
 /** Derived hygiene nudges (no AI behind them). Fetched lazily — pass enabled=false until the panel opens. */
 export function useCopilotNudges(enabled = true) {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: copilotNudgesKey,
+    queryKey: copilotNudgesKey(pid),
     queryFn: () => fetchJson<CopilotNudge[]>('/api/copilot/nudges'),
     enabled,
     staleTime: 30_000,
   });
 }
 
-/** POST /api/ai/suggest-decision {commentId} — AI reads the thread, suggests a decision draft. */
+/** POST /api/projects/:pid/ai/suggest-decision {commentId} — AI reads the thread, suggests a decision draft. */
 export function useSuggestDecision() {
+  const pid = useProjectId();
   return useMutation({
     mutationFn: (commentId: string) =>
-      fetchJson<SuggestDecisionResponse>('/api/ai/suggest-decision', {
+      fetchJson<SuggestDecisionResponse>(apiPath(pid, 'ai', 'suggest-decision'), {
         method: 'POST',
         body: JSON.stringify({ commentId }),
       }),
@@ -1063,18 +1065,18 @@ export interface DecisionCreateInput {
   sourceCommentId?: string;
 }
 
-/** POST /api/decisions — log a decision (optionally sourced from a resolved thread). */
+/** POST /api/projects/:pid/decisions — log a decision (optionally sourced from a resolved thread). */
 export function useCreateDecision() {
   const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: DecisionCreateInput) =>
-      fetchJson<Decision>('/api/decisions', {
+      fetchJson<Decision>(apiPath(pid, 'decisions'), {
         method: 'POST',
         body: JSON.stringify(input),
       }),
     onSettled: (_data, _err, { featureId }) => {
-      qc.invalidateQueries({ queryKey: decisionsRootKey });
+      qc.invalidateQueries({ queryKey: decisionsRootKey(pid) });
       if (featureId) {
         qc.invalidateQueries({ queryKey: queryKeys.activity(pid, featureId) });
       }
@@ -1162,13 +1164,14 @@ export function useDeleteEvidence() {
   });
 }
 
-export const decisionsKey = (featureId: string) => ['decisions', featureId] as const;
+export const decisionsKey = (pid: string, featureId: string) => ['p', pid, 'decisions', featureId] as const;
 
 /** Decisions for a feature, newest first (display only here — creation lives with comments extraction). */
 export function useDecisions(featureId: string) {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: decisionsKey(featureId),
-    queryFn: () => fetchJson<Decision[]>(`/api/decisions?featureId=${featureId}`),
+    queryKey: decisionsKey(pid, featureId),
+    queryFn: () => fetchJson<Decision[]>(`${apiPath(pid, 'decisions')}?featureId=${featureId}`),
     enabled: !!featureId,
   });
 }

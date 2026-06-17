@@ -293,7 +293,7 @@ describe('CommentsSection', () => {
     let suggestBody: unknown = null;
     let decisionBody: unknown = null;
     server.use(
-      http.post('/api/ai/suggest-decision', async ({ request }) => {
+      http.post(`/api/projects/${TEST_PROJECT_ID}/ai/suggest-decision`, async ({ request }) => {
         suggestBody = await request.json();
         return HttpResponse.json({
           suggested: true,
@@ -302,7 +302,7 @@ describe('CommentsSection', () => {
           alternativesMd: '- WebSockets',
         });
       }),
-      http.post('/api/decisions', async ({ request }) => {
+      http.post(`/api/projects/${TEST_PROJECT_ID}/decisions`, async ({ request }) => {
         decisionBody = await request.json();
         return HttpResponse.json({ id: 'dec1' }, { status: 201 });
       }),
