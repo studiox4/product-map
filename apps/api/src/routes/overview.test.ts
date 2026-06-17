@@ -1,23 +1,17 @@
 import { beforeAll, beforeEach, afterAll, describe, expect, it } from 'vitest';
-import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { fileURLToPath } from 'node:url';
 import type { OverviewResponse, AttentionItem } from '@productmap/shared';
-import { createTestUser, authCookie } from '../test/helpers';
-
-process.env.DATABASE_URL = 'postgres://localhost:5432/productmap_test';
+// Importing helpers first sets DATABASE_URL to the TEST_PG_BASE-aware test URL
+// (honors a CI Postgres password) before ../db evaluates its pool below.
+import { createTestUser, authCookie, setupTestDb } from '../test/helpers';
 
 const { app } = await import('../app');
 const { db, pool } = await import('../db');
 const { products, features, documents, users, comments, votes } = await import('@productmap/db');
 
-const migrationsFolder = fileURLToPath(
-  new URL('../../../../packages/db/migrations', import.meta.url),
-);
-
 let auth: Record<string, string> = {};
 
 beforeAll(async () => {
-  await migrate(db, { migrationsFolder });
+  await setupTestDb();
 });
 
 beforeEach(async () => {
