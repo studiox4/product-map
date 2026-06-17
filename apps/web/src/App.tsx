@@ -26,6 +26,8 @@ const UsersTab = lazy(() => import('@/components/settings/UsersTab'));
 const ProjectTab = lazy(() => import('@/components/settings/ProjectTab'));
 const TemplateEditorPage = lazy(() => import('@/routes/TemplateEditor'));
 const SharePage = lazy(() => import('@/routes/SharePage'));
+// Accept-invite page — sibling of /share/:token; does its own auth check + redirect.
+const AcceptInvitePage = lazy(() => import('@/routes/AcceptInvite'));
 // First-run gate — shown by AuthedShell when the caller has no memberships.
 const FirstRunPage = lazy(() => import('@/routes/FirstRun'));
 // Releases + Outcomes (Dream tier D7/D9 — releases+outcomes agent route lines).
@@ -190,6 +192,16 @@ export default function App() {
             element={
               <Suspense fallback={<RouteFallback />}>
                 <SharePage />
+              </Suspense>
+            }
+          />
+          {/* Accept-invite — sibling of /share/:token, outside the active-project
+              gate; the page handles its own auth check + login redirect. */}
+          <Route
+            path="/invite/:token"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <AcceptInvitePage />
               </Suspense>
             }
           />
