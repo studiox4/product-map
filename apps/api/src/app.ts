@@ -10,7 +10,6 @@ import { uploadsRoutes } from './routes/uploads';
 import { overviewRoutes } from './routes/overview';
 import { aiRoutes } from './routes/ai';
 import { usersRoutes } from './routes/users';
-import { commentsRoutes } from './routes/comments';
 import { templatesRoutes } from './routes/templates';
 import { adminRoutes } from './routes/admin';
 // Dream-tier route modules (mounted as stubs by the foundation agent; each
@@ -44,7 +43,6 @@ export const app = new Hono()
   .use('/api/admin/*', requireAdmin)
   .route('/api/users', usersRoutes)
   .route('/api/activity', activityRoutes)
-  .route('/api/comments', commentsRoutes)
   .route('/api/projects', projectsRoutes)
   // Content sub-app: registered AFTER mgmt so projectsRoutes /:projectId* get
   // first crack. A non-match falls through to this mount (Hono chain semantics).

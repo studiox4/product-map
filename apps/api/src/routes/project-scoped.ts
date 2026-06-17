@@ -7,6 +7,7 @@ import { featuresRoutes } from './features';
 import { depsRoutes } from './deps';
 import { evidenceRoutes } from './evidence';
 import { documentsRoutes, exportRoutes } from './documents';
+import { commentsRoutes } from './comments';
 
 /**
  * Content routes scoped to /api/projects/:projectId. One method-based gate:
@@ -27,4 +28,5 @@ export const projectScopedContent = new Hono<MembershipEnv>()
   .route('/', evidenceRoutes)
   .route('/documents', documentsRoutes)
   // exportRoutes defines /export.zip — mount at root
-  .route('/', exportRoutes);
+  .route('/', exportRoutes)
+  .route('/comments', commentsRoutes);

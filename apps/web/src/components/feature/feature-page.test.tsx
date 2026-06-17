@@ -106,7 +106,7 @@ const server = setupServer(
   http.get(`/api/projects/${TEST_PROJECT_ID}/features/f1/activity`, () => HttpResponse.json(activity)),
   http.get(`/api/projects/${TEST_PROJECT_ID}/features/f1/collaborators`, () => HttpResponse.json([corban, ada])),
   http.get(`/api/projects/${TEST_PROJECT_ID}/documents`, () => HttpResponse.json(allDocs)),
-  http.get('/api/comments', () => HttpResponse.json([])),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/comments`, () => HttpResponse.json([])),
   // Dream tier (D2/D3/D4) feature-page sections
   http.get(`/api/projects/${TEST_PROJECT_ID}/features/f1/evidence`, () => HttpResponse.json([])),
   http.get('/api/decisions', () => HttpResponse.json([])),
