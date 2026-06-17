@@ -1,25 +1,27 @@
-// Mounted at /api/features (app.ts) alongside featuresRoutes; this file owns
-// only the /:id/dependencies endpoints.
+// Mounted at /features on projectScopedContent (project-scoped.ts) alongside featuresRoutes;
+// this file owns only the /:id/dependencies endpoints.
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { dependenciesPut } from '@productmap/shared';
 import { features, featureDependencies } from '@productmap/db';
 import { db } from '../db';
-import { type CurrentUserEnv } from '../middleware/current-user';
+import { type MembershipEnv } from '../middleware/membership';
+import { loadScoped } from '../lib/scope';
 import { recordActivity } from '../lib/activity';
 
-async function featuresByIds(ids: string[]) {
+async function featuresByIds(ids: string[], pid: string) {
   if (ids.length === 0) return [];
-  return db.select().from(features).where(inArray(features.id, ids));
+  return db.select().from(features).where(and(inArray(features.id, ids), eq(features.projectId, pid)));
 }
 
 /** Blockers (features blocking :id) and blocked (features :id blocks). */
-async function dependencyGraphFor(id: string) {
+async function dependencyGraphFor(id: string, pid: string) {
   const edges = await db.select().from(featureDependencies);
   const blockerIds = edges.filter((e) => e.blockedId === id).map((e) => e.blockerId);
   const blockedIds = edges.filter((e) => e.blockerId === id).map((e) => e.blockedId);
-  const rows = await featuresByIds([...new Set([...blockerIds, ...blockedIds])]);
+  // Resolve feature rows scoped to pid — cross-project ids simply won't match.
+  const rows = await featuresByIds([...new Set([...blockerIds, ...blockedIds])], pid);
   const byId = new Map(rows.map((f) => [f.id, f]));
   return {
     blockers: blockerIds.map((bid) => byId.get(bid)).filter(Boolean),
@@ -62,12 +64,12 @@ function createsCycle(
   return false;
 }
 
-export const depsRoutes = new Hono<CurrentUserEnv>()
+export const depsRoutes = new Hono<MembershipEnv>()
   .get('/:id/dependencies', async (c) => {
     const id = c.req.param('id');
-    const [feature] = await db.select({ id: features.id }).from(features).where(eq(features.id, id));
-    if (!feature) return c.json({ error: 'not_found' }, 404);
-    return c.json(await dependencyGraphFor(id));
+    const pid = c.get('currentProjectId');
+    await loadScoped(features, id, pid);
+    return c.json(await dependencyGraphFor(id, pid));
   })
   .put(
     '/:id/dependencies',
@@ -78,13 +80,16 @@ export const depsRoutes = new Hono<CurrentUserEnv>()
     }),
     async (c) => {
       const id = c.req.param('id');
+      const pid = c.get('currentProjectId');
       const blockerIds = [...new Set(c.req.valid('json').blockerIds)];
       const user = c.get('currentUser');
-      const [feature] = await db.select({ id: features.id }).from(features).where(eq(features.id, id));
-      if (!feature) return c.json({ error: 'not_found' }, 404);
+      await loadScoped(features, id, pid);
       if (blockerIds.includes(id)) return c.json({ error: 'cycle' }, 400);
 
-      const blockerRows = await featuresByIds(blockerIds);
+      const blockerRows = blockerIds.length === 0
+        ? []
+        : await db.select().from(features)
+            .where(and(inArray(features.id, blockerIds), eq(features.projectId, pid)));
       if (blockerRows.length !== blockerIds.length) return c.json({ error: 'not_found' }, 404);
 
       const edges = await db.select().from(featureDependencies);
@@ -114,6 +119,6 @@ export const depsRoutes = new Hono<CurrentUserEnv>()
         }
       }
 
-      return c.json(await dependencyGraphFor(id));
+      return c.json(await dependencyGraphFor(id, pid));
     },
   );

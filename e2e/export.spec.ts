@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import AdmZip from 'adm-zip';
-import { createDocument, getFeatureByTitle, getFeatures } from './helpers';
+import { createDocument, getFeatureByTitle, getFeatures, getProjectId } from './helpers';
 
 // AC6 — editor "Export .md" downloads markdown containing the doc's headings;
 // GET /api/export.zip returns one folder per feature containing its docs as .md.
@@ -35,7 +35,8 @@ test('AC6: "Export .md" downloads markdown with the doc headings', async ({
 test('AC6: /api/export.zip contains a folder per feature with .md docs', async ({
   request,
 }) => {
-  const res = await request.get('/api/export.zip');
+  const pid = await getProjectId(request);
+  const res = await request.get(`/api/projects/${pid}/export.zip`);
   expect(res.status()).toBe(200);
   expect(res.headers()['content-type']).toContain('zip');
 

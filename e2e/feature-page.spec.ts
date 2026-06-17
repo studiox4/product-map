@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { addDaysIso, todayIso } from './helpers';
+import { addDaysIso, todayIso, getProjectId } from './helpers';
 
 // Feature hub AC2 — board card click → peek sheet → "Open feature ↗" → full page
 // with description, docs grid, people, dates, activity.
@@ -15,7 +15,8 @@ test('AC2: card click opens the peek fast; Open feature lands on the full page',
   page,
   request,
 }) => {
-  const res = await request.post('/api/features', {
+  const pid = await getProjectId(request);
+  const res = await request.post(`/api/projects/${pid}/features`, {
     data: { title: FEATURE_TITLE, horizon: 'later' },
   });
   expect(res.status()).toBe(201);

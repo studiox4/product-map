@@ -12,7 +12,8 @@ import {
 } from '@productmap/shared';
 import { StatusBadge } from '@/components/StatusBadge';
 import { cn } from '@/lib/utils';
-import { fetchJson, queryKeys } from '@/lib/api';
+import { apiPath, fetchJson, queryKeys } from '@/lib/api';
+import { useProjectId } from '@/lib/project';
 import { hasOpenOverlay, isEditableTarget } from '@/components/command/useGlobalShortcuts';
 import { makeHoverPrefetch } from '@/lib/delight';
 import { morphStyle } from '@/lib/transitions';
@@ -103,6 +104,8 @@ function DocsRow({
   active: boolean;
   onRowClick: (id: string) => void;
 }) {
+
+  const pid = useProjectId();
   const queryClient = useQueryClient();
   const rowRef = useRef<HTMLTableRowElement>(null);
 
@@ -115,11 +118,11 @@ function DocsRow({
     () =>
       makeHoverPrefetch(() => {
         void queryClient.prefetchQuery({
-          queryKey: queryKeys.document(doc.id),
-          queryFn: () => fetchJson<DocumentFull>(`/api/documents/${doc.id}`),
+          queryKey: queryKeys.document(pid, doc.id),
+          queryFn: () => fetchJson<DocumentFull>(apiPath(pid, 'documents', doc.id)),
         });
       }),
-    [queryClient, doc.id],
+    [queryClient, pid, doc.id],
   );
 
   return (

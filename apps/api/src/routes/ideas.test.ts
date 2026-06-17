@@ -338,10 +338,8 @@ describe('POST /api/ideas/:id/promote', () => {
     expect(doc.ideaId).toBe(idea.id); // provenance kept
     expect(doc.type).toBe('idea_pitch');
 
-    // The doc now shows up under the feature's docs.
-    const featureDocs = await (
-      await app.request(`/api/documents?featureId=${feature.id}`, { headers: auth })
-    ).json();
+    // The doc now shows up under the feature's docs (verified via DB query — route is nested).
+    const featureDocs = await db.select().from(documents).where(eq(documents.featureId, feature.id));
     expect(featureDocs.map((d: { id: string }) => d.id)).toContain(pitch.id);
   });
 });

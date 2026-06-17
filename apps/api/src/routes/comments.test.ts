@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
-import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
+import { setupTestDb, truncateAll, closeTestDb, createTestUser, createTestProject, addMembership, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
 import { projects, features, documents, users, comments, activity, featureCollaborators } from '@productmap/db';
@@ -28,12 +28,14 @@ beforeEach(async () => {
   const actor = await createTestUser({ role: 'admin', name: 'Corban', email: 'corban@test.co' });
   userId = actor.id;
   auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
-  // Ada is a secondary user for 403 / doc-comment tests
+  // Ada is a secondary user for 403 / doc-comment tests — must be editor to pass the gate
   const other = await createTestUser({ role: 'member', name: 'Ada', email: 'ada@test.co', color: '#3c6b46' });
   otherId = other.id;
   otherAuth = { cookie: await authCookie(other), origin: 'http://localhost', host: 'localhost' };
   const [p] = await db.insert(projects).values({ name: 'ProductMap', vision: 'v', aboutMd: '' }).returning();
   projectId = p.id;
+  // Ada must be a member so she can write comments; admin (Corban) passes gate automatically
+  await addMembership(otherId, projectId, 'editor');
   const [f] = await db.insert(features).values({ projectId, title: 'Gantt roadmap', horizon: 'next' }).returning();
   featureId = f.id;
   const [df] = await db.insert(features).values({ projectId, title: 'Rich markdown editor', horizon: 'now' }).returning();
@@ -41,6 +43,8 @@ beforeEach(async () => {
   const [d] = await db.insert(documents).values({ projectId, featureId: docFeatureId, type: 'prd', title: 'PRD' }).returning();
   documentId = d.id;
 });
+
+const BASE = (pid: string) => `/api/projects/${pid}/comments`;
 
 const post = (body: unknown, asAuth?: Record<string, string>) => ({
   method: 'POST',
@@ -57,9 +61,9 @@ async function activityRows(fid: string) {
   return db.select().from(activity).where(eq(activity.featureId, fid)).orderBy(asc(activity.createdAt));
 }
 
-describe('POST /api/comments', () => {
+describe('POST /api/projects/:pid/comments', () => {
   it('creates a feature comment with 201, author join, activity and collaborator', async () => {
-    const res = await app.request('/api/comments', post({ featureId, body: 'Week or month view?' }));
+    const res = await app.request(BASE(projectId), post({ featureId, body: 'Week or month view?' }));
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body).toMatchObject({
@@ -86,8 +90,8 @@ describe('POST /api/comments', () => {
     expect(collabs.map((c) => c.userId)).toEqual([userId]);
   });
 
-  it('creates a doc comment and attributes activity to the doc’s feature', async () => {
-    const res = await app.request('/api/comments', post({ documentId, body: 'Add shortcuts?' }, otherAuth));
+  it("creates a doc comment and attributes activity to the doc's feature", async () => {
+    const res = await app.request(BASE(projectId), post({ documentId, body: 'Add shortcuts?' }, otherAuth));
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.documentId).toBe(documentId);
@@ -106,9 +110,9 @@ describe('POST /api/comments', () => {
   });
 
   it('creates a one-level reply and rejects reply-to-reply with 400', async () => {
-    const root = await (await app.request('/api/comments', post({ featureId, body: 'root' }))).json();
+    const root = await (await app.request(BASE(projectId), post({ featureId, body: 'root' }))).json();
     const replyRes = await app.request(
-      '/api/comments',
+      BASE(projectId),
       post({ featureId, parentId: root.id, body: 'reply' }),
     );
     expect(replyRes.status).toBe(201);
@@ -116,42 +120,42 @@ describe('POST /api/comments', () => {
     expect(reply.parentId).toBe(root.id);
 
     const nested = await app.request(
-      '/api/comments',
+      BASE(projectId),
       post({ featureId, parentId: reply.id, body: 'reply to reply' }),
     );
     expect(nested.status).toBe(400);
   });
 
   it('400 when both or neither target is given, and on empty body', async () => {
-    expect((await app.request('/api/comments', post({ body: 'x' }))).status).toBe(400);
+    expect((await app.request(BASE(projectId), post({ body: 'x' }))).status).toBe(400);
     expect(
-      (await app.request('/api/comments', post({ featureId, documentId, body: 'x' }))).status,
+      (await app.request(BASE(projectId), post({ featureId, documentId, body: 'x' }))).status,
     ).toBe(400);
-    expect((await app.request('/api/comments', post({ featureId, body: '' }))).status).toBe(400);
+    expect((await app.request(BASE(projectId), post({ featureId, body: '' }))).status).toBe(400);
   });
 
   it('404 on unknown feature, document, or parent', async () => {
     const missing = '00000000-0000-4000-8000-000000000000';
-    expect((await app.request('/api/comments', post({ featureId: missing, body: 'x' }))).status).toBe(404);
-    expect((await app.request('/api/comments', post({ documentId: missing, body: 'x' }))).status).toBe(404);
+    expect((await app.request(BASE(projectId), post({ featureId: missing, body: 'x' }))).status).toBe(404);
+    expect((await app.request(BASE(projectId), post({ documentId: missing, body: 'x' }))).status).toBe(404);
     expect(
-      (await app.request('/api/comments', post({ featureId, parentId: missing, body: 'x' }))).status,
+      (await app.request(BASE(projectId), post({ featureId, parentId: missing, body: 'x' }))).status,
     ).toBe(404);
   });
 });
 
-describe('GET /api/comments', () => {
+describe('GET /api/projects/:pid/comments', () => {
   it('returns threads with nested replies, unresolved first, newest roots first', async () => {
-    const oldRoot = await (await app.request('/api/comments', post({ featureId, body: 'old root' }))).json();
-    await app.request('/api/comments', post({ featureId, parentId: oldRoot.id, body: 'first reply' }, otherAuth));
-    await app.request('/api/comments', post({ featureId, parentId: oldRoot.id, body: 'second reply' }));
-    const newRoot = await (await app.request('/api/comments', post({ featureId, body: 'new root' }))).json();
+    const oldRoot = await (await app.request(BASE(projectId), post({ featureId, body: 'old root' }))).json();
+    await app.request(BASE(projectId), post({ featureId, parentId: oldRoot.id, body: 'first reply' }, otherAuth));
+    await app.request(BASE(projectId), post({ featureId, parentId: oldRoot.id, body: 'second reply' }));
+    const newRoot = await (await app.request(BASE(projectId), post({ featureId, body: 'new root' }))).json();
     const resolvedRoot = await (
-      await app.request('/api/comments', post({ featureId, body: 'resolved root' }))
+      await app.request(BASE(projectId), post({ featureId, body: 'resolved root' }))
     ).json();
-    await app.request(`/api/comments/${resolvedRoot.id}/resolve`, patch({ resolved: true }));
+    await app.request(`${BASE(projectId)}/${resolvedRoot.id}/resolve`, patch({ resolved: true }));
 
-    const res = await app.request(`/api/comments?featureId=${featureId}`, { headers: auth });
+    const res = await app.request(`${BASE(projectId)}?featureId=${featureId}`, { headers: auth });
     expect(res.status).toBe(200);
     const threads = await res.json();
     expect(threads.map((t: { body: string }) => t.body)).toEqual(['new root', 'old root', 'resolved root']);
@@ -163,26 +167,26 @@ describe('GET /api/comments', () => {
   });
 
   it('filters by documentId and keeps surfaces separate', async () => {
-    await app.request('/api/comments', post({ featureId, body: 'feature comment' }));
-    await app.request('/api/comments', post({ documentId, body: 'doc comment' }));
-    const res = await app.request(`/api/comments?documentId=${documentId}`, { headers: auth });
+    await app.request(BASE(projectId), post({ featureId, body: 'feature comment' }));
+    await app.request(BASE(projectId), post({ documentId, body: 'doc comment' }));
+    const res = await app.request(`${BASE(projectId)}?documentId=${documentId}`, { headers: auth });
     const threads = await res.json();
     expect(threads).toHaveLength(1);
     expect(threads[0].body).toBe('doc comment');
   });
 
   it('400 when neither or both query params are given', async () => {
-    expect((await app.request('/api/comments', { headers: auth })).status).toBe(400);
+    expect((await app.request(BASE(projectId), { headers: auth })).status).toBe(400);
     expect(
-      (await app.request(`/api/comments?featureId=${featureId}&documentId=${documentId}`, { headers: auth })).status,
+      (await app.request(`${BASE(projectId)}?featureId=${featureId}&documentId=${documentId}`, { headers: auth })).status,
     ).toBe(400);
   });
 });
 
-describe('PATCH /api/comments/:id', () => {
+describe('PATCH /api/projects/:pid/comments/:id', () => {
   it('lets the author edit their own body', async () => {
-    const root = await (await app.request('/api/comments', post({ featureId, body: 'tpyo' }))).json();
-    const res = await app.request(`/api/comments/${root.id}`, patch({ body: 'typo fixed' }));
+    const root = await (await app.request(BASE(projectId), post({ featureId, body: 'tpyo' }))).json();
+    const res = await app.request(`${BASE(projectId)}/${root.id}`, patch({ body: 'typo fixed' }));
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.body).toBe('typo fixed');
@@ -190,28 +194,28 @@ describe('PATCH /api/comments/:id', () => {
   });
 
   it('403 for non-authors and 404 on unknown id', async () => {
-    const root = await (await app.request('/api/comments', post({ featureId, body: 'mine' }))).json();
-    const res = await app.request(`/api/comments/${root.id}`, patch({ body: 'hijack' }, otherAuth));
+    const root = await (await app.request(BASE(projectId), post({ featureId, body: 'mine' }))).json();
+    const res = await app.request(`${BASE(projectId)}/${root.id}`, patch({ body: 'hijack' }, otherAuth));
     expect(res.status).toBe(403);
     const missing = await app.request(
-      '/api/comments/00000000-0000-4000-8000-000000000000',
+      `${BASE(projectId)}/00000000-0000-4000-8000-000000000000`,
       patch({ body: 'x' }),
     );
     expect(missing.status).toBe(404);
   });
 });
 
-describe('PATCH /api/comments/:id/resolve', () => {
+describe('PATCH /api/projects/:pid/comments/:id/resolve', () => {
   it('resolves and reopens a root, recording comment_resolved activity', async () => {
-    const root = await (await app.request('/api/comments', post({ featureId, body: 'root' }))).json();
+    const root = await (await app.request(BASE(projectId), post({ featureId, body: 'root' }))).json();
 
-    const res = await app.request(`/api/comments/${root.id}/resolve`, patch({ resolved: true }, otherAuth));
+    const res = await app.request(`${BASE(projectId)}/${root.id}/resolve`, patch({ resolved: true }, otherAuth));
     expect(res.status).toBe(200);
     const resolved = await res.json();
     expect(resolved.resolvedAt).not.toBeNull();
     expect(resolved.resolvedBy).toBe(otherId);
 
-    const reopenRes = await app.request(`/api/comments/${root.id}/resolve`, patch({ resolved: false }));
+    const reopenRes = await app.request(`${BASE(projectId)}/${root.id}/resolve`, patch({ resolved: false }));
     const reopened = await reopenRes.json();
     expect(reopened.resolvedAt).toBeNull();
     expect(reopened.resolvedBy).toBeNull();
@@ -224,42 +228,116 @@ describe('PATCH /api/comments/:id/resolve', () => {
   });
 
   it('400 when resolving a reply, 404 on unknown id', async () => {
-    const root = await (await app.request('/api/comments', post({ featureId, body: 'root' }))).json();
+    const root = await (await app.request(BASE(projectId), post({ featureId, body: 'root' }))).json();
     const reply = await (
-      await app.request('/api/comments', post({ featureId, parentId: root.id, body: 'reply' }))
+      await app.request(BASE(projectId), post({ featureId, parentId: root.id, body: 'reply' }))
     ).json();
-    const res = await app.request(`/api/comments/${reply.id}/resolve`, patch({ resolved: true }));
+    const res = await app.request(`${BASE(projectId)}/${reply.id}/resolve`, patch({ resolved: true }));
     expect(res.status).toBe(400);
     const missing = await app.request(
-      '/api/comments/00000000-0000-4000-8000-000000000000/resolve',
+      `${BASE(projectId)}/00000000-0000-4000-8000-000000000000/resolve`,
       patch({ resolved: true }),
     );
     expect(missing.status).toBe(404);
   });
 });
 
-describe('DELETE /api/comments/:id', () => {
+describe('DELETE /api/projects/:pid/comments/:id', () => {
   it('author deletes a root → 204 and replies cascade', async () => {
-    const root = await (await app.request('/api/comments', post({ featureId, body: 'root' }))).json();
-    await app.request('/api/comments', post({ featureId, parentId: root.id, body: 'reply' }, otherAuth));
+    const root = await (await app.request(BASE(projectId), post({ featureId, body: 'root' }))).json();
+    await app.request(BASE(projectId), post({ featureId, parentId: root.id, body: 'reply' }, otherAuth));
 
-    const res = await app.request(`/api/comments/${root.id}`, { method: 'DELETE', headers: auth });
+    const res = await app.request(`${BASE(projectId)}/${root.id}`, { method: 'DELETE', headers: auth });
     expect(res.status).toBe(204);
     const remaining = await db.select().from(comments).where(eq(comments.featureId, featureId));
     expect(remaining).toHaveLength(0);
   });
 
   it('403 for non-authors and 404 on unknown id', async () => {
-    const root = await (await app.request('/api/comments', post({ featureId, body: 'root' }))).json();
-    const res = await app.request(`/api/comments/${root.id}`, {
+    const root = await (await app.request(BASE(projectId), post({ featureId, body: 'root' }))).json();
+    const res = await app.request(`${BASE(projectId)}/${root.id}`, {
       method: 'DELETE',
       headers: otherAuth,
     });
     expect(res.status).toBe(403);
-    const missing = await app.request('/api/comments/00000000-0000-4000-8000-000000000000', {
+    const missing = await app.request(`${BASE(projectId)}/00000000-0000-4000-8000-000000000000`, {
       method: 'DELETE',
       headers: auth,
     });
     expect(missing.status).toBe(404);
+  });
+});
+
+// ---- Cross-project isolation tests (B5 scoping) ----
+
+describe('Cross-project isolation', () => {
+  let projectBId: string;
+  let bFeatureId: string;
+  let bCommentId: string;
+
+  beforeEach(async () => {
+    // Set up project B with its own feature and comment (not accessible via project A's path)
+    const [pb] = await db.insert(projects).values({ name: 'Project B', vision: '', aboutMd: '' }).returning();
+    projectBId = pb.id;
+    const [bf] = await db.insert(features).values({ projectId: projectBId, title: 'B Feature', horizon: 'now' }).returning();
+    bFeatureId = bf.id;
+    // Insert a comment directly on B's feature (bypassing route — no membership needed here)
+    const [bc] = await db.insert(comments).values({
+      authorId: userId,
+      featureId: bFeatureId,
+      documentId: null,
+      parentId: null,
+      body: 'B comment',
+    }).returning();
+    bCommentId = bc.id;
+  });
+
+  it('GET ?featureId=<B feature> via A path → 404', async () => {
+    const res = await app.request(`${BASE(projectId)}?featureId=${bFeatureId}`, { headers: auth });
+    expect(res.status).toBe(404);
+  });
+
+  it('GET ?documentId=<B doc> via A path → 404', async () => {
+    const [bDoc] = await db.insert(documents).values({ projectId: projectBId, featureId: bFeatureId, type: 'prd', title: 'B Doc' }).returning();
+    const res = await app.request(`${BASE(projectId)}?documentId=${bDoc.id}`, { headers: auth });
+    expect(res.status).toBe(404);
+  });
+
+  it('POST {parentId: <B comment>} via A path → 404', async () => {
+    const res = await app.request(BASE(projectId), post({ featureId, parentId: bCommentId, body: 'hijack' }));
+    expect(res.status).toBe(404);
+  });
+
+  it('POST {featureId: <B feature>} via A path → 404', async () => {
+    const res = await app.request(BASE(projectId), post({ featureId: bFeatureId, body: 'hijack' }));
+    expect(res.status).toBe(404);
+  });
+
+  it('PATCH /A/comments/<B comment> → 404', async () => {
+    const res = await app.request(`${BASE(projectId)}/${bCommentId}`, patch({ body: 'hacked' }));
+    expect(res.status).toBe(404);
+  });
+
+  it('PATCH /A/comments/<B comment>/resolve → 404', async () => {
+    const res = await app.request(`${BASE(projectId)}/${bCommentId}/resolve`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json', ...auth },
+      body: JSON.stringify({ resolved: true }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it('DELETE /A/comments/<B comment> → 404', async () => {
+    const res = await app.request(`${BASE(projectId)}/${bCommentId}`, { method: 'DELETE', headers: auth });
+    expect(res.status).toBe(404);
+  });
+
+  it('viewer POST → 403', async () => {
+    // Create a viewer of project A
+    const viewer = await createTestUser({ role: 'member', name: 'Viewer', email: 'viewer@test.co' });
+    await addMembership(viewer.id, projectId, 'viewer');
+    const viewerAuth = { cookie: await authCookie(viewer), origin: 'http://localhost', host: 'localhost' };
+    const res = await app.request(BASE(projectId), post({ featureId, body: 'read only!' }, viewerAuth));
+    expect(res.status).toBe(403);
   });
 });

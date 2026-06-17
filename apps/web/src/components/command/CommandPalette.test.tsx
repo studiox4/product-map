@@ -12,6 +12,9 @@ import CommandPalette from './CommandPalette';
 import ShortcutsOverlay from './ShortcutsOverlay';
 import { useGlobalShortcuts } from './useGlobalShortcuts';
 import { RECENTS_KEY, getRecents, recordRecent } from './recents';
+import { ProjectProvider } from '@/lib/project';
+
+const TEST_PROJECT_ID = 'p1';
 
 // Node's experimental webstorage shadows jsdom's localStorage in this env
 // (methods are undefined) — install a working in-memory Storage.
@@ -101,8 +104,11 @@ const docs: DocumentListItem[] = [
 ];
 
 const server = setupServer(
-  http.get('/api/features', () => HttpResponse.json(features)),
-  http.get('/api/documents', () => HttpResponse.json(docs)),
+  http.get('/api/projects', () =>
+    HttpResponse.json([{ id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'owner' }]),
+  ),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/features`, () => HttpResponse.json(features)),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/documents`, () => HttpResponse.json(docs)),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -143,9 +149,11 @@ function renderHarness(entries: string[] = ['/']) {
   });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={entries}>
-        <Harness />
-      </MemoryRouter>
+      <ProjectProvider>
+        <MemoryRouter initialEntries={entries}>
+          <Harness />
+        </MemoryRouter>
+      </ProjectProvider>
     </QueryClientProvider>,
   );
 }
@@ -187,7 +195,7 @@ describe('CommandPalette', () => {
   it('creates a feature in a horizon with an inline title and navigates to it', async () => {
     let posted: Record<string, unknown> | null = null;
     server.use(
-      http.post('/api/features', async ({ request }) => {
+      http.post(`/api/projects/${TEST_PROJECT_ID}/features`, async ({ request }) => {
         posted = (await request.json()) as Record<string, unknown>;
         return HttpResponse.json(
           makeFeature({ id: 'f-new', title: String(posted.title), horizon: 'later' }),
@@ -223,7 +231,7 @@ describe('CommandPalette', () => {
 
   it("'?' opens the shortcuts overlay, but not while typing in an input", async () => {
     renderHarness();
-    const decoy = screen.getByLabelText('decoy text field');
+    const decoy = await screen.findByLabelText('decoy text field');
     await user().type(decoy, '?');
     expect(screen.queryByRole('dialog', { name: /keyboard shortcuts/i })).toBeNull();
     (decoy as HTMLInputElement).blur();

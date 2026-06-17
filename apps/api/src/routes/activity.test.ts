@@ -1,6 +1,14 @@
-// Integration tests for GET /api/activity (workspace-wide feed for the Time Machine).
+// Integration tests for GET /api/projects/:projectId/activity (workspace feed).
 // helpers must be imported before ../app so DATABASE_URL points at productmap_test.
-import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
+import {
+  setupTestDb,
+  truncateAll,
+  closeTestDb,
+  createTestUser,
+  createTestProject,
+  addMembership,
+  authCookie,
+} from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
 import { projects, features, users, activity } from '@productmap/db';
@@ -9,6 +17,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 let userId: string;
 let editorId: string;
 let ganttId: string;
+let projectId: string;
 let auth: Record<string, string> = {};
 
 const daysAgo = (n: number) => new Date(Date.now() - n * 24 * 60 * 60 * 1000);
@@ -29,6 +38,9 @@ beforeEach(async () => {
     .insert(projects)
     .values({ name: 'ProductMap', vision: 'v', aboutMd: '' })
     .returning();
+  projectId = project.id;
+  // Super-admin needs membership for requireMembership to set currentProjectId
+  await addMembership(actor.id, project.id, 'editor');
   const [u] = await db.insert(users).values({ name: 'Corban', color: '#2b557e' }).returning();
   userId = u.id;
   const rows = await db
@@ -74,10 +86,10 @@ async function seedHistory() {
   ]);
 }
 
-describe('GET /api/activity', () => {
-  it('returns workspace-wide activity ascending with joined actor and feature title', async () => {
+describe('GET /api/projects/:projectId/activity', () => {
+  it('returns project-scoped activity ascending with joined actor and feature title', async () => {
     await seedHistory();
-    const res = await app.request('/api/activity', { headers: auth });
+    const res = await app.request(`/api/projects/${projectId}/activity`, { headers: auth });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toHaveLength(3);
@@ -112,13 +124,19 @@ describe('GET /api/activity', () => {
 
   it('filters with ?since= (inclusive lower bound)', async () => {
     await seedHistory();
-    const res = await app.request(`/api/activity?since=${daysAgo(21).toISOString()}`, { headers: auth });
+    const res = await app.request(
+      `/api/projects/${projectId}/activity?since=${daysAgo(21).toISOString()}`,
+      { headers: auth },
+    );
     const body = await res.json();
     expect(body.map((a: { kind: string }) => a.kind)).toEqual(['horizon_changed', 'dates_changed']);
   });
 
   it('400 on a malformed since', async () => {
-    const res = await app.request('/api/activity?since=not-a-date', { headers: auth });
+    const res = await app.request(
+      `/api/projects/${projectId}/activity?since=not-a-date`,
+      { headers: auth },
+    );
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe('validation');
   });
@@ -132,8 +150,58 @@ describe('GET /api/activity', () => {
       createdAt: new Date(Date.now() - (1010 - i) * 60_000),
     }));
     await db.insert(activity).values(rows);
-    const res = await app.request('/api/activity', { headers: auth });
+    const res = await app.request(`/api/projects/${projectId}/activity`, { headers: auth });
     const body = await res.json();
     expect(body).toHaveLength(1000);
+  });
+
+  it('activity list in project A excludes activity from project B (isolation)', async () => {
+    // Seed activity in project A
+    await seedHistory();
+
+    // Create project B with its own feature and activity
+    const actorB = await createTestUser({ role: 'admin' });
+    const authB = { cookie: await authCookie(actorB), origin: 'http://localhost', host: 'localhost' };
+    const projectB = await createTestProject('Project B');
+    await addMembership(actorB.id, projectB.id, 'editor');
+    const [featureB] = await db
+      .insert(features)
+      .values({ projectId: projectB.id, title: 'Feature B', horizon: 'now' })
+      .returning();
+    await db.insert(activity).values({
+      featureId: featureB.id,
+      actorId: userId,
+      kind: 'feature_created',
+      payload: { to: 'Feature B', snapshot: { title: 'Feature B', horizon: 'now', status: 'idea', startDate: null, endDate: null } },
+    });
+
+    // Project A activity must not include B's activity
+    const resA = await app.request(`/api/projects/${projectId}/activity`, { headers: auth });
+    expect(resA.status).toBe(200);
+    const bodyA = await resA.json();
+    expect(bodyA.every((a: { featureId: string }) => a.featureId !== featureB.id)).toBe(true);
+    expect(bodyA).toHaveLength(3);
+
+    // Project B activity must not include A's activity
+    const resB = await app.request(`/api/projects/${projectB.id}/activity`, { headers: authB });
+    expect(resB.status).toBe(200);
+    const bodyB = await resB.json();
+    expect(bodyB).toHaveLength(1);
+    expect(bodyB[0].featureId).toBe(featureB.id);
+  });
+
+  it('viewer GET returns 200 (read allowed)', async () => {
+    const viewer = await createTestUser({ role: 'member' });
+    await addMembership(viewer.id, projectId, 'viewer');
+    const viewerAuth = { cookie: await authCookie(viewer), origin: 'http://localhost', host: 'localhost' };
+    const res = await app.request(`/api/projects/${projectId}/activity`, { headers: viewerAuth });
+    expect(res.status).toBe(200);
+  });
+
+  it('non-member GET returns 404', async () => {
+    const outsider = await createTestUser({ role: 'member' });
+    const outsiderAuth = { cookie: await authCookie(outsider), origin: 'http://localhost', host: 'localhost' };
+    const res = await app.request(`/api/projects/${projectId}/activity`, { headers: outsiderAuth });
+    expect(res.status).toBe(404);
   });
 });

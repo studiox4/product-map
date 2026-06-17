@@ -6,7 +6,7 @@
 // prompt content, chat retrieval ranking) are covered by the api unit tests
 // with injected mock models.
 import { test, expect, type Page } from '@playwright/test';
-import { getFeatureByTitle } from './helpers';
+import { getFeatureByTitle, getProjectId } from './helpers';
 
 /** Pretend the workspace has an AI key so AI affordances render. */
 async function enableAi(page: Page) {
@@ -74,8 +74,9 @@ test('AC1: idea lifecycle — create, vote, promote to Later, feature linked', a
   ).toBeVisible();
 
   // Cleanup: remove the promoted feature so later specs see the seeded board.
+  const pid = await getProjectId(request);
   const feature = await getFeatureByTitle(request, 'Public API for roadmap data');
-  await request.delete(`/api/features/${feature.id}`);
+  await request.delete(`/api/projects/${pid}/features/${feature.id}`);
 });
 
 // ---------------------------------------------------------------------------
@@ -192,8 +193,9 @@ test('AC4: dependencies — badge, board chip, gantt arrow, cycle toast, ship cl
   ).toBeVisible();
 
   // Throwaway pair so nothing seeded is disturbed.
+  const pid = await getProjectId(request);
   const mk = async (title: string) => {
-    const res = await request.post('/api/features', {
+    const res = await request.post(`/api/projects/${pid}/features`, {
       data: { title, horizon: 'later' },
     });
     expect(res.status()).toBe(201);
@@ -231,13 +233,13 @@ test('AC4: dependencies — badge, board chip, gantt arrow, cycle toast, ship cl
     await expect(page.getByText('That would create a loop')).toBeVisible();
 
     // Shipping the blocker clears the badge.
-    await request.patch(`/api/features/${blocker.id}`, { data: { status: 'shipped' } });
+    await request.patch(`/api/projects/${pid}/features/${blocker.id}`, { data: { status: 'shipped' } });
     await page.goto(`/features/${blocked.id}`);
     await expect(page.getByRole('region', { name: 'Dependencies' })).toBeVisible();
     await expect(page.getByText('Blocked by 1')).toHaveCount(0);
   } finally {
-    await request.delete(`/api/features/${blocked.id}`);
-    await request.delete(`/api/features/${blocker.id}`);
+    await request.delete(`/api/projects/${pid}/features/${blocked.id}`);
+    await request.delete(`/api/projects/${pid}/features/${blocker.id}`);
   }
 });
 
@@ -385,7 +387,8 @@ test('AC9a: copilot chat streams with doc citation links; nudges list real items
   );
 
   // A dateless now-feature feeds the dateless_now nudge (cleaned up below).
-  const tempRes = await request.post('/api/features', {
+  const pid = await getProjectId(request);
+  const tempRes = await request.post(`/api/projects/${pid}/features`, {
     data: { title: 'E2E dateless now feature', horizon: 'now' },
   });
   const temp = (await tempRes.json()) as { id: string };
@@ -409,7 +412,7 @@ test('AC9a: copilot chat streams with doc citation links; nudges list real items
     await expect(nudges.getByText('Comments & review — Feature brief')).toBeVisible();
     await expect(nudges.getByText('E2E dateless now feature')).toBeVisible();
   } finally {
-    await request.delete(`/api/features/${temp.id}`);
+    await request.delete(`/api/projects/${pid}/features/${temp.id}`);
   }
 });
 

@@ -3,23 +3,16 @@ import { HTTPException } from 'hono/http-exception';
 import { authRoutes } from './routes/auth';
 import { requireAuth, requireAdmin } from './middleware/auth';
 import { isSameOrigin } from './lib/rate-limit';
-import { activityRoutes } from './routes/activity';
-import { featuresRoutes } from './routes/features';
 import { projectsRoutes } from './routes/projects';
-import { documentsRoutes, exportRoutes } from './routes/documents';
 import { uploadsRoutes } from './routes/uploads';
-import { overviewRoutes } from './routes/overview';
 import { aiRoutes } from './routes/ai';
 import { usersRoutes } from './routes/users';
-import { commentsRoutes } from './routes/comments';
 import { templatesRoutes } from './routes/templates';
 import { adminRoutes } from './routes/admin';
 // Dream-tier route modules (mounted as stubs by the foundation agent; each
 // feature agent fills in its own file — nobody else edits app.ts).
 import { ideasRoutes } from './routes/ideas';
-import { evidenceRoutes } from './routes/evidence';
 import { decisionsRoutes } from './routes/decisions';
-import { depsRoutes } from './routes/deps';
 import { shareRoutes } from './routes/share';
 import { copilotRoutes } from './routes/copilot';
 import { projectScopedContent } from './routes/project-scoped';
@@ -46,28 +39,19 @@ export const app = new Hono()
   })
   .use('/api/admin/*', requireAdmin)
   .route('/api/users', usersRoutes)
-  .route('/api/features', featuresRoutes)
-  .route('/api/activity', activityRoutes)
-  .route('/api/comments', commentsRoutes)
   .route('/api/projects', projectsRoutes)
   // Content sub-app: registered AFTER mgmt so projectsRoutes /:projectId* get
   // first crack. A non-match falls through to this mount (Hono chain semantics).
   .route('/api/projects/:projectId', projectScopedContent)
-  .route('/api/documents', documentsRoutes)
-  .route('/api', exportRoutes)
+  // documentsRoutes + exportRoutes → moved to /api/projects/:projectId/* in project-scoped.ts
   .route('/api/uploads', uploadsRoutes)
-  .route('/api/overview', overviewRoutes)
   .route('/api/ai', aiRoutes)
   .route('/api/templates', templatesRoutes)
   .route('/api/admin', adminRoutes)
   // --- Dream tier mounts (paths inside each module are relative to these) ---
   .route('/api/ideas', ideasRoutes)
-  // evidence defines /features/:id/evidence + /evidence/:id
-  .route('/api', evidenceRoutes)
   // decisions defines /decisions… + /ai/suggest-decision
   .route('/api', decisionsRoutes)
-  // deps defines /:id/dependencies
-  .route('/api/features', depsRoutes)
   .route('/api/share', shareRoutes)
   // copilot defines /ai/review-doc, /ai/chat, /copilot/nudges
   .route('/api', copilotRoutes);

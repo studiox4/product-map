@@ -2,26 +2,35 @@ import { beforeAll, beforeEach, afterAll, describe, expect, it } from 'vitest';
 import type { OverviewResponse, AttentionItem } from '@productmap/shared';
 // Importing helpers first sets DATABASE_URL to the TEST_PG_BASE-aware test URL
 // (honors a CI Postgres password) before ../db evaluates its pool below.
-import { createTestUser, authCookie, setupTestDb } from '../test/helpers';
+import {
+  createTestUser,
+  createTestProject,
+  addMembership,
+  authCookie,
+  setupTestDb,
+  truncateAll,
+  closeTestDb,
+} from '../test/helpers';
 
 const { app } = await import('../app');
 const { db, pool } = await import('../db');
 const { projects, features, documents, users, comments, votes } = await import('@productmap/db');
 
 let auth: Record<string, string> = {};
+let actor: { id: string; role: 'admin' | 'member'; tokenVersion?: number };
 
 beforeAll(async () => {
   await setupTestDb();
 });
 
 beforeEach(async () => {
-  await db.execute('truncate table documents, features, projects, users cascade' as never);
-  const actor = await createTestUser({ role: 'admin' });
+  await truncateAll();
+  actor = await createTestUser({ role: 'admin' });
   auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
 });
 
 afterAll(async () => {
-  await pool.end();
+  await closeTestDb();
 });
 
 async function seedFixture() {
@@ -29,6 +38,9 @@ async function seedFixture() {
     .insert(projects)
     .values({ name: 'ProductMap', vision: 'A vision', aboutMd: 'About' })
     .returning();
+
+  // Super-admin actor needs membership for requireMembership to resolve pid
+  await addMembership(actor.id, project.id, 'editor');
 
   // dated feature with docs (one draft, one in_review) → only doc attention
   const [editor] = await db
@@ -109,10 +121,10 @@ async function seedFixture() {
   return { project, editor, gantt, collab, draftDoc, reviewDoc };
 }
 
-describe('GET /api/overview', () => {
+describe('GET /api/projects/:projectId/overview', () => {
   it('returns product, features with nested docs, and attention items', async () => {
     const { project, editor, gantt, collab, draftDoc, reviewDoc } = await seedFixture();
-    const res = await app.request('/api/overview', { headers: auth });
+    const res = await app.request(`/api/projects/${project.id}/overview`, { headers: auth });
     expect(res.status).toBe(200);
     const body = (await res.json()) as OverviewResponse;
 
@@ -176,8 +188,8 @@ describe('GET /api/overview', () => {
   });
 
   it('has no duplicate attention items and orders doc items before feature items', async () => {
-    await seedFixture();
-    const res = await app.request('/api/overview', { headers: auth });
+    const { project } = await seedFixture();
+    const res = await app.request(`/api/projects/${project.id}/overview`, { headers: auth });
     const body = (await res.json()) as OverviewResponse;
 
     const keys = body.attention.map((a) =>
@@ -193,10 +205,11 @@ describe('GET /api/overview', () => {
   });
 
   it('includes vote summaries on features with per-user myVote', async () => {
-    const { editor, gantt } = await seedFixture();
+    const { project, editor, gantt } = await seedFixture();
     const [corban] = await db.insert(users).values({ name: 'Corban', color: '#2b557e' }).returning();
     // Ada is a real auth user so we can read the overview as her via cookie.
     const ada = await createTestUser({ role: 'member', name: 'Ada', email: 'ada@test.co', color: '#3c6b46' });
+    await addMembership(ada.id, project.id, 'viewer');
     const adaAuth = { cookie: await authCookie(ada), origin: 'http://localhost', host: 'localhost' };
     await db.insert(votes).values([
       { userId: corban.id, featureId: editor.id, value: 1 },
@@ -204,7 +217,7 @@ describe('GET /api/overview', () => {
       { userId: ada.id, featureId: gantt.id, value: -1 },
     ]);
 
-    const res = await app.request('/api/overview', { headers: adaAuth });
+    const res = await app.request(`/api/projects/${project.id}/overview`, { headers: adaAuth });
     const body = (await res.json()) as OverviewResponse;
     const editorF = body.features.find((f) => f.id === editor.id)!;
     expect(editorF).toMatchObject({ score: 2, boosts: 2, cools: 0, myVote: 1 });
@@ -215,7 +228,7 @@ describe('GET /api/overview', () => {
   });
 
   it('adds open_comments attention items first, combining feature and doc threads', async () => {
-    const { editor, gantt, draftDoc } = await seedFixture();
+    const { project, editor, gantt, draftDoc } = await seedFixture();
     const [corban] = await db.insert(users).values({ name: 'Corban', color: '#2b557e' }).returning();
 
     // editor: one unresolved doc root (reply must not count) + one unresolved feature root = 2
@@ -239,7 +252,7 @@ describe('GET /api/overview', () => {
       resolvedBy: corban.id,
     });
 
-    const res = await app.request('/api/overview', { headers: auth });
+    const res = await app.request(`/api/projects/${project.id}/overview`, { headers: auth });
     const body = (await res.json()) as OverviewResponse;
     const openItems = body.attention.filter((a) => a.kind === 'open_comments');
     expect(openItems).toEqual([
@@ -249,9 +262,60 @@ describe('GET /api/overview', () => {
     expect(body.attention[0].kind).toBe('open_comments');
   });
 
-  it('404s when no product exists', async () => {
-    const res = await app.request('/api/overview', { headers: auth });
+  it('404s when no project exists for pid', async () => {
+    // Use a random project ID that does not exist (no membership either → 404 from gate)
+    const outsider = await createTestUser({ role: 'member' });
+    const outsiderAuth = { cookie: await authCookie(outsider), origin: 'http://localhost', host: 'localhost' };
+    const res = await app.request('/api/projects/00000000-0000-0000-0000-000000000000/overview', { headers: outsiderAuth });
     expect(res.status).toBe(404);
-    expect(await res.json()).toMatchObject({ error: 'not_found' });
+  });
+
+  it('overview returns only the pid project features (isolation)', async () => {
+    const { project, editor } = await seedFixture();
+
+    // Project B with its own feature
+    const actorB = await createTestUser({ role: 'admin' });
+    const authB = { cookie: await authCookie(actorB), origin: 'http://localhost', host: 'localhost' };
+    const [projectB] = await db
+      .insert(projects)
+      .values({ name: 'Project B', vision: '', aboutMd: '' })
+      .returning();
+    await addMembership(actorB.id, projectB.id, 'editor');
+    await db.insert(features).values({
+      projectId: projectB.id,
+      title: 'Feature from B',
+      horizon: 'now',
+    });
+
+    // Project A overview should not include B's features
+    const resA = await app.request(`/api/projects/${project.id}/overview`, { headers: auth });
+    expect(resA.status).toBe(200);
+    const bodyA = (await resA.json()) as OverviewResponse;
+    expect(bodyA.features.every((f) => f.projectId === project.id)).toBe(true);
+    expect(bodyA.features.some((f) => f.id === editor.id)).toBe(true);
+
+    // Project B overview should not include A's features
+    const resB = await app.request(`/api/projects/${projectB.id}/overview`, { headers: authB });
+    expect(resB.status).toBe(200);
+    const bodyB = (await resB.json()) as OverviewResponse;
+    expect(bodyB.features.every((f) => f.projectId === projectB.id)).toBe(true);
+    expect(bodyB.features.some((f) => f.id === editor.id)).toBe(false);
+  });
+
+  it('viewer GET returns 200 (read allowed)', async () => {
+    const { project } = await seedFixture();
+    const viewer = await createTestUser({ role: 'member' });
+    await addMembership(viewer.id, project.id, 'viewer');
+    const viewerAuth = { cookie: await authCookie(viewer), origin: 'http://localhost', host: 'localhost' };
+    const res = await app.request(`/api/projects/${project.id}/overview`, { headers: viewerAuth });
+    expect(res.status).toBe(200);
+  });
+
+  it('non-member GET returns 404', async () => {
+    const { project } = await seedFixture();
+    const outsider = await createTestUser({ role: 'member' });
+    const outsiderAuth = { cookie: await authCookie(outsider), origin: 'http://localhost', host: 'localhost' };
+    const res = await app.request(`/api/projects/${project.id}/overview`, { headers: outsiderAuth });
+    expect(res.status).toBe(404);
   });
 });

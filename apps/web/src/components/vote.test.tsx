@@ -8,6 +8,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import type { FeatureWithDocs } from '@productmap/shared';
 import Board from '@/routes/Board';
+import { ProjectProvider } from '@/lib/project';
+
+const TEST_PROJECT_ID = 'p1';
 
 // Node's experimental webstorage shadows jsdom's localStorage in this env
 // (methods are undefined) — install a working in-memory Storage.
@@ -79,9 +82,12 @@ function makeFeature(overrides: Partial<FeatureWithDocs>): FeatureWithDocs {
 let fixture: FeatureWithDocs[] = [];
 
 const server = setupServer(
+  http.get('/api/projects', () =>
+    HttpResponse.json([{ id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'owner' }]),
+  ),
   http.get('/api/users', () => HttpResponse.json([])),
-  http.get('/api/features', () => HttpResponse.json(fixture)),
-  http.get('/api/features/:id', ({ params }) => {
+  http.get(`/api/projects/${TEST_PROJECT_ID}/features`, () => HttpResponse.json(fixture)),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/features/:id`, ({ params }) => {
     const f = fixture.find((x) => x.id === params.id);
     return f ? HttpResponse.json(f) : new HttpResponse(null, { status: 404 });
   }),
@@ -105,11 +111,13 @@ function renderBoard() {
   });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={['/board']}>
-        <Routes>
-          <Route path="/board" element={<Board />} />
-        </Routes>
-      </MemoryRouter>
+      <ProjectProvider>
+        <MemoryRouter initialEntries={['/board']}>
+          <Routes>
+            <Route path="/board" element={<Board />} />
+          </Routes>
+        </MemoryRouter>
+      </ProjectProvider>
     </QueryClientProvider>,
   );
 }
@@ -123,7 +131,7 @@ describe('VoteWidget on board cards', () => {
     fixture = [makeFeature({ id: 'f1', title: 'Alpha', boosts: 2, cools: 1, score: 1, myVote: 0 })];
     let putBody: Record<string, unknown> | null = null;
     server.use(
-      http.put('/api/features/:id/vote', async ({ request }) => {
+      http.put(`/api/projects/${TEST_PROJECT_ID}/features/:id/vote`, async ({ request }) => {
         putBody = (await request.json()) as Record<string, unknown>;
         await delay(60);
         return HttpResponse.json({ score: 2, boosts: 3, cools: 1, myVote: 1 });
@@ -145,7 +153,7 @@ describe('VoteWidget on board cards', () => {
     fixture = [makeFeature({ id: 'f1', title: 'Alpha', boosts: 3, cools: 0, score: 3, myVote: 1 })];
     let putBody: Record<string, unknown> | null = null;
     server.use(
-      http.put('/api/features/:id/vote', async ({ request }) => {
+      http.put(`/api/projects/${TEST_PROJECT_ID}/features/:id/vote`, async ({ request }) => {
         putBody = (await request.json()) as Record<string, unknown>;
         const summary = { score: 2, boosts: 2, cools: 0, myVote: 0 as const };
         fixture = [{ ...fixture[0], ...summary }];
@@ -166,7 +174,7 @@ describe('VoteWidget on board cards', () => {
     fixture = [makeFeature({ id: 'f1', title: 'Alpha', boosts: 1, cools: 0, score: 1, myVote: 1 })];
     let putBody: Record<string, unknown> | null = null;
     server.use(
-      http.put('/api/features/:id/vote', async ({ request }) => {
+      http.put(`/api/projects/${TEST_PROJECT_ID}/features/:id/vote`, async ({ request }) => {
         putBody = (await request.json()) as Record<string, unknown>;
         const summary = { score: -1, boosts: 0, cools: 1, myVote: -1 as const };
         fixture = [{ ...fixture[0], ...summary }];
@@ -187,7 +195,7 @@ describe('VoteWidget on board cards', () => {
   it('rolls back the optimistic vote on server error', async () => {
     fixture = [makeFeature({ id: 'f1', title: 'Alpha', boosts: 2, cools: 0, score: 2, myVote: 0 })];
     server.use(
-      http.put('/api/features/:id/vote', async () => {
+      http.put(`/api/projects/${TEST_PROJECT_ID}/features/:id/vote`, async () => {
         await delay(60);
         return new HttpResponse(null, { status: 500 });
       }),
@@ -205,7 +213,7 @@ describe('VoteWidget on board cards', () => {
   it('clicking a vote control does not open the feature peek', async () => {
     fixture = [makeFeature({ id: 'f1', title: 'Alpha' })];
     server.use(
-      http.put('/api/features/:id/vote', () =>
+      http.put(`/api/projects/${TEST_PROJECT_ID}/features/:id/vote`, () =>
         HttpResponse.json({ score: 1, boosts: 1, cools: 0, myVote: 1 }),
       ),
     );

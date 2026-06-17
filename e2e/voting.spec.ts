@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { APIRequestContext } from '@playwright/test';
+import { getProjectId } from './helpers';
 
 // Comments & voting addendum — voting ACs:
 // AC4 — 🚀/🧊 vote, un-vote and flip all work and persist; counts and my-vote
@@ -12,14 +13,15 @@ test.describe.configure({ mode: 'serial' });
 const TITLES = ['Vote Target Alpha', 'Vote Target Bravo', 'Vote Target Charlie'] as const;
 const ids: Record<string, string> = {};
 
-async function createFeature(request: APIRequestContext, title: string) {
-  const res = await request.post('/api/features', { data: { title, horizon: 'later' } });
+async function createFeature(request: APIRequestContext, title: string, pid: string) {
+  const res = await request.post(`/api/projects/${pid}/features`, { data: { title, horizon: 'later' } });
   expect(res.status()).toBe(201);
   return ((await res.json()) as { id: string }).id;
 }
 
 test.beforeAll(async ({ request }) => {
-  for (const title of TITLES) ids[title] = await createFeature(request, title);
+  const pid = await getProjectId(request);
+  for (const title of TITLES) ids[title] = await createFeature(request, title, pid);
 });
 
 test('AC4: boost, un-vote and flip from the feature page; state survives reload', async ({
@@ -73,14 +75,15 @@ test('AC4: one vote per user enforced (idempotent PUT)', async ({
   request,
 }) => {
   const alphaId = ids['Vote Target Alpha'];
+  const pid = await getProjectId(request);
 
   // Same user (admin, via auth cookie) voting boost twice still counts once.
   for (let i = 0; i < 2; i += 1) {
-    const res = await request.put(`/api/features/${alphaId}/vote`, { data: { value: 1 } });
+    const res = await request.put(`/api/projects/${pid}/features/${alphaId}/vote`, { data: { value: 1 } });
     expect(res.ok()).toBeTruthy();
   }
   const summary = (await (
-    await request.put(`/api/features/${alphaId}/vote`, { data: { value: 1 } })
+    await request.put(`/api/projects/${pid}/features/${alphaId}/vote`, { data: { value: 1 } })
   ).json()) as { score: number; boosts: number; cools: number; myVote: number };
   expect(summary).toMatchObject({ boosts: 1, cools: 0, score: 1, myVote: 1 });
 });
@@ -110,8 +113,9 @@ test('AC5: score sort reorders the column, survives reload, and toggles back to 
 }) => {
   // Set distinct net scores via the API (auth cookie on the request fixture).
   // Alpha: 0 (cleared above), Bravo: +1, Charlie: −1.
+  const pid = await getProjectId(request);
   const put = (featureId: string, value: number) =>
-    request.put(`/api/features/${featureId}/vote`, { data: { value } });
+    request.put(`/api/projects/${pid}/features/${featureId}/vote`, { data: { value } });
 
   await put(ids['Vote Target Alpha'], 0);
   await put(ids['Vote Target Bravo'], 1);

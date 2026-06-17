@@ -104,9 +104,8 @@ const server = setupServer(
   http.get(`/api/projects/${TEST_PROJECT_ID}/releases/r1`, () =>
     HttpResponse.json({ ...releaseList[0], features: memberFeatures }),
   ),
-  // features and documents stay flat (PR-B migration)
-  http.get('/api/features', () => HttpResponse.json([...memberFeatures, ...unassignedFeatures])),
-  http.get('/api/documents/d1', () => HttpResponse.json(notesDoc)),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/features`, () => HttpResponse.json([...memberFeatures, ...unassignedFeatures])),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/documents/d1`, () => HttpResponse.json(notesDoc)),
   http.patch(`/api/projects/${TEST_PROJECT_ID}/releases/:id`, async ({ params, request }) => {
     const body = (await request.json()) as Record<string, unknown>;
     patchCalls.push({ id: params.id as string, body });

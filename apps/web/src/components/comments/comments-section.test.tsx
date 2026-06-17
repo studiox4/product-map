@@ -8,6 +8,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { CommentThread, User } from '@productmap/shared';
 import { CommentsSection } from './CommentsSection';
+import { ProjectProvider } from '@/lib/project';
+
+const TEST_PROJECT_ID = 'p1';
 
 // Node's experimental webstorage shadows jsdom's localStorage in this env
 // (methods are undefined) — install a working in-memory Storage.
@@ -112,9 +115,12 @@ let threads: CommentThread[] = [];
 let meUser: User = corban;
 
 const server = setupServer(
+  http.get('/api/projects', () =>
+    HttpResponse.json([{ id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'owner' }]),
+  ),
   http.get('/api/auth/me', () => HttpResponse.json(meUser)),
   http.get('/api/users', () => HttpResponse.json([corban, ada])),
-  http.get('/api/comments', () => HttpResponse.json(threads)),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/comments`, () => HttpResponse.json(threads)),
   // Decision extraction gates on AI status; enabled by default in tests.
   http.get('/api/ai/status', () => HttpResponse.json({ enabled: true })),
 );
@@ -136,9 +142,11 @@ function renderSection() {
   });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter>
-        <CommentsSection target={{ featureId: 'f1' }} />
-      </MemoryRouter>
+      <ProjectProvider>
+        <MemoryRouter>
+          <CommentsSection target={{ featureId: 'f1' }} />
+        </MemoryRouter>
+      </ProjectProvider>
     </QueryClientProvider>,
   );
 }
@@ -184,7 +192,7 @@ describe('CommentsSection', () => {
     threads = [adaThread];
     let patched: { url: string; body: unknown } | null = null;
     server.use(
-      http.patch('/api/comments/:id/resolve', async ({ request, params }) => {
+      http.patch(`/api/projects/${TEST_PROJECT_ID}/comments/:id/resolve`, async ({ request, params }) => {
         patched = { url: String(params.id), body: await request.json() };
         threads = [{ ...adaThread, resolvedAt: now, resolvedBy: 'u1' }];
         return HttpResponse.json({ ...adaThread, resolvedAt: now, resolvedBy: 'u1' });
@@ -225,7 +233,7 @@ describe('CommentsSection', () => {
     threads = [];
     let posted: unknown = null;
     server.use(
-      http.post('/api/comments', async ({ request }) => {
+      http.post(`/api/projects/${TEST_PROJECT_ID}/comments`, async ({ request }) => {
         posted = await request.json();
         return HttpResponse.json(comment({ id: 'c9', body: 'Ship it' }), { status: 201 });
       }),
@@ -242,7 +250,7 @@ describe('CommentsSection', () => {
     threads = [adaThread];
     let posted: unknown = null;
     server.use(
-      http.post('/api/comments', async ({ request }) => {
+      http.post(`/api/projects/${TEST_PROJECT_ID}/comments`, async ({ request }) => {
         posted = await request.json();
         return HttpResponse.json(
           comment({ id: 'c10', parentId: 'c3', body: 'Agreed' }),
@@ -328,7 +336,7 @@ describe('CommentsSection', () => {
     threads = [myThread, adaThread];
     let deleted: string | null = null;
     server.use(
-      http.delete('/api/comments/:id', ({ params }) => {
+      http.delete(`/api/projects/${TEST_PROJECT_ID}/comments/:id`, ({ params }) => {
         deleted = String(params.id);
         threads = [adaThread];
         return new HttpResponse(null, { status: 204 });

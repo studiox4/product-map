@@ -8,6 +8,9 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import type { OverviewResponse, WorkspaceActivityItem } from '@productmap/shared';
 import Landing from './Landing';
 import { digestCacheKey } from '@/components/landing/AiDigestCard';
+import { ProjectProvider } from '@/lib/project';
+
+const TEST_PROJECT_ID = 'p1';
 
 const product = {
   id: 'p1',
@@ -88,8 +91,11 @@ const activityFixture: WorkspaceActivityItem[] = [
 ];
 
 const server = setupServer(
-  http.get('/api/overview', () => HttpResponse.json(fixture)),
-  http.get('/api/activity', () => HttpResponse.json(activityFixture)),
+  http.get('/api/projects', () =>
+    HttpResponse.json([{ id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'owner' }]),
+  ),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/overview`, () => HttpResponse.json(fixture)),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/activity`, () => HttpResponse.json(activityFixture)),
   http.get('/api/ai/status', () => HttpResponse.json({ enabled: false })),
 );
 
@@ -136,15 +142,17 @@ function renderLanding() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={['/']}>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/board" element={<div>board page</div>} />
-          <Route path="/roadmap" element={<div>roadmap page</div>} />
-          <Route path="/docs/:id" element={<div>doc page</div>} />
-        </Routes>
-        <LocationProbe />
-      </MemoryRouter>
+      <ProjectProvider>
+        <MemoryRouter initialEntries={['/']}>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/board" element={<div>board page</div>} />
+            <Route path="/roadmap" element={<div>roadmap page</div>} />
+            <Route path="/docs/:id" element={<div>doc page</div>} />
+          </Routes>
+          <LocationProbe />
+        </MemoryRouter>
+      </ProjectProvider>
     </QueryClientProvider>,
   );
 }
@@ -199,7 +207,7 @@ describe('Landing', () => {
   });
 
   it('shows an error card with retry when overview fails', async () => {
-    server.use(http.get('/api/overview', () => HttpResponse.json({ error: 'internal' }, { status: 500 })));
+    server.use(http.get(`/api/projects/${TEST_PROJECT_ID}/overview`, () => HttpResponse.json({ error: 'internal' }, { status: 500 })));
     renderLanding();
     expect(await screen.findByText(/Couldn't load the overview/)).toBeTruthy();
     server.resetHandlers();

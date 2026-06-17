@@ -28,9 +28,25 @@ export interface FeatureLike {
   documents: { id: string; type: string; title: string; status: string }[];
 }
 
+/**
+ * Resolve the seeded project id for the authenticated user. The e2e auth
+ * context is the seeded admin (super-admin), so /api/projects always returns
+ * the seeded project first. Called fresh on each invocation so that specs
+ * that call /api/admin/reset-demo mid-run (which mints a new project row) get
+ * a current id rather than a stale cached one.
+ */
+export async function getProjectId(request: APIRequestContext): Promise<string> {
+  const res = await request.get('/api/projects');
+  if (!res.ok()) throw new Error(`GET /api/projects failed: ${res.status()}`);
+  const projects = (await res.json()) as { id: string }[];
+  if (!projects.length) throw new Error('no projects for the authenticated user');
+  return projects[0].id;
+}
+
 export async function getFeatures(request: APIRequestContext): Promise<FeatureLike[]> {
-  const res = await request.get('/api/features');
-  if (!res.ok()) throw new Error(`GET /api/features failed: ${res.status()}`);
+  const pid = await getProjectId(request);
+  const res = await request.get(`/api/projects/${pid}/features`);
+  if (!res.ok()) throw new Error(`GET /api/projects/${pid}/features failed: ${res.status()}`);
   return (await res.json()) as FeatureLike[];
 }
 
@@ -48,8 +64,9 @@ export async function createDocument(
   request: APIRequestContext,
   body: { featureId: string; type: string; title: string; fromTemplate: boolean },
 ): Promise<{ id: string }> {
-  const res = await request.post('/api/documents', { data: body });
-  if (res.status() !== 201) throw new Error(`POST /api/documents failed: ${res.status()}`);
+  const pid = await getProjectId(request);
+  const res = await request.post(`/api/projects/${pid}/documents`, { data: body });
+  if (res.status() !== 201) throw new Error(`POST /api/projects/${pid}/documents failed: ${res.status()}`);
   return (await res.json()) as { id: string };
 }
 

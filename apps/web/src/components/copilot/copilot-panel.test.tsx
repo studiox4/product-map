@@ -4,6 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { CopilotNudge } from '@productmap/shared';
 import { CopilotPanel, linkifyDocTitles } from './CopilotPanel';
+import { ProjectProvider } from '@/lib/project';
+
+const TEST_PROJECT_ID = 'p1';
 
 // Node's experimental webstorage shadows jsdom's localStorage in this env —
 // install a working in-memory Storage (same shim as comments-section tests).
@@ -88,7 +91,8 @@ function mockFetch(chatEvents: string[]) {
     .spyOn(globalThis, 'fetch')
     .mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.startsWith('/api/documents')) return jsonResponse(docs);
+      if (url === '/api/projects') return jsonResponse([{ id: TEST_PROJECT_ID, name: 'Test', vision: '', aboutMd: '', role: 'owner' }]);
+      if (url.startsWith(`/api/projects/${TEST_PROJECT_ID}/documents`)) return jsonResponse(docs);
       if (url === '/api/copilot/nudges') return jsonResponse(nudges);
       if (url === '/api/ai/chat') return sseResponse(chatEvents);
       throw new Error(`unhandled fetch ${url}`);
@@ -101,9 +105,11 @@ function renderPanel() {
   });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter>
-        <CopilotPanel open onOpenChange={vi.fn()} />
-      </MemoryRouter>
+      <ProjectProvider>
+        <MemoryRouter>
+          <CopilotPanel open onOpenChange={vi.fn()} />
+        </MemoryRouter>
+      </ProjectProvider>
     </QueryClientProvider>,
   );
 }
@@ -129,7 +135,8 @@ describe('CopilotPanel', () => {
   it('renders Chat and Nudges tabs with the chat empty state', async () => {
     mockFetch([]);
     renderPanel();
-    expect(screen.getByRole('tab', { name: 'Chat' })).toBeTruthy();
+    // wait for ProjectProvider to resolve before checking synchronous roles
+    expect(await screen.findByRole('tab', { name: 'Chat' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Nudges' })).toBeTruthy();
     expect(await screen.findByText(/Ask anything about this workspace/)).toBeTruthy();
   });
@@ -142,6 +149,8 @@ describe('CopilotPanel', () => {
     ]);
     renderPanel();
 
+    // wait for ProjectProvider to resolve
+    await screen.findByLabelText('Ask the copilot');
     fireEvent.change(screen.getByLabelText('Ask the copilot'), {
       target: { value: 'How much do we sample?' },
     });
@@ -161,11 +170,14 @@ describe('CopilotPanel', () => {
   it('shows an error message when the chat stream fails', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.startsWith('/api/documents')) return jsonResponse(docs);
+      if (url === '/api/projects') return jsonResponse([{ id: TEST_PROJECT_ID, name: 'Test', vision: '', aboutMd: '', role: 'owner' }]);
+      if (url.startsWith(`/api/projects/${TEST_PROJECT_ID}/documents`)) return jsonResponse(docs);
       if (url === '/api/ai/chat') return new Response('{}', { status: 503 });
       throw new Error(`unhandled fetch ${url}`);
     });
     renderPanel();
+    // wait for ProjectProvider to resolve
+    await screen.findByLabelText('Ask the copilot');
     fireEvent.change(screen.getByLabelText('Ask the copilot'), {
       target: { value: 'hi' },
     });
@@ -176,7 +188,8 @@ describe('CopilotPanel', () => {
   it('lists nudges with click-through links on the Nudges tab', async () => {
     mockFetch([]);
     renderPanel();
-    fireEvent.click(screen.getByRole('tab', { name: 'Nudges' }));
+    // wait for ProjectProvider to resolve
+    fireEvent.click(await screen.findByRole('tab', { name: 'Nudges' }));
 
     const staleDraft = await screen.findByRole('link', { name: /Telemetry PRD/ });
     expect(staleDraft.getAttribute('href')).toBe('/docs/d1');
@@ -190,12 +203,14 @@ describe('CopilotPanel', () => {
   it('shows the tidy empty state when there are no nudges', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.startsWith('/api/documents')) return jsonResponse([]);
+      if (url === '/api/projects') return jsonResponse([{ id: TEST_PROJECT_ID, name: 'Test', vision: '', aboutMd: '', role: 'owner' }]);
+      if (url.startsWith(`/api/projects/${TEST_PROJECT_ID}/documents`)) return jsonResponse([]);
       if (url === '/api/copilot/nudges') return jsonResponse([]);
       throw new Error(`unhandled fetch ${url}`);
     });
     renderPanel();
-    fireEvent.click(screen.getByRole('tab', { name: 'Nudges' }));
+    // wait for ProjectProvider to resolve
+    fireEvent.click(await screen.findByRole('tab', { name: 'Nudges' }));
     expect(await screen.findByText(/All tidy/)).toBeTruthy();
     await waitFor(() => expect(screen.queryByText(/Draft untouched/)).toBeNull());
   });

@@ -5,6 +5,9 @@ import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import WorkspaceTab from './WorkspaceTab';
+import { ProjectProvider } from '@/lib/project';
+
+const TEST_PROJECT_ID = 'p1';
 
 // Node's experimental webstorage shadows jsdom's localStorage in this env
 // (methods are undefined) — install a working in-memory Storage.
@@ -39,7 +42,10 @@ let productPatch: unknown = null;
 let resetCalls = 0;
 
 const server = setupServer(
-  http.get('/api/overview', () =>
+  http.get('/api/projects', () =>
+    HttpResponse.json([{ id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'owner' }]),
+  ),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/overview`, () =>
     HttpResponse.json({ project: product, features: [], recentActivity: [] }),
   ),
   http.patch('/api/projects/:id', async ({ request, params }) => {
@@ -69,7 +75,9 @@ function renderTab() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <WorkspaceTab />
+      <ProjectProvider>
+        <WorkspaceTab />
+      </ProjectProvider>
     </QueryClientProvider>,
   );
 }
@@ -99,7 +107,7 @@ describe('WorkspaceTab', () => {
   it('exposes the workspace export as a download link', async () => {
     renderTab();
     const link = await screen.findByRole('link', { name: /export workspace/i });
-    expect(link.getAttribute('href')).toBe('/api/export.zip');
+    expect(link.getAttribute('href')).toBe(`/api/projects/${TEST_PROJECT_ID}/export.zip`);
   });
 
   it('reset demo is confirm-gated and POSTs /api/admin/reset-demo', async () => {

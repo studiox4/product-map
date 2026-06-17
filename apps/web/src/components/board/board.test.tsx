@@ -9,6 +9,9 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import type { FeatureWithDocs } from '@productmap/shared';
 import Board from '@/routes/Board';
 import { useUpdateFeature } from '@/lib/api';
+import { ProjectProvider } from '@/lib/project';
+
+const TEST_PROJECT_ID = 'p1';
 
 // jsdom polyfills for Radix
 beforeAll(() => {
@@ -80,6 +83,9 @@ const fixture: FeatureWithDocs[] = [
 ];
 
 const server = setupServer(
+  http.get('/api/projects', () =>
+    HttpResponse.json([{ id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'owner' }]),
+  ),
   http.get('/api/users', () => HttpResponse.json([])),
   // New-doc dialog lists DB templates (settings/templates addendum).
   http.get('/api/templates', () =>
@@ -100,17 +106,20 @@ const server = setupServer(
       },
     ]),
   ),
-  http.get('/api/features', () => HttpResponse.json(fixture)),
-  http.get('/api/features/:id', ({ params }) => {
+  http.get(`/api/projects/${TEST_PROJECT_ID}/features`, async () => {
+    await delay(20);
+    return HttpResponse.json(fixture);
+  }),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/features/:id`, ({ params }) => {
     const f = fixture.find((x) => x.id === params.id);
     return f ? HttpResponse.json(f) : new HttpResponse(null, { status: 404 });
   }),
-  http.patch('/api/features/:id', async ({ request, params }) => {
+  http.patch(`/api/projects/${TEST_PROJECT_ID}/features/:id`, async ({ request, params }) => {
     const body = (await request.json()) as Record<string, unknown>;
     const f = fixture.find((x) => x.id === params.id)!;
     return HttpResponse.json({ ...f, ...body });
   }),
-  http.post('/api/documents', async ({ request }) => {
+  http.post(`/api/projects/${TEST_PROJECT_ID}/documents`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
     return HttpResponse.json(
       {
@@ -155,20 +164,22 @@ function renderBoard(opts: { entries?: string[]; withMover?: string } = {}) {
   });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={opts.entries ?? ['/board']}>
-        <Routes>
-          <Route
-            path="/board"
-            element={
-              <>
-                <Board />
-                {opts.withMover ? <Mover id={opts.withMover} /> : null}
-              </>
-            }
-          />
-          <Route path="/docs/:id" element={<div>doc page</div>} />
-        </Routes>
-      </MemoryRouter>
+      <ProjectProvider>
+        <MemoryRouter initialEntries={opts.entries ?? ['/board']}>
+          <Routes>
+            <Route
+              path="/board"
+              element={
+                <>
+                  <Board />
+                  {opts.withMover ? <Mover id={opts.withMover} /> : null}
+                </>
+              }
+            />
+            <Route path="/docs/:id" element={<div>doc page</div>} />
+          </Routes>
+        </MemoryRouter>
+      </ProjectProvider>
     </QueryClientProvider>,
   );
 }
@@ -176,7 +187,9 @@ function renderBoard(opts: { entries?: string[]; withMover?: string } = {}) {
 describe('Board', () => {
   it('shows loading skeleton, then 3 columns with cards and counts', async () => {
     renderBoard();
-    expect(screen.getByTestId('board-skeleton')).toBeTruthy();
+    // ProjectProvider resolves first (no delay), then Board renders its own
+    // loading skeleton while features fetch (delayed 20 ms) is in-flight.
+    expect(await screen.findByTestId('board-skeleton')).toBeTruthy();
     await screen.findByText('Rich markdown editor');
     expect(screen.getByText('Gantt roadmap')).toBeTruthy();
     const nowCol = screen.getByTestId('column-now');
@@ -195,7 +208,7 @@ describe('Board', () => {
 
   it('optimistically moves a feature, then rolls back on 500', async () => {
     server.use(
-      http.patch('/api/features/:id', async () => {
+      http.patch(`/api/projects/${TEST_PROJECT_ID}/features/:id`, async () => {
         await delay(80);
         return new HttpResponse(null, { status: 500 });
       }),
@@ -267,7 +280,7 @@ describe('Board', () => {
   it('"+ Add feature" opens dialog and creates a feature in that column', async () => {
     let posted: Record<string, unknown> | null = null;
     server.use(
-      http.post('/api/features', async ({ request }) => {
+      http.post(`/api/projects/${TEST_PROJECT_ID}/features`, async ({ request }) => {
         posted = (await request.json()) as Record<string, unknown>;
         return HttpResponse.json(
           {

@@ -29,12 +29,14 @@ import {
   type Horizon,
 } from '@productmap/shared';
 import {
+  apiPath,
   useAllDocuments,
   useCreateFeature,
   useFeatures,
   useUpdateFeature,
   useVote,
 } from '@/lib/api';
+import { useProjectId } from '@/lib/project';
 import { setTheme, type Theme } from '@/lib/theme';
 import { navigateWithTransition } from '@/lib/transitions';
 import { HORIZON_LABELS } from '@/components/HorizonBadge';
@@ -115,6 +117,7 @@ function PaletteContent({
   close: () => void;
   onPickDocFeature: (feature: FeatureWithDocs) => void;
 }) {
+  const pid = useProjectId();
   const navigate = useNavigate();
   const location = useLocation();
   const [search, setSearch] = useState('');
@@ -191,7 +194,7 @@ function PaletteContent({
   const exportMarkdown = () => {
     if (!contextDocId) return;
     const a = document.createElement('a');
-    a.href = `/api/documents/${contextDocId}/export.md`;
+    a.href = apiPath(pid, 'documents', contextDocId, 'export.md');
     a.download = '';
     document.body.appendChild(a);
     a.click();

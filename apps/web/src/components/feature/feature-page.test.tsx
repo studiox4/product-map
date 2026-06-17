@@ -102,20 +102,20 @@ const server = setupServer(
   ),
   http.get(`/api/projects/${TEST_PROJECT_ID}/objectives`, () => HttpResponse.json([])),
   http.get('/api/users', () => HttpResponse.json([corban, ada])),
-  http.get('/api/features/f1', () => HttpResponse.json(feature)),
-  http.get('/api/features/f1/activity', () => HttpResponse.json(activity)),
-  http.get('/api/features/f1/collaborators', () => HttpResponse.json([corban, ada])),
-  http.get('/api/documents', () => HttpResponse.json(allDocs)),
-  http.get('/api/comments', () => HttpResponse.json([])),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/features/f1`, () => HttpResponse.json(feature)),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/features/f1/activity`, () => HttpResponse.json(activity)),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/features/f1/collaborators`, () => HttpResponse.json([corban, ada])),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/documents`, () => HttpResponse.json(allDocs)),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/comments`, () => HttpResponse.json([])),
   // Dream tier (D2/D3/D4) feature-page sections
-  http.get('/api/features/f1/evidence', () => HttpResponse.json([])),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/features/f1/evidence`, () => HttpResponse.json([])),
   http.get('/api/decisions', () => HttpResponse.json([])),
-  http.get('/api/features/f1/dependencies', () =>
+  http.get(`/api/projects/${TEST_PROJECT_ID}/features/f1/dependencies`, () =>
     HttpResponse.json({ blockers: [], blocked: [] }),
   ),
-  http.get('/api/features', () => HttpResponse.json([feature])),
-  http.get('/api/releases', () => HttpResponse.json([])),
-  http.patch('/api/features/f1', async ({ request }) => {
+  http.get(`/api/projects/${TEST_PROJECT_ID}/features`, () => HttpResponse.json([feature])),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/releases`, () => HttpResponse.json([])),
+  http.patch(`/api/projects/${TEST_PROJECT_ID}/features/f1`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
     return HttpResponse.json({ ...feature, ...body, documents: undefined });
   }),
@@ -205,7 +205,7 @@ describe('FeaturePage', () => {
   it('removing a collaborator PUTs the reduced set', async () => {
     let putBody: unknown = null;
     server.use(
-      http.put('/api/features/f1/collaborators', async ({ request }) => {
+      http.put(`/api/projects/${TEST_PROJECT_ID}/features/f1/collaborators`, async ({ request }) => {
         putBody = await request.json();
         return new HttpResponse(null, { status: 204 });
       }),
@@ -221,7 +221,7 @@ describe('FeaturePage', () => {
   it('editing the description PATCHes descriptionMd', async () => {
     let patched: Record<string, unknown> | null = null;
     server.use(
-      http.patch('/api/features/f1', async ({ request }) => {
+      http.patch(`/api/projects/${TEST_PROJECT_ID}/features/f1`, async ({ request }) => {
         patched = (await request.json()) as Record<string, unknown>;
         return HttpResponse.json({ ...feature, ...patched });
       }),
@@ -240,7 +240,7 @@ describe('FeaturePage', () => {
   it('delete requires confirmation, then navigates to the board', async () => {
     let deleted = false;
     server.use(
-      http.delete('/api/features/f1', () => {
+      http.delete(`/api/projects/${TEST_PROJECT_ID}/features/f1`, () => {
         deleted = true;
         return new HttpResponse(null, { status: 204 });
       }),

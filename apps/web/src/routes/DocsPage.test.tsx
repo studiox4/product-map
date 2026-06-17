@@ -7,6 +7,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import type { DocumentListItem } from '@productmap/shared';
 import DocsPage from '@/routes/DocsPage';
+import { ProjectProvider } from '@/lib/project';
+
+const TEST_PROJECT_ID = 'p1';
 
 // jsdom polyfills for Radix
 beforeAll(() => {
@@ -69,21 +72,24 @@ const fixture: DocumentListItem[] = [
 ];
 
 const server = setupServer(
-  http.get('/api/documents', ({ request }) => {
+  http.get('/api/projects', () =>
+    HttpResponse.json([{ id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'owner' }]),
+  ),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/documents`, ({ request }) => {
     const url = new URL(request.url);
     if (url.searchParams.get('all') !== 'true') {
       return new HttpResponse(null, { status: 400 });
     }
     return HttpResponse.json(fixture);
   }),
-  http.get('/api/documents/:id', ({ params }) =>
+  http.get(`/api/projects/${TEST_PROJECT_ID}/documents/:id`, ({ params }) =>
     HttpResponse.json({
       ...fixture.find((d) => d.id === params.id)!,
       contentJson: { type: 'doc', content: [] },
       contentMd: '# Goals\n\nShip a **great** editor.',
     }),
   ),
-  http.get('/api/features', () => HttpResponse.json([])),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/features`, () => HttpResponse.json([])),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -102,13 +108,15 @@ function renderDocs() {
   });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={['/docs']}>
-        <Routes>
-          <Route path="/docs" element={<DocsPage />} />
-          <Route path="/docs/:id" element={<div>editor route</div>} />
-          <Route path="/features/:id" element={<div>feature route</div>} />
-        </Routes>
-      </MemoryRouter>
+      <ProjectProvider>
+        <MemoryRouter initialEntries={['/docs']}>
+          <Routes>
+            <Route path="/docs" element={<DocsPage />} />
+            <Route path="/docs/:id" element={<div>editor route</div>} />
+            <Route path="/features/:id" element={<div>feature route</div>} />
+          </Routes>
+        </MemoryRouter>
+      </ProjectProvider>
     </QueryClientProvider>,
   );
 }
@@ -193,7 +201,7 @@ describe('DocsPage', () => {
 
   it('sanitizes markup in doc content', async () => {
     server.use(
-      http.get('/api/documents/:id', () =>
+      http.get(`/api/projects/${TEST_PROJECT_ID}/documents/:id`, () =>
         HttpResponse.json({
           ...fixture[0],
           contentJson: { type: 'doc', content: [] },
@@ -255,7 +263,7 @@ describe('DocsPage', () => {
         ownerLabel: null,
       },
     ];
-    server.use(http.get('/api/documents', () => HttpResponse.json([...fixture, ...extra])));
+    server.use(http.get(`/api/projects/${TEST_PROJECT_ID}/documents`, () => HttpResponse.json([...fixture, ...extra])));
     renderDocs();
     await screen.findByText('Bulk export — Idea pitch');
 
@@ -279,7 +287,7 @@ describe('DocsPage', () => {
 
   it('shows error state with retry', async () => {
     server.use(
-      http.get('/api/documents', () => new HttpResponse(null, { status: 500 })),
+      http.get(`/api/projects/${TEST_PROJECT_ID}/documents`, () => new HttpResponse(null, { status: 500 })),
     );
     renderDocs();
     await screen.findByText("Couldn't load docs.");
