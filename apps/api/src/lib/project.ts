@@ -2,6 +2,9 @@
  *  Returns the first project's id, or throws if no project exists yet.
  *  Route handlers that create project-scoped rows call this until the API
  *  grows multi-project support and accepts projectId in the request body.
+ *
+ *  REMOVE in Phase 2b: routes become /api/projects/:projectId/... and derive the
+ *  project from the URL via requireMembership — no default-project resolution.
  */
 import { asc } from 'drizzle-orm';
 import { projects } from '@productmap/db';

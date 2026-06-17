@@ -134,6 +134,14 @@ Uploads stay **global, public-by-unguessable-path** in v1 (as in Phase 1). Cross
 - Share token now project-scoped — public read path must resolve token→project and leak nothing else.
 - Active-project threading through the web client.
 
+## 15b. Phase 2b must-fix carryovers (surfaced by the 2a final review)
+
+These are harmless under a single project but **will silently resolve the wrong project once multiple exist** — 2b must replace them when wiring real project scoping:
+
+- **Remove `apps/api/src/lib/project.ts` (`getDefaultProjectId`)** — replace every caller with the URL-derived project from `requireMembership`.
+- **`apps/api/src/routes/features.ts` (~:86) and `routes/ideas.ts` (~:327)** select a project via `projects … limit(1)` with **no `ORDER BY`** — unify on the real scoping resolver (the `:projectId` from the route).
+- **`apps/api/src/routes/share.ts` (`GET /:token/data`, ~:41)** ignores `tokenRow.projectId` and reads `projects … limit(1)` — must read the **token's own `projectId`** so a share link returns only its project's data (ties to strong-goal §13.5).
+
 ## 16. Open questions (resolve in planning)
 
 - Composite-FK vs `CHECK` vs helper-only per cross-reference (decide per table in 2b; default helper + index, add DB constraint where cheap).
