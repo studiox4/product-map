@@ -170,6 +170,24 @@ export interface PlanApplyResult {
     fields: Partial<Record<'startDate' | 'endDate' | 'horizon', { from: string | null; to: string | null }>>;
   }>;
 }
+export interface Invite {
+  token: string;
+  projectId: string;
+  role: MemberRole;
+  email: string | null;
+  expiresAt: string;
+  revokedAt: string | null;
+  createdAt: string;
+}
+/** Public-safe preview returned by GET /api/invites/:token (no token internals leaked). */
+export interface InvitePreview {
+  projectId: string;
+  projectName: string;
+  role: MemberRole;
+  email: string | null;
+  expired: boolean;
+}
+
 export interface ShareTokenInfo {
   id: string; token: string; kind: string; createdAt: string; revokedAt: string | null;
 }

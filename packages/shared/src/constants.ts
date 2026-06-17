@@ -68,3 +68,6 @@ export type MemberRoleConst = (typeof MEMBER_ROLES)[number];
 /** Project role hierarchy — higher rank ⊇ lower rank's capabilities.
  *  Keyed by MemberRoleConst so a missing entry is a compile error. */
 export const ROLE_RANK: Record<MemberRoleConst, number> = { viewer: 1, editor: 2, owner: 3 } as const;
+
+/** Default invite link lifetime — 7 days (spec §8). */
+export const INVITE_TTL_SEC = 7 * 24 * 60 * 60;

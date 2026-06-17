@@ -240,3 +240,8 @@ export const memberAdd = z
   .refine((v) => !!v.userId || !!v.email, { message: 'userId or email required' });
 
 export const memberUpdate = z.object({ role });
+
+export const inviteCreate = z.object({
+  role: z.enum(['owner', 'editor', 'viewer']).default('editor'),
+  email: z.string().email().optional(),
+});
