@@ -179,12 +179,11 @@ export interface Invite {
   revokedAt: string | null;
   createdAt: string;
 }
-/** Public-safe preview returned by GET /api/invites/:token (no token internals leaked). */
+/** Public-safe preview returned by GET /api/invites/:token (no token internals leaked / no PII). */
 export interface InvitePreview {
   projectId: string;
   projectName: string;
   role: MemberRole;
-  email: string | null;
   expired: boolean;
 }
 

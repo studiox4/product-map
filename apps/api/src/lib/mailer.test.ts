@@ -23,4 +23,15 @@ describe('mailer', () => {
       expect.objectContaining({ to: 'a@b.co', subject: 'Invite', from: 'ProductMap <no-reply@x>' }),
     );
   });
+
+  it('transport resolves with rejected recipients → send() returns false', async () => {
+    const send = vi.fn().mockResolvedValue({ rejected: ['x@y.co'], accepted: [] });
+    const transport: MailTransport = { sendMail: send };
+    const mailer = createMailer(
+      { host: 'h', port: 587, from: 'ProductMap <no-reply@x>' },
+      () => transport,
+    );
+    const sent = await mailer.send({ to: 'x@y.co', subject: 'Invite', text: 'link' });
+    expect(sent).toBe(false);
+  });
 });

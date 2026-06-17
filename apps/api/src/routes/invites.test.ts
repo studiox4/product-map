@@ -49,6 +49,9 @@ describe('invites preview + accept', () => {
     expect(res.status).toBe(200);
     // Does NOT downgrade an existing higher membership.
     expect(await membershipRole(joiner.id, p.id)).toBe('editor');
+    // Response body role reflects the ACTUAL (editor) role, not the invite's (viewer) role.
+    const body = await res.json();
+    expect(body.role).toBe('editor');
   });
 
   it('expired invite → 410; revoked invite → 404; unknown token → 404', async () => {

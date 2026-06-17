@@ -9,7 +9,7 @@ export interface MailMessage {
 
 /** Minimal transport contract — nodemailer's Transporter satisfies this structurally. */
 export interface MailTransport {
-  sendMail(msg: { from: string; to: string; subject: string; text: string; html?: string }): Promise<unknown>;
+  sendMail(msg: { from: string; to: string; subject: string; text: string; html?: string }): Promise<{ accepted?: unknown[]; rejected?: unknown[] }>;
 }
 
 export interface Mailer {
@@ -45,7 +45,11 @@ export function createMailer(
     enabled: true,
     async send(msg) {
       const transport = await transportFactory(smtp);
-      await transport.sendMail({ from: smtp.from, to: msg.to, subject: msg.subject, text: msg.text, html: msg.html });
+      const info = await transport.sendMail({ from: smtp.from, to: msg.to, subject: msg.subject, text: msg.text, html: msg.html });
+      if (info.rejected?.length) {
+        console.error('[mailer] send rejected recipients:', info.rejected);
+        return false;
+      }
       return true;
     },
   };

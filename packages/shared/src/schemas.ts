@@ -242,6 +242,6 @@ export const memberAdd = z
 export const memberUpdate = z.object({ role });
 
 export const inviteCreate = z.object({
-  role: z.enum(['owner', 'editor', 'viewer']).default('editor'),
+  role: role.default('editor'),
   email: z.string().email().optional(),
 });

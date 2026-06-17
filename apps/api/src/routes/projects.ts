@@ -172,7 +172,9 @@ export const projectsRoutes = new Hono<MembershipEnv>()
     return c.json(
       rows.map((r) => ({
         token: r.token, projectId: r.projectId, role: r.role, email: r.email,
-        expiresAt: r.expiresAt, revokedAt: r.revokedAt, createdAt: r.createdAt,
+        expiresAt: r.expiresAt.toISOString(),
+        revokedAt: r.revokedAt ? r.revokedAt.toISOString() : null,
+        createdAt: r.createdAt.toISOString(),
       })),
     );
   })
@@ -189,13 +191,20 @@ export const projectsRoutes = new Hono<MembershipEnv>()
 
     let emailSent = false;
     if (email && mailer.enabled) {
-      const [proj] = await db.select({ name: projects.name }).from(projects).where(eq(projects.id, projectId));
-      const url = `${config.appUrl}/invite/${token}`;
-      const body = inviteEmail({ projectName: proj?.name ?? 'a project', role, url });
-      emailSent = await mailer.send({ to: email, subject: body.subject, text: body.text });
+      try {
+        const [proj] = await db.select({ name: projects.name }).from(projects).where(eq(projects.id, projectId));
+        const url = `${config.appUrl}/invite/${token}`;
+        const body = inviteEmail({ projectName: proj?.name ?? 'a project', role, url });
+        emailSent = await mailer.send({ to: email, subject: body.subject, text: body.text });
+      } catch (err) {
+        // SMTP throw after row commit — log and fall through; caller still gets the token.
+        // Route-level SMTP send is covered at the mailer unit (mailer.test.ts).
+        console.error('[invites] SMTP send failed after row commit:', err);
+        emailSent = false;
+      }
     }
     return c.json(
-      { token: row.token, projectId: row.projectId, role: row.role, email: row.email, expiresAt: row.expiresAt, emailSent },
+      { token: row.token, projectId: row.projectId, role: row.role, email: row.email, expiresAt: row.expiresAt.toISOString(), emailSent },
       201,
     );
   })
