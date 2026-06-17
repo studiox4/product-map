@@ -138,6 +138,7 @@ export const documentsRoutes = new Hono<CurrentUserEnv>()
     const [row] = await db
       .insert(documents)
       .values({
+        projectId: feature.projectId,
         featureId: body.featureId,
         type: body.type,
         title: body.title,

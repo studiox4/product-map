@@ -18,7 +18,7 @@ const product = {
 
 function feature(overrides: Partial<OverviewResponse['features'][number]> & { id: string; title: string }) {
   return {
-    productId: 'p1',
+    projectId: 'p1',
     score: 0,
     boosts: 0,
     cools: 0,
@@ -43,7 +43,7 @@ function feature(overrides: Partial<OverviewResponse['features'][number]> & { id
 }
 
 const fixture: OverviewResponse = {
-  product,
+  project: product,
   features: [
     feature({ id: 'f1', title: 'Rich markdown editor', horizon: 'now', status: 'in_progress', startDate: '2026-06-01', endDate: '2026-06-20', sortOrder: 0 }),
     feature({ id: 'f2', title: 'Now-next-later board', horizon: 'now', status: 'in_progress', startDate: '2026-06-05', endDate: '2026-06-25', sortOrder: 1 }),
@@ -210,7 +210,7 @@ describe('Landing', () => {
   it('saves an edited vision and PATCHes the product', async () => {
     let patched: unknown = null;
     server.use(
-      http.patch('/api/products/p1', async ({ request }) => {
+      http.patch('/api/projects/p1', async ({ request }) => {
         patched = await request.json();
         return HttpResponse.json({ ...product, vision: 'New vision' });
       }),

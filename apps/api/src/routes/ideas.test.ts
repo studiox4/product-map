@@ -7,7 +7,7 @@ import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } fro
 
 const { app } = await import('../app');
 const { db } = await import('../db');
-const { products, features, activity, documents, ideas, templates } = await import(
+const { projects, features, activity, documents, ideas, templates } = await import(
   '@productmap/db'
 );
 const { setAiModelFactory } = await import('../lib/ai');
@@ -28,7 +28,7 @@ beforeAll(async () => {
 beforeEach(async () => {
   clearAwsEnv();
   await truncateAll();
-  await db.insert(products).values({ name: 'ProductMap', vision: 'v', aboutMd: '' });
+  await db.insert(projects).values({ name: 'ProductMap', vision: 'v', aboutMd: '' });
   // Actor IS the Corban user — attribution checks compare against userId
   const actor = await createTestUser({ role: 'admin', name: 'Corban', email: 'corban@test.co' });
   userId = actor.id;

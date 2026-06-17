@@ -2,11 +2,11 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { products, features, documents, releases, activity, templates } from '@productmap/db';
+import { projects, features, documents, releases, activity, templates } from '@productmap/db';
 import { markdownToTiptap } from '../lib/markdown';
 import { asc, eq } from 'drizzle-orm';
 
-let productId: string;
+let projectId: string;
 let userId: string;
 let releaseId: string;
 let featureA: string;
@@ -26,21 +26,21 @@ beforeEach(async () => {
   const actor = await createTestUser({ role: 'admin', name: 'Corban', email: 'corban@test.co' });
   userId = actor.id;
   auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
-  const [p] = await db.insert(products).values({ name: 'ProductMap', vision: 'v', aboutMd: '' }).returning();
-  productId = p.id;
+  const [p] = await db.insert(projects).values({ name: 'ProductMap', vision: 'v', aboutMd: '' }).returning();
+  projectId = p.id;
   const [r] = await db
     .insert(releases)
-    .values({ name: 'v0.2 — Team ready', targetDate: '2026-07-01' })
+    .values({ projectId, name: 'v0.2 — Team ready', targetDate: '2026-07-01' })
     .returning();
   releaseId = r.id;
   const [a] = await db
     .insert(features)
-    .values({ productId, title: 'Comments & review', horizon: 'now', releaseId, sortOrder: 0 })
+    .values({ projectId, title: 'Comments & review', horizon: 'now', releaseId, sortOrder: 0 })
     .returning();
   featureA = a.id;
   const [b] = await db
     .insert(features)
-    .values({ productId, title: 'Voting', horizon: 'now', releaseId, sortOrder: 1 })
+    .values({ projectId, title: 'Voting', horizon: 'now', releaseId, sortOrder: 1 })
     .returning();
   featureB = b.id;
 });
@@ -259,6 +259,7 @@ describe('POST /api/releases/:id/generate-notes', () => {
   beforeEach(async () => {
     await db.insert(documents).values([
       {
+        projectId,
         featureId: featureA,
         type: 'prd',
         title: 'Comments PRD',
@@ -266,6 +267,7 @@ describe('POST /api/releases/:id/generate-notes', () => {
         contentMd: 'Threaded comments on features and docs.\n\nSecond paragraph that must not appear.',
       },
       {
+        projectId,
         featureId: featureA,
         type: 'brd',
         title: 'Draft note',
@@ -273,6 +275,7 @@ describe('POST /api/releases/:id/generate-notes', () => {
         contentMd: 'Draft content must be excluded.',
       },
       {
+        projectId,
         featureId: featureB,
         type: 'prd',
         title: 'Voting PRD',
@@ -326,11 +329,11 @@ describe('PUT /api/releases/:id/features (replace-set membership)', () => {
   let otherReleaseId: string;
 
   beforeEach(async () => {
-    const [r2] = await db.insert(releases).values({ name: 'v0.3' }).returning();
+    const [r2] = await db.insert(releases).values({ projectId, name: 'v0.3' }).returning();
     otherReleaseId = r2.id;
     const [cRow] = await db
       .insert(features)
-      .values({ productId, title: 'Templates', horizon: 'next', releaseId: otherReleaseId, sortOrder: 2 })
+      .values({ projectId, title: 'Templates', horizon: 'next', releaseId: otherReleaseId, sortOrder: 2 })
       .returning();
     featureC = cRow.id;
   });
@@ -393,6 +396,7 @@ describe('GET /api/releases/:id/notes.md', () => {
   it('assembles ## sections from feature titles with final-doc first paragraphs', async () => {
     await db.insert(documents).values([
       {
+        projectId,
         featureId: featureA,
         type: 'prd',
         title: 'Comments PRD',
@@ -400,6 +404,7 @@ describe('GET /api/releases/:id/notes.md', () => {
         contentMd: 'Threaded comments on features and docs.\n\nSecond paragraph that must not appear.',
       },
       {
+        projectId,
         featureId: featureA,
         type: 'brd',
         title: 'Draft note',
@@ -407,6 +412,7 @@ describe('GET /api/releases/:id/notes.md', () => {
         contentMd: 'Draft content must be excluded.',
       },
       {
+        projectId,
         featureId: featureB,
         type: 'prd',
         title: 'Voting PRD',

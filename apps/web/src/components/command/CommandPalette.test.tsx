@@ -54,7 +54,7 @@ const now = '2026-06-09T00:00:00.000Z';
 
 function makeFeature(partial: Partial<FeatureWithDocs> & { id: string; title: string }): FeatureWithDocs {
   return {
-    productId: 'p1',
+    projectId: 'p1',
     score: 0,
     boosts: 0,
     cools: 0,

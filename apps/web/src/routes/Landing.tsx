@@ -74,7 +74,7 @@ export function Landing() {
   return (
     <div className="space-y-8">
       <div className="fade-up flex flex-wrap items-start justify-between gap-4">
-        <VisionHeader product={data.product} />
+        <VisionHeader product={data.project} />
         {activity.data ? <VelocitySparkline events={events} /> : null}
       </div>
       <div className="fade-up" style={{ animationDelay: '60ms' }}>

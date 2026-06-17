@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '../db';
-import { products, features, documents, comments } from '@productmap/db';
+import { projects, features, documents, comments } from '@productmap/db';
 import { EMPTY_VOTE_SUMMARY, requestUserId, voteSummaries } from '../lib/votes';
 import type {
   AttentionItem,
@@ -14,13 +14,13 @@ import type {
 const HORIZON_ORDER: Record<Horizon, number> = { now: 0, next: 1, later: 2 };
 
 export const overviewRoutes = new Hono().get('/', async (c) => {
-  const [product] = await db.select().from(products).limit(1);
-  if (!product) return c.json({ error: 'not_found' }, 404);
+  const [project] = await db.select().from(projects).limit(1);
+  if (!project) return c.json({ error: 'not_found' }, 404);
 
   const featureRows = await db
     .select()
     .from(features)
-    .where(eq(features.productId, product.id));
+    .where(eq(features.projectId, project.id));
 
   featureRows.sort(
     (a, b) =>
@@ -44,7 +44,7 @@ export const overviewRoutes = new Hono().get('/', async (c) => {
     })
     .from(documents)
     .innerJoin(features, eq(documents.featureId, features.id))
-    .where(eq(features.productId, product.id));
+    .where(eq(features.projectId, project.id));
 
   const docsByFeature = new Map<string, DocumentMeta[]>();
   for (const d of docRows) {
@@ -77,7 +77,7 @@ export const overviewRoutes = new Hono().get('/', async (c) => {
   const featuresWithDocs: FeatureWithDocs[] = featureRows.map((f) => ({
     ...(voteMap.get(f.id) ?? EMPTY_VOTE_SUMMARY),
     id: f.id,
-    productId: f.productId,
+    projectId: f.projectId,
     title: f.title,
     horizon: f.horizon,
     status: f.status,
@@ -148,11 +148,11 @@ export const overviewRoutes = new Hono().get('/', async (c) => {
   }
 
   const response: OverviewResponse = {
-    product: {
-      id: product.id,
-      name: product.name,
-      vision: product.vision,
-      aboutMd: product.aboutMd,
+    project: {
+      id: project.id,
+      name: project.name,
+      vision: project.vision,
+      aboutMd: project.aboutMd,
     },
     features: featuresWithDocs,
     attention,

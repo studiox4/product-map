@@ -33,7 +33,7 @@ function feature(
   overrides: Partial<ShareData['features'][number]> & { id: string; title: string },
 ): ShareData['features'][number] {
   return {
-    productId: 'p1',
+    projectId: 'p1',
     score: 0,
     boosts: 0,
     cools: 0,
@@ -58,7 +58,7 @@ function feature(
 }
 
 const shareData: ShareData = {
-  product: { id: 'p1', name: 'ProductMap', vision: 'See the whole map.', aboutMd: '' },
+  project: { id: 'p1', name: 'ProductMap', vision: 'See the whole map.', aboutMd: '' },
   features: [
     feature({
       id: 'f1',

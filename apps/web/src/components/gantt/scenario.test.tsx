@@ -38,7 +38,7 @@ beforeAll(() => {
 
 function feature(overrides: Partial<Feature> & { id: string; title: string }): Feature {
   return {
-    productId: 'p1',
+    projectId: 'p1',
     score: 0,
     boosts: 0,
     cools: 0,

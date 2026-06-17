@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Pencil } from 'lucide-react';
-import type { Product } from '@productmap/shared';
-import { useUpdateProduct } from '@/lib/api';
+import type { Project } from '@productmap/shared';
+import { useUpdateProject } from '@/lib/api';
 import { Input } from '@/components/ui/input';
 
-export function VisionHeader({ product }: { product: Product }) {
+export function VisionHeader({ product }: { product: Project }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(product.vision);
-  const updateProduct = useUpdateProduct();
+  const updateProduct = useUpdateProject();
 
   function startEditing() {
     setDraft(product.vision);

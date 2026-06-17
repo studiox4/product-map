@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { users } from '@productmap/db';
+import { users, projects, memberships } from '@productmap/db';
 import { signAccess } from '../lib/auth/tokens';
 import { ACCESS_COOKIE } from '../lib/auth/cookies';
 import { hashPassword } from '../lib/auth/password';
@@ -52,7 +52,7 @@ export async function setupTestDb(): Promise<void> {
 /** Wipe all rows from every table. Call in beforeEach. */
 export async function truncateAll(): Promise<void> {
   await getPool().query(
-    'truncate table comments, votes, activity, feature_collaborators, uploads, documents, idea_votes, ideas, evidence, decisions, feature_dependencies, share_tokens, plan_entries, plans, features, releases, objectives, products, templates, users cascade',
+    'truncate table comments, votes, activity, feature_collaborators, uploads, documents, idea_votes, ideas, evidence, decisions, feature_dependencies, share_tokens, plan_entries, plans, features, releases, objectives, memberships, projects, templates, users cascade',
   );
 }
 
@@ -94,4 +94,15 @@ export async function createTestUser(opts: TestUserOpts = {}) {
 export async function authCookie(user: { id: string; role: 'admin' | 'member'; tokenVersion?: number }): Promise<string> {
   const token = await signAccess({ id: user.id, role: user.role, tokenVersion: user.tokenVersion ?? 0 });
   return `${ACCESS_COOKIE}=${token}`;
+}
+
+/** Insert a project and return the row. */
+export async function createTestProject(name = 'Test Project') {
+  const [row] = await hdb().insert(projects).values({ name }).returning();
+  return row;
+}
+
+/** Insert a membership linking a user to a project with the given role. */
+export async function addMembership(userId: string, projectId: string, role: 'owner' | 'editor' | 'viewer' = 'editor') {
+  await hdb().insert(memberships).values({ userId, projectId, role });
 }

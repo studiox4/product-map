@@ -82,17 +82,17 @@ export default function SharePage() {
     );
   }
 
-  const { product, features, releases } = query.data;
+  const { project, features, releases } = query.data;
   const shipped = releases.filter((r) => r.status === 'shipped');
 
   return (
     <ShareFrame>
       <header>
         <h1 className="font-display text-3xl font-bold tracking-tight text-ink">
-          {product.name}
+          {project.name}
         </h1>
-        {product.vision && (
-          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{product.vision}</p>
+        {project.vision && (
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{project.vision}</p>
         )}
       </header>
 

@@ -185,7 +185,7 @@ describe('densityBuckets', () => {
 
 function asFeature(s: (typeof baseNow)[number]): Feature {
   return {
-    productId: 'p1',
+    projectId: 'p1',
     sortOrder: 0,
     descriptionMd: '',
     size: null,

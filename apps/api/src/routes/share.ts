@@ -5,7 +5,8 @@ import { Hono } from 'hono';
 import { and, eq, isNull } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { db } from '../db';
-import { products, features, documents, releases, shareTokens } from '@productmap/db';
+import { projects, features, documents, releases, shareTokens } from '@productmap/db';
+import { getDefaultProjectId } from '../lib/project';
 import type { DocumentMeta, FeatureWithDocs, Horizon, ShareData } from '@productmap/shared';
 import { EMPTY_VOTE_SUMMARY, voteSummaries } from '../lib/votes';
 
@@ -15,7 +16,8 @@ export const shareRoutes = new Hono()
   // POST /api/share/roadmap → mint a share link.
   .post('/roadmap', async (c) => {
     const token = nanoid();
-    await db.insert(shareTokens).values({ token, kind: 'roadmap' });
+    const projectId = await getDefaultProjectId();
+    await db.insert(shareTokens).values({ projectId, token, kind: 'roadmap' });
     return c.json({ url: `/share/${token}` }, 201);
   })
   // DELETE /api/share/:token → revoke. 404 when unknown or already revoked.
@@ -36,13 +38,13 @@ export const shareRoutes = new Hono()
       .where(and(eq(shareTokens.token, c.req.param('token')), isNull(shareTokens.revokedAt)));
     if (!tokenRow) return c.json({ error: 'not_found' }, 404);
 
-    const [product] = await db.select().from(products).limit(1);
-    if (!product) return c.json({ error: 'not_found' }, 404);
+    const [project] = await db.select().from(projects).where(eq(projects.id, tokenRow.projectId));
+    if (!project) return c.json({ error: 'not_found' }, 404);
 
     const featureRows = await db
       .select()
       .from(features)
-      .where(eq(features.productId, product.id));
+      .where(eq(features.projectId, project.id));
     featureRows.sort(
       (a, b) =>
         HORIZON_ORDER[a.horizon] - HORIZON_ORDER[b.horizon] ||
@@ -65,7 +67,7 @@ export const shareRoutes = new Hono()
       })
       .from(documents)
       .innerJoin(features, eq(documents.featureId, features.id))
-      .where(eq(features.productId, product.id));
+      .where(eq(features.projectId, project.id));
 
     const docsByFeature = new Map<string, DocumentMeta[]>();
     for (const d of docRows) {
@@ -105,11 +107,11 @@ export const shareRoutes = new Hono()
     );
 
     const response: ShareData = {
-      product: {
-        id: product.id,
-        name: product.name,
-        vision: product.vision,
-        aboutMd: product.aboutMd,
+      project: {
+        id: project.id,
+        name: project.name,
+        vision: project.vision,
+        aboutMd: project.aboutMd,
       },
       features: featuresWithDocs,
       releases: releaseRows.map((r) => ({

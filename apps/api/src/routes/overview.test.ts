@@ -6,7 +6,7 @@ import { createTestUser, authCookie, setupTestDb } from '../test/helpers';
 
 const { app } = await import('../app');
 const { db, pool } = await import('../db');
-const { products, features, documents, users, comments, votes } = await import('@productmap/db');
+const { projects, features, documents, users, comments, votes } = await import('@productmap/db');
 
 let auth: Record<string, string> = {};
 
@@ -15,7 +15,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await db.execute('truncate table documents, features, products, users cascade' as never);
+  await db.execute('truncate table documents, features, projects, users cascade' as never);
   const actor = await createTestUser({ role: 'admin' });
   auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
 });
@@ -25,8 +25,8 @@ afterAll(async () => {
 });
 
 async function seedFixture() {
-  const [product] = await db
-    .insert(products)
+  const [project] = await db
+    .insert(projects)
     .values({ name: 'ProductMap', vision: 'A vision', aboutMd: 'About' })
     .returning();
 
@@ -34,7 +34,7 @@ async function seedFixture() {
   const [editor] = await db
     .insert(features)
     .values({
-      productId: product.id,
+      projectId: project.id,
       title: 'Rich markdown editor',
       horizon: 'now',
       status: 'in_progress',
@@ -48,7 +48,7 @@ async function seedFixture() {
   const [gantt] = await db
     .insert(features)
     .values({
-      productId: product.id,
+      projectId: project.id,
       title: 'Gantt roadmap',
       horizon: 'next',
       status: 'planned',
@@ -62,7 +62,7 @@ async function seedFixture() {
   const [collab] = await db
     .insert(features)
     .values({
-      productId: product.id,
+      projectId: project.id,
       title: 'Realtime collaboration',
       horizon: 'later',
       status: 'idea',
@@ -73,6 +73,7 @@ async function seedFixture() {
   const [draftDoc] = await db
     .insert(documents)
     .values({
+      projectId: project.id,
       featureId: editor.id,
       type: 'prd',
       title: 'Editor PRD',
@@ -85,6 +86,7 @@ async function seedFixture() {
   const [reviewDoc] = await db
     .insert(documents)
     .values({
+      projectId: project.id,
       featureId: editor.id,
       type: 'tech_spec',
       title: 'Editor tech spec',
@@ -95,6 +97,7 @@ async function seedFixture() {
     .returning();
 
   await db.insert(documents).values({
+    projectId: project.id,
     featureId: gantt.id,
     type: 'feature_brief',
     title: 'Gantt brief',
@@ -103,18 +106,18 @@ async function seedFixture() {
     contentMd: '',
   });
 
-  return { product, editor, gantt, collab, draftDoc, reviewDoc };
+  return { project, editor, gantt, collab, draftDoc, reviewDoc };
 }
 
 describe('GET /api/overview', () => {
   it('returns product, features with nested docs, and attention items', async () => {
-    const { product, editor, gantt, collab, draftDoc, reviewDoc } = await seedFixture();
+    const { project, editor, gantt, collab, draftDoc, reviewDoc } = await seedFixture();
     const res = await app.request('/api/overview', { headers: auth });
     expect(res.status).toBe(200);
     const body = (await res.json()) as OverviewResponse;
 
-    expect(body.product).toMatchObject({
-      id: product.id,
+    expect(body.project).toMatchObject({
+      id: project.id,
       name: 'ProductMap',
       vision: 'A vision',
       aboutMd: 'About',

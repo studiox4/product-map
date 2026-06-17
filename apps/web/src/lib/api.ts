@@ -19,7 +19,7 @@ import type {
   FeatureWithDocs,
   Horizon,
   OverviewResponse,
-  Product,
+  Project,
   User,
 } from '@productmap/shared';
 import type { AppType } from '../../../api/src/app';
@@ -60,7 +60,7 @@ export interface DocumentUpdateInput {
   /** Curated gradient cover key; null clears the cover. */
   cover?: string | null;
 }
-export interface ProductUpdateInput {
+export interface ProjectUpdateInput {
   name?: string;
   vision?: string;
   aboutMd?: string;
@@ -382,21 +382,21 @@ export function useCollaborators() {
   });
 }
 
-export interface UpdateProductVars extends ProductUpdateInput {
+export interface UpdateProjectVars extends ProjectUpdateInput {
   id: string;
 }
 
-export function useUpdateProduct() {
+export function useUpdateProject() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...patch }: UpdateProductVars) =>
-      fetchJson<Product>(`/api/products/${id}`, {
+    mutationFn: ({ id, ...patch }: UpdateProjectVars) =>
+      fetchJson<Project>(`/api/projects/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(patch),
       }),
-    onSuccess: (product) => {
+    onSuccess: (project) => {
       qc.setQueryData<OverviewResponse>(queryKeys.overview, (old) =>
-        old ? { ...old, product } : old,
+        old ? { ...old, project } : old,
       );
     },
     onSettled: () => {

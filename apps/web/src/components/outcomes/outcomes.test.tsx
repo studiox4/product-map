@@ -27,7 +27,7 @@ function makeFeature(
   overrides: Partial<FeatureWithDocs> & { id: string; title: string },
 ): FeatureWithDocs {
   return {
-    productId: 'p1',
+    projectId: 'p1',
     horizon: 'now',
     status: 'planned',
     startDate: null,

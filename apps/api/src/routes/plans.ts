@@ -7,6 +7,7 @@ import { and, asc, eq, ne, sql } from 'drizzle-orm';
 import { planCreate, planUpdate, planEntryUpdate } from '@productmap/shared';
 import { plans, planEntries, features, activity } from '@productmap/db';
 import { db } from '../db';
+import { getDefaultProjectId } from '../lib/project';
 import { type CurrentUserEnv } from '../middleware/current-user';
 
 async function entriesFor(planId: string) {
@@ -74,10 +75,11 @@ export const plansRoutes = new Hono<CurrentUserEnv>()
         }));
       }
 
+      const projectId = await getDefaultProjectId();
       const plan = await db.transaction(async (tx) => {
         const [row] = await tx
           .insert(plans)
-          .values({ name, createdBy: user?.id ?? null })
+          .values({ projectId, name, createdBy: user?.id ?? null })
           .returning();
         if (snapshot.length > 0) {
           await tx.insert(planEntries).values(snapshot.map((e) => ({ ...e, planId: row.id })));

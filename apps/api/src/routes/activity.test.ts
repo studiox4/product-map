@@ -3,7 +3,7 @@
 import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { products, features, users, activity } from '@productmap/db';
+import { projects, features, users, activity } from '@productmap/db';
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 
 let userId: string;
@@ -25,8 +25,8 @@ beforeEach(async () => {
   await truncateAll();
   const actor = await createTestUser({ role: 'admin' });
   auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
-  const [product] = await db
-    .insert(products)
+  const [project] = await db
+    .insert(projects)
     .values({ name: 'ProductMap', vision: 'v', aboutMd: '' })
     .returning();
   const [u] = await db.insert(users).values({ name: 'Corban', color: '#2b557e' }).returning();
@@ -34,8 +34,8 @@ beforeEach(async () => {
   const rows = await db
     .insert(features)
     .values([
-      { productId: product.id, title: 'Rich markdown editor', horizon: 'now' },
-      { productId: product.id, title: 'Gantt roadmap', horizon: 'next' },
+      { projectId: project.id, title: 'Rich markdown editor', horizon: 'now' },
+      { projectId: project.id, title: 'Gantt roadmap', horizon: 'next' },
     ])
     .returning();
   editorId = rows[0].id;

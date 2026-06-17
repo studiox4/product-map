@@ -259,9 +259,9 @@ test('AC4: reset-demo is confirm-gated and restores the seed', async ({ page, re
   await expect(page.getByText('Demo data reset — workspace restored to the seed')).toBeVisible();
 
   const overview = (await (await request.get('/api/overview')).json()) as {
-    product: { vision: string };
+    project: { vision: string };
   };
-  expect(overview.product.vision).toBe(SEED_VISION);
+  expect(overview.project.vision).toBe(SEED_VISION);
 
   users = (await (await request.get('/api/users')).json()) as { name: string }[];
   expect(users.map((u) => u.name)).toEqual([

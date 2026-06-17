@@ -6,7 +6,7 @@ import { eq, asc } from 'drizzle-orm';
 import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { products, features, plans, planEntries, activity } from '@productmap/db';
+import { projects, features, plans, planEntries, activity } from '@productmap/db';
 
 let userId: string;
 let auth: Record<string, string> = {};
@@ -27,17 +27,17 @@ beforeEach(async () => {
   auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
 });
 
-async function seedProduct() {
-  const [p] = await db.insert(products).values({ name: 'ProductMap' }).returning();
+async function seedProject() {
+  const [p] = await db.insert(projects).values({ name: 'ProductMap' }).returning();
   return p;
 }
 
 /** Two scheduled features + one dateless later feature. */
-async function seedFeatures(productId: string) {
+async function seedFeatures(projectId: string) {
   const [alpha] = await db
     .insert(features)
     .values({
-      productId,
+      projectId,
       title: 'Alpha',
       horizon: 'now',
       startDate: '2026-07-01',
@@ -47,7 +47,7 @@ async function seedFeatures(productId: string) {
   const [beta] = await db
     .insert(features)
     .values({
-      productId,
+      projectId,
       title: 'Beta',
       horizon: 'next',
       startDate: '2026-08-01',
@@ -56,7 +56,7 @@ async function seedFeatures(productId: string) {
     .returning();
   const [gamma] = await db
     .insert(features)
-    .values({ productId, title: 'Gamma', horizon: 'later' })
+    .values({ projectId, title: 'Gamma', horizon: 'later' })
     .returning();
   return { alpha, beta, gamma };
 }
@@ -78,9 +78,10 @@ describe('GET /api/plans', () => {
   });
 
   it('lists plans oldest-first with status and appliedAt', async () => {
+    const p = await seedProject();
     await db.insert(plans).values([
-      { name: 'Q4 stretch', createdBy: userId, createdAt: new Date('2026-06-01T00:00:00Z') },
-      { name: 'Lean cut', createdBy: userId, createdAt: new Date('2026-06-05T00:00:00Z') },
+      { projectId: p.id, name: 'Q4 stretch', createdBy: userId, createdAt: new Date('2026-06-01T00:00:00Z') },
+      { projectId: p.id, name: 'Lean cut', createdBy: userId, createdAt: new Date('2026-06-05T00:00:00Z') },
     ]);
     const res = await app.request('/api/plans', { headers: auth });
     expect(res.status).toBe(200);
@@ -92,7 +93,7 @@ describe('GET /api/plans', () => {
 
 describe('POST /api/plans (snapshot)', () => {
   it('snapshots every feature dates+horizon into entries (copyFrom current)', async () => {
-    const p = await seedProduct();
+    const p = await seedProject();
     const { alpha, beta, gamma } = await seedFeatures(p.id);
 
     const res = await createPlan('Q4 stretch');
@@ -117,7 +118,7 @@ describe('POST /api/plans (snapshot)', () => {
   });
 
   it('snapshots another plan entries (copyFrom planId), not current features', async () => {
-    const p = await seedProduct();
+    const p = await seedProject();
     const { alpha } = await seedFeatures(p.id);
 
     const source = await (await createPlan('Source')).json();
@@ -134,7 +135,7 @@ describe('POST /api/plans (snapshot)', () => {
   });
 
   it('404s when copyFrom references a missing plan', async () => {
-    await seedProduct();
+    await seedProject();
     const res = await createPlan('Ghost', '00000000-0000-0000-0000-000000000000');
     expect(res.status).toBe(404);
   });
@@ -151,7 +152,7 @@ describe('POST /api/plans (snapshot)', () => {
 
 describe('GET /api/plans/:id', () => {
   it('returns the plan with its entries', async () => {
-    const p = await seedProduct();
+    const p = await seedProject();
     await seedFeatures(p.id);
     const plan = await (await createPlan()).json();
 
@@ -170,7 +171,7 @@ describe('GET /api/plans/:id', () => {
 
 describe('PATCH /api/plans/:id', () => {
   it('renames a plan', async () => {
-    await seedProduct();
+    await seedProject();
     const plan = await (await createPlan('Old name')).json();
     const res = await app.request(`/api/plans/${plan.id}`, {
       method: 'PATCH',
@@ -193,7 +194,7 @@ describe('PATCH /api/plans/:id', () => {
 
 describe('PUT /api/plans/:id/entries/:featureId (scenario edit isolation)', () => {
   it('updates the plan entry and leaves the real feature untouched', async () => {
-    const p = await seedProduct();
+    const p = await seedProject();
     const { alpha } = await seedFeatures(p.id);
     const plan = await (await createPlan()).json();
 
@@ -219,11 +220,11 @@ describe('PUT /api/plans/:id/entries/:featureId (scenario edit isolation)', () =
   });
 
   it('creates an entry for a feature added after the snapshot (tray-drop)', async () => {
-    const p = await seedProduct();
+    const p = await seedProject();
     const plan = await (await createPlan()).json();
     const [late] = await db
       .insert(features)
-      .values({ productId: p.id, title: 'Latecomer', horizon: 'later' })
+      .values({ projectId: p.id, title: 'Latecomer', horizon: 'later' })
       .returning();
 
     const res = await app.request(`/api/plans/${plan.id}/entries/${late.id}`, {
@@ -236,7 +237,7 @@ describe('PUT /api/plans/:id/entries/:featureId (scenario edit isolation)', () =
   });
 
   it('404s on an unknown plan or feature', async () => {
-    const p = await seedProduct();
+    const p = await seedProject();
     const { alpha } = await seedFeatures(p.id);
     const plan = await (await createPlan()).json();
 
@@ -262,7 +263,7 @@ describe('PUT /api/plans/:id/entries/:featureId (scenario edit isolation)', () =
   });
 
   it('400s on inverted dates', async () => {
-    const p = await seedProduct();
+    const p = await seedProject();
     const { alpha } = await seedFeatures(p.id);
     const plan = await (await createPlan()).json();
     const res = await app.request(`/api/plans/${plan.id}/entries/${alpha.id}`, {
@@ -276,7 +277,7 @@ describe('PUT /api/plans/:id/entries/:featureId (scenario edit isolation)', () =
 
 describe('POST /api/plans/:id/apply', () => {
   it('writes entries to features, returns the diff, and records activity', async () => {
-    const p = await seedProduct();
+    const p = await seedProject();
     const { alpha, beta, gamma } = await seedFeatures(p.id);
     const plan = await (await createPlan()).json();
 
@@ -340,7 +341,7 @@ describe('POST /api/plans/:id/apply', () => {
   });
 
   it('archives previously applied plans when a new one is applied', async () => {
-    const p = await seedProduct();
+    const p = await seedProject();
     await seedFeatures(p.id);
     const first = await (await createPlan('First')).json();
     const second = await (await createPlan('Second')).json();
@@ -355,7 +356,7 @@ describe('POST /api/plans/:id/apply', () => {
   });
 
   it('double-apply is idempotent: empty diff, no duplicate activity, stays applied', async () => {
-    const p = await seedProduct();
+    const p = await seedProject();
     const { alpha } = await seedFeatures(p.id);
     const plan = await (await createPlan()).json();
     await app.request(`/api/plans/${plan.id}/entries/${alpha.id}`, {
@@ -387,7 +388,7 @@ describe('POST /api/plans/:id/apply', () => {
 
 describe('DELETE /api/plans/:id', () => {
   it('deletes the plan and cascades its entries, leaving features intact', async () => {
-    const p = await seedProduct();
+    const p = await seedProject();
     const { alpha } = await seedFeatures(p.id);
     const plan = await (await createPlan()).json();
     expect(await db.select().from(planEntries)).toHaveLength(3);

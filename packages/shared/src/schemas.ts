@@ -36,7 +36,7 @@ export const documentUpdate = z.object({
   status: z.enum(DOC_STATUSES).optional(),
   cover: z.string().min(1).max(120).nullable().optional(),  // curated gradient key
 });
-export const productUpdate = z.object({
+export const projectUpdate = z.object({
   name: z.string().min(1).optional(),
   vision: z.string().optional(),
   aboutMd: z.string().optional(),

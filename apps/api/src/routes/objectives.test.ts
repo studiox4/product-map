@@ -2,9 +2,10 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { objectives, products, features } from '@productmap/db';
+import { objectives, projects, features } from '@productmap/db';
 
 let userId: string;
+let projectId: string;
 let auth: Record<string, string> = {};
 
 beforeAll(async () => {
@@ -20,6 +21,8 @@ beforeEach(async () => {
   const actor = await createTestUser({ role: 'admin', name: 'Corban', email: 'corban@test.co' });
   userId = actor.id;
   auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
+  const [p] = await db.insert(projects).values({ name: 'ProductMap', vision: 'v', aboutMd: '' }).returning();
+  projectId = p.id;
 });
 
 const json = (method: string, body: unknown) => ({
@@ -55,8 +58,8 @@ describe('objectives CRUD', () => {
 
   it('lists objectives in creation order', async () => {
     // distinct created_at values — a bulk insert stamps one shared now()
-    await db.insert(objectives).values({ title: 'First', createdAt: new Date('2026-06-01T00:00:00Z') });
-    await db.insert(objectives).values({ title: 'Second', createdAt: new Date('2026-06-02T00:00:00Z') });
+    await db.insert(objectives).values({ projectId, title: 'First', createdAt: new Date('2026-06-01T00:00:00Z') });
+    await db.insert(objectives).values({ projectId, title: 'Second', createdAt: new Date('2026-06-02T00:00:00Z') });
     const res = await app.request('/api/objectives', { headers: auth });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -64,7 +67,7 @@ describe('objectives CRUD', () => {
   });
 
   it('gets, patches and deletes an objective', async () => {
-    const [o] = await db.insert(objectives).values({ title: 'Retention' }).returning();
+    const [o] = await db.insert(objectives).values({ projectId, title: 'Retention' }).returning();
 
     const got = await app.request(`/api/objectives/${o.id}`, { headers: auth });
     expect(got.status).toBe(200);
@@ -127,7 +130,7 @@ describe('objectives dream-tier-2 properties + joins', () => {
   });
 
   it('patches status, current and ownerId (incl. clearing owner)', async () => {
-    const [o] = await db.insert(objectives).values({ title: 'Retention', ownerId: userId }).returning();
+    const [o] = await db.insert(objectives).values({ projectId, title: 'Retention', ownerId: userId }).returning();
     const patched = await app.request(
       `/api/objectives/${o.id}`,
       json('PATCH', { status: 'achieved', current: '42%', descriptionMd: 'done' }),
@@ -146,16 +149,15 @@ describe('objectives dream-tier-2 properties + joins', () => {
   });
 
   it('GET / joins owner {name,color} and featureCount', async () => {
-    const [p] = await db.insert(products).values({ name: 'ProductMap', vision: 'v', aboutMd: '' }).returning();
     const [owned] = await db
       .insert(objectives)
-      .values({ title: 'Owned', ownerId: userId, metric: 'WAU', target: '500', current: '320' })
+      .values({ projectId, title: 'Owned', ownerId: userId, metric: 'WAU', target: '500', current: '320' })
       .returning();
-    const [bare] = await db.insert(objectives).values({ title: 'Bare' }).returning();
+    const [bare] = await db.insert(objectives).values({ projectId, title: 'Bare' }).returning();
     await db.insert(features).values([
-      { productId: p.id, title: 'F1', horizon: 'now', objectiveId: owned.id },
-      { productId: p.id, title: 'F2', horizon: 'next', objectiveId: owned.id },
-      { productId: p.id, title: 'F3', horizon: 'later' },
+      { projectId, title: 'F1', horizon: 'now', objectiveId: owned.id },
+      { projectId, title: 'F2', horizon: 'next', objectiveId: owned.id },
+      { projectId, title: 'F3', horizon: 'later' },
     ]);
 
     const res = await app.request('/api/objectives', { headers: auth });

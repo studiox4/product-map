@@ -5,6 +5,7 @@ import { and, asc, count, eq, inArray, isNull, notInArray, sql } from 'drizzle-o
 import { releaseCreate, releaseUpdate, releaseFeaturesPut } from '@productmap/shared';
 import { releases, features, documents, templates } from '@productmap/db';
 import { db } from '../db';
+import { getDefaultProjectId } from '../lib/project';
 import { type CurrentUserEnv } from '../middleware/current-user';
 import { recordActivity } from '../lib/activity';
 import { markdownToTiptap } from '../lib/markdown';
@@ -89,6 +90,7 @@ async function ensureNotesDoc(
   const [doc] = await db
     .insert(documents)
     .values({
+      projectId: release.projectId,
       type: 'release_notes',
       title: release.name,
       contentJson,
@@ -140,9 +142,10 @@ export const releasesRoutes = new Hono<CurrentUserEnv>()
     }),
     async (c) => {
       const body = c.req.valid('json');
+      const projectId = await getDefaultProjectId();
       const [row] = await db
         .insert(releases)
-        .values({ name: body.name, targetDate: body.targetDate ?? null })
+        .values({ projectId, name: body.name, targetDate: body.targetDate ?? null })
         .returning();
       return c.json(row, 201);
     },

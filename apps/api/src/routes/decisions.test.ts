@@ -5,10 +5,10 @@ import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } fro
 
 const { app } = await import('../app');
 const { db } = await import('../db');
-const { products, features, users, comments, decisions, activity } = await import('@productmap/db');
+const { projects, features, users, comments, decisions, activity } = await import('@productmap/db');
 const { setAiModelFactory } = await import('../lib/ai');
 
-let productId: string;
+let projectId: string;
 let userId: string;
 let otherId: string;
 let featureId: string;
@@ -36,11 +36,11 @@ beforeEach(async () => {
   const actor = await createTestUser({ role: 'admin', name: 'Corban', email: 'corban@test.co' });
   userId = actor.id;
   auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
-  const [p] = await db.insert(products).values({ name: 'ProductMap', vision: 'v', aboutMd: '' }).returning();
-  productId = p.id;
+  const [p] = await db.insert(projects).values({ name: 'ProductMap', vision: 'v', aboutMd: '' }).returning();
+  projectId = p.id;
   const [o] = await db.insert(users).values({ name: 'Ada', color: '#3c6b46' }).returning();
   otherId = o.id;
-  const [f] = await db.insert(features).values({ productId, title: 'Gantt roadmap', horizon: 'next' }).returning();
+  const [f] = await db.insert(features).values({ projectId, title: 'Gantt roadmap', horizon: 'next' }).returning();
   featureId = f.id;
 });
 
@@ -133,7 +133,7 @@ describe('GET /api/decisions', () => {
   it('lists all decisions newest-first and filters by featureId', async () => {
     const [other] = await db
       .insert(features)
-      .values({ productId, title: 'Realtime collaboration', horizon: 'later' })
+      .values({ projectId, title: 'Realtime collaboration', horizon: 'later' })
       .returning();
     await app.request('/api/decisions', post({ featureId, title: 'First', decisionMd: 'a' }));
     await app.request('/api/decisions', post({ featureId: other.id, title: 'Second', decisionMd: 'b' }));

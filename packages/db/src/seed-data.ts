@@ -9,7 +9,7 @@ import { hash } from '@node-rs/argon2';
 import { sql } from 'drizzle-orm';
 import { TEMPLATES } from '@productmap/templates';
 import {
-  products,
+  projects,
   features,
   documents,
   users,
@@ -27,6 +27,7 @@ import {
   objectives,
   plans,
   planEntries,
+  memberships,
   type Db,
 } from './index';
 import { eq } from 'drizzle-orm';
@@ -48,7 +49,7 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
 
   // Idempotent: wipe everything first.
   await db.execute(
-    sql`truncate table comments, votes, activity, feature_collaborators, uploads, documents, idea_votes, ideas, evidence, decisions, feature_dependencies, share_tokens, plan_entries, plans, features, releases, objectives, products, templates, users restart identity cascade`,
+    sql`truncate table comments, votes, activity, feature_collaborators, uploads, documents, idea_votes, ideas, evidence, decisions, feature_dependencies, share_tokens, plan_entries, plans, features, releases, objectives, projects, templates, users restart identity cascade`,
   );
 
   // The team, in join order. Corban stays first — several code paths fall back
@@ -79,8 +80,8 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
     })),
   );
 
-  const [product] = await db
-    .insert(products)
+  const [project] = await db
+    .insert(projects)
     .values({
       name: 'ProductMap',
       vision: 'Roadmaps and docs your security team will let you run.',
@@ -89,12 +90,22 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
     })
     .returning();
 
+  // Memberships: every seeded user gets a membership in the seeded project.
+  // Owner is identified by email === 'admin@productmap.local' (Corban); all others get 'editor'.
+  await db.insert(memberships).values(
+    [corban, priya, marcus, elena].map((u) => ({
+      userId: u.id,
+      projectId: project.id,
+      role: u.email === 'admin@productmap.local' ? ('owner' as const) : ('editor' as const),
+    })),
+  );
+
   const featureRows = await db
     .insert(features)
     .values([
       // Now
       {
-        productId: product.id,
+        projectId: project.id,
         title: 'Rich markdown editor',
         horizon: 'now' as const,
         status: 'in_progress' as const,
@@ -107,7 +118,7 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
         updatedBy: corban.id,
       },
       {
-        productId: product.id,
+        projectId: project.id,
         title: 'Now-next-later board',
         horizon: 'now' as const,
         status: 'in_progress' as const,
@@ -121,7 +132,7 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
       },
       // Next
       {
-        productId: product.id,
+        projectId: project.id,
         title: 'Gantt roadmap',
         horizon: 'next' as const,
         status: 'planned' as const,
@@ -134,7 +145,7 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
         updatedBy: elena.id,
       },
       {
-        productId: product.id,
+        projectId: project.id,
         title: 'AI doc drafting',
         horizon: 'next' as const,
         status: 'planned' as const,
@@ -149,7 +160,7 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
       // Later — two dated (so the landing hero shows ≥6 bars per AC2), two dateless
       // (→ unscheduled tray + attention).
       {
-        productId: product.id,
+        projectId: project.id,
         title: 'Comments & review',
         horizon: 'later' as const,
         status: 'idea' as const,
@@ -162,7 +173,7 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
         updatedBy: elena.id,
       },
       {
-        productId: product.id,
+        projectId: project.id,
         title: 'Up/down voting',
         horizon: 'later' as const,
         status: 'idea' as const,
@@ -175,7 +186,7 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
         updatedBy: priya.id,
       },
       {
-        productId: product.id,
+        projectId: project.id,
         title: 'Realtime collaboration (Yjs)',
         horizon: 'later' as const,
         status: 'idea' as const,
@@ -186,7 +197,7 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
         updatedBy: marcus.id,
       },
       {
-        productId: product.id,
+        projectId: project.id,
         title: 'ECS deployment',
         horizon: 'later' as const,
         status: 'idea' as const,
@@ -223,6 +234,7 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
     updatedDaysAgo: number;
     md: string;
   }) => ({
+    projectId: args.feature.projectId,
     featureId: args.feature.id,
     type: args.type,
     title: args.title,
@@ -995,6 +1007,7 @@ Fund the two weeks. Gate GA behind one partner running the module in staging for
     .insert(objectives)
     .values([
       {
+        projectId: project.id,
         title: 'Become the roadmap of record',
         descriptionMd:
           'The board, the Gantt and the docs replace the slide deck as the place stakeholders look first. We win when the question "what are we doing and when?" is answered by a link, not a meeting.',
@@ -1006,6 +1019,7 @@ Fund the two weeks. Gate GA behind one partner running the module in staging for
         quarter: 'Q3 2026',
       },
       {
+        projectId: project.id,
         title: 'Win security-conscious teams',
         descriptionMd:
           'Self-hosted is the wedge: pass security review at shops where Notion and Google Docs are blocked, then convert the pilot. ECS module and SSO asks both hang off this.',
@@ -1050,6 +1064,7 @@ Our design partners who pasted screenshots into chat for three months so we didn
   const [v02NotesDoc] = await db
     .insert(documents)
     .values({
+      projectId: project.id,
       featureId: null,
       ideaId: null,
       type: 'release_notes' as const,
@@ -1066,6 +1081,7 @@ Our design partners who pasted screenshots into chat for three months so we didn
   const [v02] = await db
     .insert(releases)
     .values({
+      projectId: project.id,
       name: 'v0.2 — Team ready',
       targetDate: nextMonth(28),
       status: 'planned',
@@ -1103,6 +1119,7 @@ Our design partners who pasted screenshots into chat for three months so we didn
     .insert(ideas)
     .values([
       {
+        projectId: project.id,
         title: 'Slack notifications for resolved threads',
         bodyMd: 'When a review thread resolves, ping the doc author in Slack. Three partners asked in the same week — review latency is their top complaint.',
         source: 'support',
@@ -1111,6 +1128,7 @@ Our design partners who pasted screenshots into chat for three months so we didn
         updatedAt: daysAgo(9),
       },
       {
+        projectId: project.id,
         title: 'CSV export of the roadmap',
         bodyMd: 'Procurement at Northwind wants a quarterly spreadsheet snapshot. Ugly but it unblocks a contract.',
         source: 'sales call',
@@ -1119,6 +1137,7 @@ Our design partners who pasted screenshots into chat for three months so we didn
         updatedAt: daysAgo(7),
       },
       {
+        projectId: project.id,
         title: 'Doc version history',
         bodyMd: 'A "what changed since I last reviewed" diff view. Reviewers currently re-read whole specs.',
         source: 'dogfooding',
@@ -1127,6 +1146,7 @@ Our design partners who pasted screenshots into chat for three months so we didn
         updatedAt: daysAgo(5),
       },
       {
+        projectId: project.id,
         title: 'Keyboard-first board triage',
         bodyMd: 'j/k to move between cards, h/l to change horizon. Weekly planning is mouse-bound today.',
         source: '',
@@ -1135,6 +1155,7 @@ Our design partners who pasted screenshots into chat for three months so we didn
         updatedAt: daysAgo(3),
       },
       {
+        projectId: project.id,
         title: 'SSO via OIDC',
         bodyMd: 'Two prospects gate the pilot on Okta login. Self-hosted + local users only gets us through security review, not rollout.',
         source: 'sales call',
@@ -1185,6 +1206,7 @@ Both asks are attached to contracts in flight this quarter. Six months ago we ha
 - Why: one well-trodden protocol, but auth touches every request path — testing is the cost, not the code.
 `;
   await db.insert(documents).values({
+    projectId: project.id,
     featureId: null,
     ideaId: ssoIdea.id,
     type: 'idea_pitch' as const,
@@ -1205,6 +1227,7 @@ Both asks are attached to contracts in flight this quarter. Six months ago we ha
   const [q4Stretch] = await db
     .insert(plans)
     .values({
+      projectId: project.id,
       name: 'Q4 stretch',
       status: 'draft',
       createdBy: corban.id,
@@ -1269,16 +1292,18 @@ Both asks are attached to contracts in flight this quarter. Six months ago we ha
   // Decisions: one linked to the resolved voting-anonymity thread, one manual.
   await db.insert(decisions).values([
     {
+      projectId: project.id,
       featureId: voting.id,
       title: 'Votes are aggregate-only',
       decisionMd: 'The API returns counts and your own vote — never who voted which way. The schema stores voters only to enforce one vote per person.',
-      alternativesMd: 'Attributed votes (rejected: nobody would ever 🧊 a teammate’s pet feature); fully anonymous storage (rejected: cannot enforce the one-vote constraint).',
+      alternativesMd: `Attributed votes (rejected: nobody would ever 🧊 a teammate’s pet feature); fully anonymous storage (rejected: cannot enforce the one-vote constraint).`,
       sourceCommentId: votingAnonRoot.id,
       decidedBy: priya.id,
       decidedAt: daysAgo(4.5),
       createdAt: daysAgo(4.5),
     },
     {
+      projectId: project.id,
       featureId: editor.id,
       title: 'Tiptap JSON is the source of truth; markdown is derived',
       decisionMd: 'The server derives content_md from contentJson on every save via one shared extension list. The client never serializes markdown itself.',

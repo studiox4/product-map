@@ -40,9 +40,9 @@ let resetCalls = 0;
 
 const server = setupServer(
   http.get('/api/overview', () =>
-    HttpResponse.json({ product, features: [], recentActivity: [] }),
+    HttpResponse.json({ project: product, features: [], recentActivity: [] }),
   ),
-  http.patch('/api/products/:id', async ({ request, params }) => {
+  http.patch('/api/projects/:id', async ({ request, params }) => {
     productPatch = { id: params.id, body: await request.json() };
     const body = (productPatch as { body: Record<string, unknown> }).body;
     return HttpResponse.json({ ...product, ...body });

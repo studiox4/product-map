@@ -3,7 +3,7 @@
 import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { users, products, features, documents, templates, activity } from '@productmap/db';
+import { users, projects, features, documents, templates, activity, memberships } from '@productmap/db';
 import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach } from 'vitest';
 
 let auth: Record<string, string> = {};
@@ -43,11 +43,16 @@ describe('POST /api/admin/reset-demo', () => {
     );
     expect(oldestFirst[0].name).toBe('Corban');
 
-    expect(await db.select().from(products)).toHaveLength(1);
+    expect(await db.select().from(projects)).toHaveLength(1);
     expect(await db.select().from(features)).toHaveLength(8);
     // 13 feature docs + the SSO idea pitch + the v0.2 release notes doc.
     expect(await db.select().from(documents)).toHaveLength(15);
     expect((await db.select().from(activity)).length).toBeGreaterThan(0);
+
+    // Each seeded user gets exactly one membership (one per user, one project).
+    const memRows = await db.select().from(memberships);
+    expect(memRows).toHaveLength(4); // one per seeded user
+    expect(memRows.some((m) => m.role === 'owner')).toBe(true);
 
     // 6 built-in templates, one default per doc type, {{title}} preserved.
     const tplRows = await db.select().from(templates);

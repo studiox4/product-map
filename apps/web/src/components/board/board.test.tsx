@@ -29,7 +29,7 @@ const now = '2026-06-09T00:00:00.000Z';
 const fixture: FeatureWithDocs[] = [
   {
     id: 'f1',
-    productId: 'p1',
+    projectId: 'p1',
     score: 0,
     boosts: 0,
     cools: 0,
@@ -55,7 +55,7 @@ const fixture: FeatureWithDocs[] = [
   },
   {
     id: 'f2',
-    productId: 'p1',
+    projectId: 'p1',
     score: 0,
     boosts: 0,
     cools: 0,
@@ -272,7 +272,7 @@ describe('Board', () => {
         return HttpResponse.json(
           {
             id: 'f-new',
-            productId: 'p1',
+            projectId: 'p1',
             score: 0,
             boosts: 0,
             cools: 0,
