@@ -5,7 +5,7 @@ import { ROLE_RANK, type MemberRole } from '@productmap/shared';
 import { db } from '../db';
 import type { AuthEnv } from './auth';
 
-export type MembershipEnv = AuthEnv & { Variables: { currentRole: MemberRole } };
+export type MembershipEnv = AuthEnv & { Variables: { currentRole: MemberRole; currentProjectId: string } };
 
 /**
  * Gate a `:projectId` route. Allows instance admins (super-admin → effective
@@ -22,6 +22,7 @@ export function requireMembership(minRole: MemberRole) {
 
     if (user.role === 'admin') {
       c.set('currentRole', 'owner');
+      c.set('currentProjectId', projectId);
       await next();
       return;
     }
@@ -33,6 +34,7 @@ export function requireMembership(minRole: MemberRole) {
     if (!m) return c.json({ error: 'not_found' }, 404);
     if (ROLE_RANK[m.role] < ROLE_RANK[minRole]) return c.json({ error: 'forbidden' }, 403);
     c.set('currentRole', m.role);
+    c.set('currentProjectId', projectId);
     await next();
   });
 }
