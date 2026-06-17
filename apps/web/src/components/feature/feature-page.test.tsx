@@ -108,7 +108,7 @@ const server = setupServer(
   http.get('/api/documents', () => HttpResponse.json(allDocs)),
   http.get('/api/comments', () => HttpResponse.json([])),
   // Dream tier (D2/D3/D4) feature-page sections
-  http.get('/api/features/f1/evidence', () => HttpResponse.json([])),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/features/f1/evidence`, () => HttpResponse.json([])),
   http.get('/api/decisions', () => HttpResponse.json([])),
   http.get(`/api/projects/${TEST_PROJECT_ID}/features/f1/dependencies`, () =>
     HttpResponse.json({ blockers: [], blocked: [] }),

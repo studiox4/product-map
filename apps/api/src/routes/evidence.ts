@@ -1,13 +1,15 @@
-// Dream-tier evidence routes. Mounted at /api in app.ts, so paths here are
-// /features/:id/evidence and /evidence/:id.
+// Dream-tier evidence routes. Mounted on projectScopedContent at '/', so the
+// paths here (/features/:id/evidence and /evidence/:id) resolve under
+// /api/projects/:projectId/…
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { asc, eq } from 'drizzle-orm';
 import { evidenceCreate } from '@productmap/shared';
 import { evidence, features, users } from '@productmap/db';
 import { db } from '../db';
-import { type CurrentUserEnv } from '../middleware/current-user';
 import { loadUser } from '../middleware/auth';
+import { type MembershipEnv } from '../middleware/membership';
+import { loadScoped } from '../lib/scope';
 
 const evidenceColumns = {
   id: evidence.id,
@@ -23,15 +25,11 @@ const evidenceColumns = {
   createdAt: evidence.createdAt,
 };
 
-async function featureExists(id: string): Promise<boolean> {
-  const [row] = await db.select({ id: features.id }).from(features).where(eq(features.id, id));
-  return Boolean(row);
-}
-
-export const evidenceRoutes = new Hono<CurrentUserEnv>()
+export const evidenceRoutes = new Hono<MembershipEnv>()
   .get('/features/:id/evidence', async (c) => {
     const featureId = c.req.param('id');
-    if (!(await featureExists(featureId))) return c.json({ error: 'not_found' }, 404);
+    const pid = c.get('currentProjectId');
+    await loadScoped(features, featureId, pid);
     const rows = await db
       .select(evidenceColumns)
       .from(evidence)
@@ -49,9 +47,10 @@ export const evidenceRoutes = new Hono<CurrentUserEnv>()
     }),
     async (c) => {
       const featureId = c.req.param('id');
+      const pid = c.get('currentProjectId');
       const body = c.req.valid('json');
       const user = c.get('currentUser');
-      if (!(await featureExists(featureId))) return c.json({ error: 'not_found' }, 404);
+      await loadScoped(features, featureId, pid);
 
       const fullUser = user ? await loadUser(user.id) : null;
       const [row] = await db
@@ -74,8 +73,14 @@ export const evidenceRoutes = new Hono<CurrentUserEnv>()
   )
   .delete('/evidence/:id', async (c) => {
     const id = c.req.param('id');
-    const [existing] = await db.select({ id: evidence.id }).from(evidence).where(eq(evidence.id, id));
+    const pid = c.get('currentProjectId');
+    const [existing] = await db
+      .select({ id: evidence.id, featureId: evidence.featureId })
+      .from(evidence)
+      .where(eq(evidence.id, id));
     if (!existing) return c.json({ error: 'not_found' }, 404);
+    // 2-hop: prove the evidence's feature belongs to this project
+    await loadScoped(features, existing.featureId, pid);
     await db.delete(evidence).where(eq(evidence.id, id));
     return c.body(null, 204);
   });

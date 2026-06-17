@@ -5,6 +5,7 @@ import { releasesRoutes } from './releases';
 import { plansRoutes } from './plans';
 import { featuresRoutes } from './features';
 import { depsRoutes } from './deps';
+import { evidenceRoutes } from './evidence';
 
 /**
  * Content routes scoped to /api/projects/:projectId. One method-based gate:
@@ -20,4 +21,6 @@ export const projectScopedContent = new Hono<MembershipEnv>()
   .route('/releases', releasesRoutes)
   .route('/plans', plansRoutes)
   .route('/features', featuresRoutes)
-  .route('/features', depsRoutes);
+  .route('/features', depsRoutes)
+  // evidence defines /features/:id/evidence + /evidence/:id — mount at root
+  .route('/', evidenceRoutes);

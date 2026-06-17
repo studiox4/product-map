@@ -1110,7 +1110,7 @@ export function useEvidence(featureId: string) {
   const pid = useProjectId();
   return useQuery({
     queryKey: evidenceKey(pid, featureId),
-    queryFn: () => fetchJson<EvidenceItem[]>(`/api/features/${featureId}/evidence`),
+    queryFn: () => fetchJson<EvidenceItem[]>(apiPath(pid, 'features', featureId, 'evidence')),
     enabled: !!featureId,
   });
 }
@@ -1129,7 +1129,7 @@ export function useAddEvidence() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ featureId, ...body }: AddEvidenceVars) =>
-      fetchJson<EvidenceItem>(`/api/features/${featureId}/evidence`, {
+      fetchJson<EvidenceItem>(apiPath(pid, 'features', featureId, 'evidence'), {
         method: 'POST',
         body: JSON.stringify(body),
       }),
@@ -1149,7 +1149,7 @@ export function useDeleteEvidence() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id }: DeleteEvidenceVars) =>
-      fetchJson<void>(`/api/evidence/${id}`, { method: 'DELETE' }),
+      fetchJson<void>(apiPath(pid, 'evidence', id), { method: 'DELETE' }),
     onSettled: (_data, _err, { featureId }) => {
       qc.invalidateQueries({ queryKey: evidenceKey(pid, featureId) });
     },

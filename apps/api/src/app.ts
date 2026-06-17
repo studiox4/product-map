@@ -16,7 +16,6 @@ import { adminRoutes } from './routes/admin';
 // Dream-tier route modules (mounted as stubs by the foundation agent; each
 // feature agent fills in its own file — nobody else edits app.ts).
 import { ideasRoutes } from './routes/ideas';
-import { evidenceRoutes } from './routes/evidence';
 import { decisionsRoutes } from './routes/decisions';
 import { shareRoutes } from './routes/share';
 import { copilotRoutes } from './routes/copilot';
@@ -59,8 +58,6 @@ export const app = new Hono()
   .route('/api/admin', adminRoutes)
   // --- Dream tier mounts (paths inside each module are relative to these) ---
   .route('/api/ideas', ideasRoutes)
-  // evidence defines /features/:id/evidence + /evidence/:id
-  .route('/api', evidenceRoutes)
   // decisions defines /decisions… + /ai/suggest-decision
   .route('/api', decisionsRoutes)
   .route('/api/share', shareRoutes)

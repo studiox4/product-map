@@ -117,7 +117,7 @@ const server = setupServer(
   ),
   http.get(`/api/projects/${TEST_PROJECT_ID}/features`, () => HttpResponse.json([makeFeature(), blockerFeature])),
   http.get(`/api/projects/${TEST_PROJECT_ID}/features/f1`, () => HttpResponse.json(makeFeature())),
-  http.get('/api/features/f1/evidence', () => HttpResponse.json(evidenceRows)),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/features/f1/evidence`, () => HttpResponse.json(evidenceRows)),
   http.get('/api/decisions', ({ request }) => {
     const url = new URL(request.url);
     return HttpResponse.json(url.searchParams.get('featureId') === 'f1' ? decisionRows : []);
@@ -167,7 +167,7 @@ describe('EvidenceSection', () => {
   it('adds evidence through the popover (POST with kind/title/weight)', async () => {
     let posted: Record<string, unknown> | null = null;
     server.use(
-      http.post('/api/features/f1/evidence', async ({ request }) => {
+      http.post(`/api/projects/${TEST_PROJECT_ID}/features/f1/evidence`, async ({ request }) => {
         posted = (await request.json()) as Record<string, unknown>;
         return HttpResponse.json(
           { ...evidenceRows[0], id: 'e3', ...posted },
@@ -189,7 +189,7 @@ describe('EvidenceSection', () => {
   it('deletes an evidence card', async () => {
     let deleted = false;
     server.use(
-      http.delete('/api/evidence/e1', () => {
+      http.delete(`/api/projects/${TEST_PROJECT_ID}/evidence/e1`, () => {
         deleted = true;
         return new HttpResponse(null, { status: 204 });
       }),
