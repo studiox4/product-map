@@ -170,14 +170,18 @@ export default function App() {
               </Suspense>
             }
           />
-          {/* Chrome-free reader view (spec 2.3) — outside AppShell on purpose, but auth-gated. */}
+          {/* Chrome-free reader view (spec 2.3) — outside AppShell on purpose, but
+              auth-gated AND project-scoped (ReaderView's useDocument needs the active
+              project via ProjectProvider). */}
           <Route
             path="/docs/:id/read"
             element={
               <RequireAuth>
-                <Suspense fallback={<RouteFallback />}>
-                  <ReaderView />
-                </Suspense>
+                <ProjectProvider>
+                  <Suspense fallback={<RouteFallback />}>
+                    <ReaderView />
+                  </Suspense>
+                </ProjectProvider>
               </RequireAuth>
             }
           />
