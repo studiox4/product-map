@@ -39,7 +39,7 @@ export const users = pgTable('users', {
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
-export const products = pgTable('products', {
+export const projects = pgTable('projects', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: text('name').notNull(),
   vision: text('vision').notNull().default(''),
@@ -48,7 +48,7 @@ export const products = pgTable('products', {
 });
 export const features = pgTable('features', {
   id: uuid('id').defaultRandom().primaryKey(),
-  productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+  projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   horizon: horizonEnum('horizon').notNull().default('later'),
   status: featureStatusEnum('status').notNull().default('idea'),
