@@ -27,6 +27,11 @@ import type { AppType } from '../../../api/src/app';
 /** Typed hono client for the API (same-origin; Vite proxies /api in dev). */
 export const api = hc<AppType>('/');
 
+/** Build a project-scoped API path: apiPath(pid, 'features', id) → /api/projects/<pid>/features/<id>. */
+export function apiPath(projectId: string, ...segments: (string | number)[]): string {
+  return `/api/projects/${projectId}${segments.length ? '/' + segments.join('/') : ''}`;
+}
+
 // ---- request body types (mirror @productmap/shared zod schemas) ----
 
 export interface FeatureCreateInput {

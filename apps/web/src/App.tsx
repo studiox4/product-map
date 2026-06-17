@@ -6,6 +6,7 @@ import Landing from '@/routes/Landing';
 import Login from '@/routes/Login';
 import Register from '@/routes/Register';
 import { AuthProvider, RequireAuth } from '@/lib/auth';
+import { ProjectProvider } from '@/lib/project';
 import { Skeleton } from '@/components/ui/skeleton';
 
 // Lazy routes owned by parallel tasks (3B-D); stubs render "coming soon" until they land.
@@ -57,7 +58,7 @@ export default function App() {
             {/* Public routes — no auth required. */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route element={<RequireAuth><AppShell /></RequireAuth>}>
+            <Route element={<RequireAuth><ProjectProvider><AppShell /></ProjectProvider></RequireAuth>}>
               <Route path="/" element={<Landing />} />
             {/* Idea Inbox (inbox agent route line). */}
             <Route
