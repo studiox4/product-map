@@ -9,6 +9,7 @@ import Register from '@/routes/Register';
 import { AuthProvider, RequireAuth } from '@/lib/auth';
 import { ActiveProjectProvider, ProjectProvider, useActiveProject } from '@/lib/project';
 import { Skeleton } from '@/components/ui/skeleton';
+import { appRoutes } from '@/lib/routes';
 
 // Lazy routes owned by parallel tasks (3B-D); stubs render "coming soon" until they land.
 const BoardPage = lazy(() => import('@/routes/Board'));
@@ -90,144 +91,155 @@ export default function App() {
             {/* Public routes — no auth required. */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route element={<RequireAuth><ActiveProjectProvider><AuthedShell /></ActiveProjectProvider></RequireAuth>}>
-              <Route path="/" element={<Landing />} />
-            {/* Idea Inbox (inbox agent route line). */}
+            {/* PR A: `/` redirects to the app (Phase 3B replaces this with Marketing). */}
+            <Route path="/" element={<Navigate to={appRoutes.dashboard} replace />} />
+            {/* Authed application — everything under /app/*. */}
             <Route
-              path="/inbox"
+              path="/app"
               element={
-                <Suspense fallback={<RouteFallback />}>
-                  <InboxPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/board"
-              element={
-                <Suspense fallback={<RouteFallback />}>
-                  <BoardPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/roadmap"
-              element={
-                <Suspense fallback={<RouteFallback />}>
-                  <RoadmapPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/features/:id"
-              element={
-                <Suspense fallback={<RouteFallback />}>
-                  <FeaturePage />
-                </Suspense>
-              }
-            />
-            {/* Releases + Outcomes (releases+outcomes agent route lines). */}
-            <Route
-              path="/releases"
-              element={
-                <Suspense fallback={<RouteFallback />}>
-                  <ReleasesPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/releases/:id"
-              element={
-                <Suspense fallback={<RouteFallback />}>
-                  <ReleaseDetailPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/outcomes"
-              element={
-                <Suspense fallback={<RouteFallback />}>
-                  <OutcomesPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/docs"
-              element={
-                <Suspense fallback={<RouteFallback />}>
-                  <DocsPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/docs/:id"
-              element={
-                <Suspense fallback={<RouteFallback />}>
-                  <DocPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <Suspense fallback={<RouteFallback />}>
-                  <SettingsPage />
-                </Suspense>
+                <RequireAuth>
+                  <ActiveProjectProvider>
+                    <AuthedShell />
+                  </ActiveProjectProvider>
+                </RequireAuth>
               }
             >
-              {/* Settings shell: tab content renders via <Outlet/> (own Suspense). */}
-              <Route index element={<Navigate to="/settings/templates" replace />} />
-              <Route path="templates" element={<TemplatesTab />} />
-              <Route path="workspace" element={<WorkspaceTab />} />
-              <Route path="profile" element={<ProfileTab />} />
-              <Route path="project" element={<ProjectTab />} />
-              <Route path="users" element={<UsersTab />} />
-              {/* Unknown tabs fall back to Templates. */}
-              <Route path="*" element={<Navigate to="/settings/templates" replace />} />
+              <Route index element={<Landing />} />
+              {/* Idea Inbox (inbox agent route line). */}
+              <Route
+                path="inbox"
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <InboxPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="board"
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <BoardPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="roadmap"
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <RoadmapPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="features/:id"
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <FeaturePage />
+                  </Suspense>
+                }
+              />
+              {/* Releases + Outcomes (releases+outcomes agent route lines). */}
+              <Route
+                path="releases"
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <ReleasesPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="releases/:id"
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <ReleaseDetailPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="outcomes"
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <OutcomesPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="docs"
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <DocsPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="docs/:id"
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <DocPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="settings"
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <SettingsPage />
+                  </Suspense>
+                }
+              >
+                {/* Settings shell: tab content renders via <Outlet/> (own Suspense). */}
+                <Route index element={<Navigate to="/app/settings/templates" replace />} />
+                <Route path="templates" element={<TemplatesTab />} />
+                <Route path="workspace" element={<WorkspaceTab />} />
+                <Route path="profile" element={<ProfileTab />} />
+                <Route path="project" element={<ProjectTab />} />
+                <Route path="users" element={<UsersTab />} />
+                {/* Unknown tabs fall back to Templates. */}
+                <Route path="*" element={<Navigate to="/app/settings/templates" replace />} />
+              </Route>
+              {/* Template editor: full-page Tiptap chrome, child of /app layout. */}
+              <Route
+                path="settings/templates/:id"
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <TemplateEditorPage />
+                  </Suspense>
+                }
+              />
             </Route>
-            {/* Template editor: full-page Tiptap chrome, outside the settings card shell. */}
+            {/* Public read-only share page (dream tier D8) — outside AppShell, no auth. */}
             <Route
-              path="/settings/templates/:id"
+              path="/share/:token"
               element={
                 <Suspense fallback={<RouteFallback />}>
-                  <TemplateEditorPage />
+                  <SharePage />
                 </Suspense>
               }
             />
-          </Route>
-          {/* Public read-only share page (dream tier D8) — outside AppShell, no auth. */}
-          <Route
-            path="/share/:token"
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <SharePage />
-              </Suspense>
-            }
-          />
-          {/* Accept-invite — sibling of /share/:token, outside the active-project
-              gate; the page handles its own auth check + login redirect. */}
-          <Route
-            path="/invite/:token"
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <AcceptInvitePage />
-              </Suspense>
-            }
-          />
-          {/* Chrome-free reader view (spec 2.3) — outside AppShell on purpose, but
-              auth-gated AND project-scoped (ReaderView's useDocument needs the active
-              project via ProjectProvider). */}
-          <Route
-            path="/docs/:id/read"
-            element={
-              <RequireAuth>
-                <ProjectProvider>
-                  <Suspense fallback={<RouteFallback />}>
-                    <ReaderView />
-                  </Suspense>
-                </ProjectProvider>
-              </RequireAuth>
-            }
-          />
+            {/* Accept-invite — sibling of /share/:token, outside the active-project
+                gate; the page handles its own auth check + login redirect. */}
+            <Route
+              path="/invite/:token"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <AcceptInvitePage />
+                </Suspense>
+              }
+            />
+            {/* Chrome-free reader view (spec 2.3) — separate top-level /app route,
+                NOT nested under the AuthedShell layout; auth-gated AND project-scoped. */}
+            <Route
+              path="/app/docs/:id/read"
+              element={
+                <RequireAuth>
+                  <ProjectProvider>
+                    <Suspense fallback={<RouteFallback />}>
+                      <ReaderView />
+                    </Suspense>
+                  </ProjectProvider>
+                </RequireAuth>
+              }
+            />
           </Routes>
         </AuthProvider>
       </BrowserRouter>
