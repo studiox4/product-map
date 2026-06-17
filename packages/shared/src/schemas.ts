@@ -3,6 +3,7 @@ import {
   HORIZONS, FEATURE_STATUSES, DOC_TYPES, DOC_STATUSES,
   IDEA_STATUSES, EVIDENCE_KINDS, FEATURE_SIZES,
   RELEASE_STATUSES, OBJECTIVE_STATUSES, MIN_PASSWORD_LENGTH,
+  MEMBER_ROLES,
 } from './constants';
 
 export const featureCreate = z.object({
@@ -222,7 +223,7 @@ export const projectCreate = z.object({
   aboutMd: z.string().max(20000).optional(),
 });
 
-const role = z.enum(['owner', 'editor', 'viewer']);
+const role = z.enum(MEMBER_ROLES);
 
 export const memberAdd = z
   .object({

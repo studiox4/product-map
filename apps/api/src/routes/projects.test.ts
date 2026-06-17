@@ -144,4 +144,111 @@ describe('project members', () => {
     const res = await app.request(`/api/projects/${p.id}/members`, json('POST', { email: 'z@x.co', role: 'viewer' }, await auth(u)));
     expect(res.status).toBe(403);
   });
+
+  it('multi-owner: demote one owner to editor succeeds (non-last)', async () => {
+    const owner1 = await createTestUser({ role: 'member' });
+    const owner2 = await createTestUser({ role: 'member' });
+    const p = await createTestProject();
+    await addMembership(owner1.id, p.id, 'owner');
+    await addMembership(owner2.id, p.id, 'owner');
+    const h = await auth(owner1);
+    // Demote owner2 to editor — should succeed since owner1 remains owner.
+    const res = await app.request(`/api/projects/${p.id}/members/${owner2.id}`, json('PATCH', { role: 'editor' }, h));
+    expect(res.status).toBe(200);
+  });
+
+  it('multi-owner: remove one owner succeeds (non-last)', async () => {
+    const owner1 = await createTestUser({ role: 'member' });
+    const owner2 = await createTestUser({ role: 'member' });
+    const p = await createTestProject();
+    await addMembership(owner1.id, p.id, 'owner');
+    await addMembership(owner2.id, p.id, 'owner');
+    const h = await auth(owner1);
+    // Remove owner2 — should succeed since owner1 remains owner.
+    const res = await app.request(`/api/projects/${p.id}/members/${owner2.id}`, { method: 'DELETE', headers: h });
+    expect(res.status).toBe(204);
+  });
+
+  it('email member-add happy path: add by email → 201', async () => {
+    const owner = await createTestUser({ role: 'member' });
+    const target = await createTestUser({ role: 'member', email: 'x@y.co' });
+    const p = await createTestProject();
+    await addMembership(owner.id, p.id, 'owner');
+    const h = await auth(owner);
+    const res = await app.request(`/api/projects/${p.id}/members`, json('POST', { email: 'x@y.co', role: 'editor' }, h));
+    expect(res.status).toBe(201);
+    expect((await res.json()).userId).toBe(target.id);
+  });
+
+  it('email member-add: unknown email → 404 user_not_found', async () => {
+    const owner = await createTestUser({ role: 'member' });
+    const p = await createTestProject();
+    await addMembership(owner.id, p.id, 'owner');
+    const h = await auth(owner);
+    const res = await app.request(`/api/projects/${p.id}/members`, json('POST', { email: 'nobody@y.co', role: 'editor' }, h));
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toBe('user_not_found');
+  });
+
+  it('direct userId member-add: unknown userId → 404 user_not_found', async () => {
+    const owner = await createTestUser({ role: 'member' });
+    const p = await createTestProject();
+    await addMembership(owner.id, p.id, 'owner');
+    const h = await auth(owner);
+    const res = await app.request(`/api/projects/${p.id}/members`, json('POST', { userId: '00000000-0000-4000-8000-000000000099', role: 'editor' }, h));
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toBe('user_not_found');
+  });
+
+  it('member upsert: POST same user twice updates role', async () => {
+    const owner = await createTestUser({ role: 'member' });
+    const target = await createTestUser({ role: 'member' });
+    const p = await createTestProject();
+    await addMembership(owner.id, p.id, 'owner');
+    const h = await auth(owner);
+    // Add as editor.
+    await app.request(`/api/projects/${p.id}/members`, json('POST', { userId: target.id, role: 'editor' }, h));
+    // Upsert as viewer.
+    const res = await app.request(`/api/projects/${p.id}/members`, json('POST', { userId: target.id, role: 'viewer' }, h));
+    expect(res.status).toBe(201);
+    // GET members should show viewer role.
+    const list = await app.request(`/api/projects/${p.id}/members`, { headers: h });
+    const members = await list.json() as Array<{ userId: string; role: string }>;
+    expect(members.find((m) => m.userId === target.id)?.role).toBe('viewer');
+  });
+
+  it('viewer can read members (200)', async () => {
+    const owner = await createTestUser({ role: 'member' });
+    const viewer = await createTestUser({ role: 'member' });
+    const p = await createTestProject();
+    await addMembership(owner.id, p.id, 'owner');
+    await addMembership(viewer.id, p.id, 'viewer');
+    const h = await auth(viewer);
+    const res = await app.request(`/api/projects/${p.id}/members`, { headers: h });
+    expect(res.status).toBe(200);
+    const members = await res.json() as Array<{ userId: string }>;
+    expect(members.length).toBe(2);
+  });
+
+  it('super-admin manages members of a project they are NOT a member of', async () => {
+    const admin = await createTestUser({ role: 'admin' });
+    const target = await createTestUser({ role: 'member' });
+    const p = await createTestProject();
+    // Admin has no membership row — requireMembership grants 'owner' automatically.
+    const h = await auth(admin);
+    const add = await app.request(`/api/projects/${p.id}/members`, json('POST', { userId: target.id, role: 'editor' }, h));
+    expect(add.status).toBe(201);
+    const del = await app.request(`/api/projects/${p.id}/members/${target.id}`, { method: 'DELETE', headers: h });
+    expect(del.status).toBe(204);
+  });
+
+  it('sole owner POST own userId role editor → 409 last_owner', async () => {
+    const owner = await createTestUser({ role: 'member' });
+    const p = await createTestProject();
+    await addMembership(owner.id, p.id, 'owner');
+    const h = await auth(owner);
+    const res = await app.request(`/api/projects/${p.id}/members`, json('POST', { userId: owner.id, role: 'editor' }, h));
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe('last_owner');
+  });
 });

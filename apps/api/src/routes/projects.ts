@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { projectCreate, projectUpdate, memberAdd, memberUpdate } from '@productmap/shared';
 import { projects, memberships, users } from '@productmap/db';
 import { db } from '../db';
@@ -8,18 +8,6 @@ import { requireMembership, type MembershipEnv } from '../middleware/membership'
 
 const bad = (r: { success: boolean; error?: { issues: unknown } }, c: any) =>
   r.success ? undefined : c.json({ error: 'validation', issues: r.error!.issues }, 400);
-
-/** True if removing/demoting (projectId,userId) would leave the project with zero owners. */
-async function isLastOwner(projectId: string, userId: string): Promise<boolean> {
-  const [{ count }] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(memberships)
-    .where(and(eq(memberships.projectId, projectId), eq(memberships.role, 'owner')));
-  if (count > 1) return false;
-  const [target] = await db.select({ role: memberships.role }).from(memberships)
-    .where(and(eq(memberships.projectId, projectId), eq(memberships.userId, userId)));
-  return target?.role === 'owner';
-}
 
 export const projectsRoutes = new Hono<MembershipEnv>()
   .get('/', async (c) => {
@@ -56,7 +44,8 @@ export const projectsRoutes = new Hono<MembershipEnv>()
     return c.json({ id: row.id, name: row.name, vision: row.vision, aboutMd: row.aboutMd });
   })
   .delete('/:projectId', requireMembership('owner'), async (c) => {
-    await db.delete(projects).where(eq(projects.id, c.req.param('projectId')));
+    const deleted = await db.delete(projects).where(eq(projects.id, c.req.param('projectId'))).returning({ id: projects.id });
+    if (!deleted.length) return c.json({ error: 'not_found' }, 404);
     return c.body(null, 204);
   })
   .get('/:projectId/members', requireMembership('viewer'), async (c) => {
@@ -70,31 +59,102 @@ export const projectsRoutes = new Hono<MembershipEnv>()
   .post('/:projectId/members', requireMembership('owner'), zValidator('json', memberAdd, bad), async (c) => {
     const projectId = c.req.param('projectId');
     const input = c.req.valid('json');
-    let userId = input.userId ?? null;
-    if (!userId && input.email) {
+
+    // Resolve userId from input — verify existence for the direct-id path.
+    let userId: string;
+    if (input.userId) {
+      const [u] = await db.select({ id: users.id }).from(users).where(eq(users.id, input.userId));
+      if (!u) return c.json({ error: 'user_not_found' }, 404);
+      userId = u.id;
+    } else if (input.email) {
       const [u] = await db.select({ id: users.id }).from(users).where(eq(users.email, input.email));
       if (!u) return c.json({ error: 'user_not_found' }, 404);
       userId = u.id;
+    } else {
+      return c.json({ error: 'validation' }, 400);
     }
-    if (!userId) return c.json({ error: 'validation' }, 400);
-    await db.insert(memberships).values({ userId, projectId, role: input.role })
-      .onConflictDoUpdate({ target: [memberships.userId, memberships.projectId], set: { role: input.role } });
-    return c.json({ userId, projectId, role: input.role }, 201);
+
+    const role = input.role;
+
+    // Transactional upsert with last-owner guard on demote.
+    const result = await db.transaction(async (tx) => {
+      // Lock all owner rows for this project to prevent TOCTOU.
+      const owners = await tx
+        .select({ userId: memberships.userId })
+        .from(memberships)
+        .where(and(eq(memberships.projectId, projectId), eq(memberships.role, 'owner')))
+        .for('update');
+
+      // Check if this is a demote of the last owner.
+      const isCurrentOwner = owners.some((o) => o.userId === userId);
+      const wouldLeaveNoOwner = isCurrentOwner && owners.length === 1 && role !== 'owner';
+      if (wouldLeaveNoOwner) return { conflict: true } as const;
+
+      await tx
+        .insert(memberships)
+        .values({ userId, projectId, role })
+        .onConflictDoUpdate({ target: [memberships.userId, memberships.projectId], set: { role } });
+
+      return { conflict: false, userId, projectId, role } as const;
+    });
+
+    if (result.conflict) return c.json({ error: 'last_owner' }, 409);
+    return c.json({ userId: result.userId, projectId: result.projectId, role: result.role }, 201);
   })
   .patch('/:projectId/members/:userId', requireMembership('owner'), zValidator('json', memberUpdate, bad), async (c) => {
     const projectId = c.req.param('projectId');
     const userId = c.req.param('userId');
     const { role } = c.req.valid('json');
-    if (role !== 'owner' && (await isLastOwner(projectId, userId))) return c.json({ error: 'last_owner' }, 409);
-    const [row] = await db.update(memberships).set({ role })
-      .where(and(eq(memberships.projectId, projectId), eq(memberships.userId, userId))).returning();
-    if (!row) return c.json({ error: 'not_found' }, 404);
+
+    const result = await db.transaction(async (tx) => {
+      // Lock all owner rows for this project to prevent TOCTOU.
+      const owners = await tx
+        .select({ userId: memberships.userId })
+        .from(memberships)
+        .where(and(eq(memberships.projectId, projectId), eq(memberships.role, 'owner')))
+        .for('update');
+
+      const isCurrentOwner = owners.some((o) => o.userId === userId);
+      const wouldLeaveNoOwner = isCurrentOwner && owners.length === 1 && role !== 'owner';
+      if (wouldLeaveNoOwner) return { conflict: true } as const;
+
+      const [row] = await tx
+        .update(memberships)
+        .set({ role })
+        .where(and(eq(memberships.projectId, projectId), eq(memberships.userId, userId)))
+        .returning();
+
+      if (!row) return { notFound: true } as const;
+      return { conflict: false, notFound: false, row } as const;
+    });
+
+    if (result.conflict) return c.json({ error: 'last_owner' }, 409);
+    if (result.notFound) return c.json({ error: 'not_found' }, 404);
     return c.json({ userId, projectId, role });
   })
   .delete('/:projectId/members/:userId', requireMembership('owner'), async (c) => {
     const projectId = c.req.param('projectId');
     const userId = c.req.param('userId');
-    if (await isLastOwner(projectId, userId)) return c.json({ error: 'last_owner' }, 409);
-    await db.delete(memberships).where(and(eq(memberships.projectId, projectId), eq(memberships.userId, userId)));
+
+    const result = await db.transaction(async (tx) => {
+      // Lock all owner rows for this project to prevent TOCTOU.
+      const owners = await tx
+        .select({ userId: memberships.userId })
+        .from(memberships)
+        .where(and(eq(memberships.projectId, projectId), eq(memberships.role, 'owner')))
+        .for('update');
+
+      const isCurrentOwner = owners.some((o) => o.userId === userId);
+      const wouldLeaveNoOwner = isCurrentOwner && owners.length === 1;
+      if (wouldLeaveNoOwner) return { conflict: true } as const;
+
+      await tx
+        .delete(memberships)
+        .where(and(eq(memberships.projectId, projectId), eq(memberships.userId, userId)));
+
+      return { conflict: false } as const;
+    });
+
+    if (result.conflict) return c.json({ error: 'last_owner' }, 409);
     return c.body(null, 204);
   });

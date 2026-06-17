@@ -16,6 +16,7 @@ export type MembershipEnv = AuthEnv & { Variables: { currentRole: MemberRole } }
 export function requireMembership(minRole: MemberRole) {
   return createMiddleware<MembershipEnv>(async (c, next) => {
     const user = c.get('currentUser');
+    if (!user) return c.json({ error: 'unauthorized' }, 401);
     const projectId = c.req.param('projectId');
     if (!projectId) return c.json({ error: 'not_found' }, 404);
 
