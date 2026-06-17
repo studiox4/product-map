@@ -1,12 +1,14 @@
+// Mounted at /api/projects/:projectId/features (project-scoped.ts).
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { featureCreate, featureUpdate, collaboratorsPut, voteBody } from '@productmap/shared';
-import { features, documents, projects, activity, featureCollaborators, users, votes, featureDependencies } from '@productmap/db';
+import { features, documents, activity, featureCollaborators, users, votes, featureDependencies, objectives, releases } from '@productmap/db';
 import { db } from '../db';
-import { type CurrentUserEnv } from '../middleware/current-user';
+import { type MembershipEnv } from '../middleware/membership';
 import { recordActivity, addCollaborator } from '../lib/activity';
 import { EMPTY_VOTE_SUMMARY, requestUserId, voteSummaries, voteSummaryFor } from '../lib/votes';
+import { loadScoped } from '../lib/scope';
 
 const horizonOrder = sql`case ${features.horizon} when 'now' then 0 when 'next' then 1 else 2 end`;
 
@@ -54,11 +56,13 @@ async function blockerIdsForFeatures(featureIds: string[]) {
   return byBlocked;
 }
 
-export const featuresRoutes = new Hono<CurrentUserEnv>()
+export const featuresRoutes = new Hono<MembershipEnv>()
   .get('/', async (c) => {
+    const pid = c.get('currentProjectId');
     const rows = await db
       .select()
       .from(features)
+      .where(eq(features.projectId, pid))
       .orderBy(horizonOrder, asc(features.sortOrder), asc(features.createdAt));
     const ids = rows.map((f) => f.id);
     const docs = await docsForFeatures(ids);
@@ -83,12 +87,11 @@ export const featuresRoutes = new Hono<CurrentUserEnv>()
     async (c) => {
       const body = c.req.valid('json');
       const user = c.get('currentUser');
-      const [project] = await db.select({ id: projects.id }).from(projects).limit(1);
-      if (!project) return c.json({ error: 'not_found' }, 404);
+      const pid = c.get('currentProjectId');
       const [row] = await db
         .insert(features)
         .values({
-          projectId: project.id,
+          projectId: pid,
           title: body.title,
           horizon: body.horizon,
           createdBy: user?.id ?? null,
@@ -112,8 +115,8 @@ export const featuresRoutes = new Hono<CurrentUserEnv>()
   )
   .get('/:id', async (c) => {
     const id = c.req.param('id');
-    const [row] = await db.select().from(features).where(eq(features.id, id));
-    if (!row) return c.json({ error: 'not_found' }, 404);
+    const pid = c.get('currentProjectId');
+    const row = await loadScoped(features, id, pid) as typeof features.$inferSelect;
     const docs = await docsForFeatures([row.id]);
     const voteSummary = await voteSummaryFor(row.id, requestUserId(c));
     const blockers = await blockerIdsForFeatures([row.id]);
@@ -133,10 +136,10 @@ export const featuresRoutes = new Hono<CurrentUserEnv>()
     }),
     async (c) => {
       const id = c.req.param('id');
+      const pid = c.get('currentProjectId');
       const { value } = c.req.valid('json');
       const user = c.get('currentUser');
-      const [feature] = await db.select({ id: features.id }).from(features).where(eq(features.id, id));
-      if (!feature) return c.json({ error: 'not_found' }, 404);
+      await loadScoped(features, id, pid);
       if (!user) return c.json({ error: 'unauthorized' }, 401);
       if (value === 0) {
         await db.delete(votes).where(and(eq(votes.userId, user.id), eq(votes.featureId, id)));
@@ -158,10 +161,13 @@ export const featuresRoutes = new Hono<CurrentUserEnv>()
     }),
     async (c) => {
       const id = c.req.param('id');
+      const pid = c.get('currentProjectId');
       const updates = c.req.valid('json');
       const user = c.get('currentUser');
-      const [prev] = await db.select().from(features).where(eq(features.id, id));
-      if (!prev) return c.json({ error: 'not_found' }, 404);
+      const prev = await loadScoped(features, id, pid) as typeof features.$inferSelect;
+      // Scope body-supplied entity ids to the same project.
+      if (updates.objectiveId != null) await loadScoped(objectives, updates.objectiveId, pid);
+      if (updates.releaseId != null) await loadScoped(releases, updates.releaseId, pid);
       const [row] = await db
         .update(features)
         .set({ ...updates, updatedBy: user?.id ?? null, updatedAt: sql`now()` })
@@ -195,8 +201,8 @@ export const featuresRoutes = new Hono<CurrentUserEnv>()
   )
   .get('/:id/activity', async (c) => {
     const id = c.req.param('id');
-    const [feature] = await db.select({ id: features.id }).from(features).where(eq(features.id, id));
-    if (!feature) return c.json({ error: 'not_found' }, 404);
+    const pid = c.get('currentProjectId');
+    await loadScoped(features, id, pid);
     const rows = await db
       .select({
         id: activity.id,
@@ -217,8 +223,8 @@ export const featuresRoutes = new Hono<CurrentUserEnv>()
   })
   .get('/:id/collaborators', async (c) => {
     const id = c.req.param('id');
-    const [feature] = await db.select({ id: features.id }).from(features).where(eq(features.id, id));
-    if (!feature) return c.json({ error: 'not_found' }, 404);
+    const pid = c.get('currentProjectId');
+    await loadScoped(features, id, pid);
     const rows = await db
       .select({
         id: users.id,
@@ -241,9 +247,10 @@ export const featuresRoutes = new Hono<CurrentUserEnv>()
     }),
     async (c) => {
       const id = c.req.param('id');
+      const pid = c.get('currentProjectId');
       const { userIds } = c.req.valid('json');
-      const [feature] = await db.select({ id: features.id }).from(features).where(eq(features.id, id));
-      if (!feature) return c.json({ error: 'not_found' }, 404);
+      await loadScoped(features, id, pid);
+      // userIds are global (users have no projectId) — do NOT scope them.
       await db.delete(featureCollaborators).where(eq(featureCollaborators.featureId, id));
       if (userIds.length > 0) {
         await db
@@ -256,6 +263,8 @@ export const featuresRoutes = new Hono<CurrentUserEnv>()
   )
   .delete('/:id', async (c) => {
     const id = c.req.param('id');
+    const pid = c.get('currentProjectId');
+    await loadScoped(features, id, pid);
     const deleted = await db.delete(features).where(eq(features.id, id)).returning({ id: features.id });
     if (deleted.length === 0) return c.json({ error: 'not_found' }, 404);
     return c.body(null, 204);

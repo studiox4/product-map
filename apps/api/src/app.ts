@@ -4,7 +4,6 @@ import { authRoutes } from './routes/auth';
 import { requireAuth, requireAdmin } from './middleware/auth';
 import { isSameOrigin } from './lib/rate-limit';
 import { activityRoutes } from './routes/activity';
-import { featuresRoutes } from './routes/features';
 import { projectsRoutes } from './routes/projects';
 import { documentsRoutes, exportRoutes } from './routes/documents';
 import { uploadsRoutes } from './routes/uploads';
@@ -46,7 +45,6 @@ export const app = new Hono()
   })
   .use('/api/admin/*', requireAdmin)
   .route('/api/users', usersRoutes)
-  .route('/api/features', featuresRoutes)
   .route('/api/activity', activityRoutes)
   .route('/api/comments', commentsRoutes)
   .route('/api/projects', projectsRoutes)
