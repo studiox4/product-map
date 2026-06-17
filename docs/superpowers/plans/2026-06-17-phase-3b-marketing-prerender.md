@@ -159,14 +159,14 @@ export const GITHUB_API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO
  * Each self-hosted instance has its own host (unknown at build time); previews
  * matter most when the *project* is shared, so we bake the canonical site.
  */
-export const MARKETING_SITE_URL = 'https://productmap.studiox4.dev';
+export const MARKETING_SITE_URL = 'https://productmap.x4.studio';
 
 /** Shown when api.github.com is unreachable (offline / rate-limited / air-gapped). */
 export const STARS_FALLBACK = 1200;
 
-export const HERO_HEADLINE = 'Roadmaps and docs your security team will let you run.';
+export const HERO_HEADLINE = 'Your product roadmap. Self-hosted. Yours.';
 export const HERO_SUBHEAD =
-  'ProductMap is the self-hosted product workspace: now-next-later roadmaps, a feature hub with PRDs and docs, releases, and an AI copilot — all on infrastructure you own.';
+  'ProductMap is the self-hosted product workspace: now-next-later roadmaps, a feature hub with PRDs and docs, releases, and an AI copilot — all on infrastructure you own, with markdown that stays yours.';
 
 export const META_TITLE = 'ProductMap — Self-hosted product roadmaps & docs';
 export const META_DESCRIPTION =
@@ -1498,7 +1498,8 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 PORT="${PORT:-3499}"
-HERO_MARK="Roadmaps and docs your security team will let you run."
+# Must match HERO_HEADLINE in apps/web/src/lib/marketing.ts.
+HERO_MARK="Your product roadmap. Self-hosted. Yours."
 
 echo "[1/5] Building web (runs prerender)…"
 pnpm --filter @productmap/web build
@@ -1573,7 +1574,7 @@ test.describe('marketing landing', () => {
   test('logged-out / shows the hero and the Deploy CTA', async ({ page }) => {
     await page.goto('/');
     await expect(
-      page.getByRole('heading', { name: /security team will let you run/i }),
+      page.getByRole('heading', { name: /self-hosted\. yours/i }),
     ).toBeVisible();
     const deploy = page.getByRole('link', { name: /deploy your own/i });
     await expect(deploy).toBeVisible();
