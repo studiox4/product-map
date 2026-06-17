@@ -35,4 +35,14 @@ describe('requireMembership', () => {
     const res = await app.request(`/p/${p.id}/x`, { headers: await hdrs(admin) });
     expect(res.status).toBe(200); expect((await res.json()).role).toBe('owner');
   });
+  it('exposes currentProjectId to handlers', async () => {
+    const u = await createTestUser({ role: 'member' }); const p = await createTestProject();
+    await addMembership(u.id, p.id, 'viewer');
+    const probe = new Hono<MembershipEnv>()
+      .use('/p/:projectId/*', requireAuth as never)
+      .get('/p/:projectId/pid', requireMembership('viewer'), (c) => c.json({ pid: c.get('currentProjectId') }));
+    const res = await probe.request(`/p/${p.id}/pid`, { headers: await hdrs(u) });
+    expect(res.status).toBe(200);
+    expect((await res.json()).pid).toBe(p.id);
+  });
 });

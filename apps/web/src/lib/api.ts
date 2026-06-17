@@ -5,6 +5,7 @@ import {
   useQueryClient,
   type QueryClient,
 } from '@tanstack/react-query';
+import { useProjectId } from './project';
 import type {
   ActivityItem,
   Comment,
@@ -26,6 +27,11 @@ import type { AppType } from '../../../api/src/app';
 
 /** Typed hono client for the API (same-origin; Vite proxies /api in dev). */
 export const api = hc<AppType>('/');
+
+/** Build a project-scoped API path: apiPath(pid, 'features', id) → /api/projects/<pid>/features/<id>. */
+export function apiPath(projectId: string, ...segments: (string | number)[]): string {
+  return `/api/projects/${projectId}${segments.length ? '/' + segments.join('/') : ''}`;
+}
 
 // ---- request body types (mirror @productmap/shared zod schemas) ----
 
@@ -843,39 +849,41 @@ export interface ReleaseUpdateInput {
   status?: Release['status'];
 }
 
-export const releasesKey = ['releases'] as const;
-export const releaseKey = (id: string) => ['releases', id] as const;
-export const objectivesKey = ['objectives'] as const;
+export const releasesKey = (pid: string) => ['p', pid, 'releases'] as const;
+export const releaseKey = (pid: string, id: string) => ['p', pid, 'releases', id] as const;
 
 export function useReleases() {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: releasesKey,
-    queryFn: () => fetchJson<ReleaseListItem[]>('/api/releases'),
+    queryKey: releasesKey(pid),
+    queryFn: () => fetchJson<ReleaseListItem[]>(apiPath(pid, 'releases')),
   });
 }
 
 export function useRelease(id: string) {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: releaseKey(id),
-    queryFn: () => fetchJson<ReleaseDetail>(`/api/releases/${id}`),
+    queryKey: releaseKey(pid, id),
+    queryFn: () => fetchJson<ReleaseDetail>(apiPath(pid, 'releases', id)),
     enabled: !!id,
   });
 }
 
-function invalidateReleases(qc: QueryClient, id?: string) {
-  qc.invalidateQueries({ queryKey: releasesKey });
-  if (id) qc.invalidateQueries({ queryKey: releaseKey(id) });
+function invalidateReleases(qc: QueryClient, pid: string, id?: string) {
+  qc.invalidateQueries({ queryKey: releasesKey(pid) });
+  if (id) qc.invalidateQueries({ queryKey: releaseKey(pid, id) });
 }
 
 export function useCreateRelease() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: ReleaseCreateInput) =>
-      fetchJson<Release>('/api/releases', {
+      fetchJson<Release>(apiPath(pid, 'releases'), {
         method: 'POST',
         body: JSON.stringify(input),
       }),
-    onSettled: () => invalidateReleases(qc),
+    onSettled: () => invalidateReleases(qc, pid),
   });
 }
 
@@ -884,15 +892,16 @@ export interface UpdateReleaseVars extends ReleaseUpdateInput {
 }
 
 export function useUpdateRelease() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, ...patch }: UpdateReleaseVars) =>
-      fetchJson<Release>(`/api/releases/${id}`, {
+      fetchJson<Release>(apiPath(pid, 'releases', id), {
         method: 'PATCH',
         body: JSON.stringify(patch),
       }),
     onSettled: (_data, _err, { id, status }) => {
-      invalidateReleases(qc, id);
+      invalidateReleases(qc, pid, id);
       if (status !== undefined) {
         // Status flips ride on features too (gantt milestone, share changelog).
         qc.invalidateQueries({ queryKey: queryKeys.features });
@@ -903,17 +912,23 @@ export function useUpdateRelease() {
 }
 
 export function useDeleteRelease() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => fetchJson<void>(`/api/releases/${id}`, { method: 'DELETE' }),
-    onSettled: () => invalidateReleases(qc),
+    mutationFn: (id: string) => fetchJson<void>(apiPath(pid, 'releases', id), { method: 'DELETE' }),
+    onSettled: () => invalidateReleases(qc, pid),
   });
 }
 
+export function objectivesKey(pid: string) {
+  return ['p', pid, 'objectives'] as const;
+}
+
 export function useObjectives() {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: objectivesKey,
-    queryFn: () => fetchJson<Objective[]>('/api/objectives'),
+    queryKey: objectivesKey(pid),
+    queryFn: () => fetchJson<Objective[]>(apiPath(pid, 'objectives')),
   });
 }
 
@@ -1396,15 +1411,16 @@ export interface ObjectiveCreateInput {
 export type ObjectiveUpdateInput = Partial<ObjectiveCreateInput>;
 
 export function useCreateObjective() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: ObjectiveCreateInput) =>
-      fetchJson<Objective>('/api/objectives', {
+      fetchJson<Objective>(apiPath(pid, 'objectives'), {
         method: 'POST',
         body: JSON.stringify(input),
       }),
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: objectivesKey });
+      qc.invalidateQueries({ queryKey: objectivesKey(pid) });
     },
   });
 }
@@ -1414,55 +1430,60 @@ export interface UpdateObjectiveVars extends ObjectiveUpdateInput {
 }
 
 export function useUpdateObjective() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, ...patch }: UpdateObjectiveVars) =>
-      fetchJson<Objective>(`/api/objectives/${id}`, {
+      fetchJson<Objective>(apiPath(pid, 'objectives', id), {
         method: 'PATCH',
         body: JSON.stringify(patch),
       }),
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: objectivesKey });
+      qc.invalidateQueries({ queryKey: objectivesKey(pid) });
     },
   });
 }
 
 /**
- * POST /api/releases/:id/notes-doc — the release's notes doc, created from the
- * default release_notes template when none is linked yet. Seeds the document
- * cache so navigating straight to /docs/:id renders without a refetch.
+ * POST /api/projects/:pid/releases/:id/notes-doc — the release's notes doc,
+ * created from the default release_notes template when none is linked yet.
+ * Seeds the document cache so navigating straight to /docs/:id renders without
+ * a refetch.
  */
 export function useCreateReleaseNotesDoc() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (releaseId: string) =>
-      fetchJson<DocumentFull>(`/api/releases/${releaseId}/notes-doc`, { method: 'POST' }),
+      fetchJson<DocumentFull>(apiPath(pid, 'releases', releaseId, 'notes-doc'), { method: 'POST' }),
     onSuccess: (doc) => {
       qc.setQueryData(queryKeys.document(doc.id), doc);
     },
     onSettled: (_data, _err, releaseId) => {
-      qc.invalidateQueries({ queryKey: releasesKey });
-      qc.invalidateQueries({ queryKey: releaseKey(releaseId) });
+      qc.invalidateQueries({ queryKey: releasesKey(pid) });
+      qc.invalidateQueries({ queryKey: releaseKey(pid, releaseId) });
       qc.invalidateQueries({ queryKey: queryKeys.allDocuments });
     },
   });
 }
 
 /**
- * POST /api/releases/:id/generate-notes — pure assembly from member features'
- * final docs, OVERWRITING the notes doc body (creates the doc first if needed).
+ * POST /api/projects/:pid/releases/:id/generate-notes — pure assembly from
+ * member features' final docs, OVERWRITING the notes doc body (creates the doc
+ * first if needed).
  */
 export function useGenerateReleaseNotes() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (releaseId: string) =>
-      fetchJson<DocumentFull>(`/api/releases/${releaseId}/generate-notes`, { method: 'POST' }),
+      fetchJson<DocumentFull>(apiPath(pid, 'releases', releaseId, 'generate-notes'), { method: 'POST' }),
     onSuccess: (doc) => {
       qc.setQueryData(queryKeys.document(doc.id), doc);
     },
     onSettled: (_data, _err, releaseId) => {
-      qc.invalidateQueries({ queryKey: releasesKey });
-      qc.invalidateQueries({ queryKey: releaseKey(releaseId) });
+      qc.invalidateQueries({ queryKey: releasesKey(pid) });
+      qc.invalidateQueries({ queryKey: releaseKey(pid, releaseId) });
       qc.invalidateQueries({ queryKey: queryKeys.allDocuments });
     },
   });
@@ -1474,23 +1495,25 @@ export interface SetReleaseFeaturesVars {
 }
 
 /**
- * PUT /api/releases/:id/features — replace-set membership (sets/clears
- * features.release_id), so feature caches refresh alongside the release.
+ * PUT /api/projects/:pid/releases/:id/features — replace-set membership
+ * (sets/clears features.release_id), so feature caches refresh alongside the
+ * release.
  */
 export function useSetReleaseFeatures() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ releaseId, featureIds }: SetReleaseFeaturesVars) =>
-      fetchJson<ReleaseDetail>(`/api/releases/${releaseId}/features`, {
+      fetchJson<ReleaseDetail>(apiPath(pid, 'releases', releaseId, 'features'), {
         method: 'PUT',
         body: JSON.stringify({ featureIds }),
       }),
     onSuccess: (detail, { releaseId }) => {
-      qc.setQueryData(releaseKey(releaseId), detail);
+      qc.setQueryData(releaseKey(pid, releaseId), detail);
     },
     onSettled: (_data, _err, { releaseId }) => {
-      qc.invalidateQueries({ queryKey: releasesKey });
-      qc.invalidateQueries({ queryKey: releaseKey(releaseId) });
+      qc.invalidateQueries({ queryKey: releasesKey(pid) });
+      qc.invalidateQueries({ queryKey: releaseKey(pid, releaseId) });
       qc.invalidateQueries({ queryKey: queryKeys.features });
       qc.invalidateQueries({ queryKey: queryKeys.overview });
     },
@@ -1508,21 +1531,23 @@ export function useSetReleaseFeatures() {
 // (`Horizon` is already imported at the top of this file.)
 import type { Plan, PlanApplyResult, PlanWithEntries } from '@productmap/shared';
 
-export const plansKey = ['plans'] as const;
-export const planKey = (id: string) => ['plans', id] as const;
+export const plansKey = (pid: string) => ['p', pid, 'plans'] as const;
+export const planKey = (pid: string, id: string) => ['p', pid, 'plans', id] as const;
 
 export function usePlans() {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: plansKey,
-    queryFn: () => fetchJson<Plan[]>('/api/plans'),
+    queryKey: plansKey(pid),
+    queryFn: () => fetchJson<Plan[]>(apiPath(pid, 'plans')),
   });
 }
 
 /** Full plan snapshot (entries) — drives scenario-mode bar rendering. */
 export function usePlan(id: string | null) {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: planKey(id ?? ''),
-    queryFn: () => fetchJson<PlanWithEntries>(`/api/plans/${id}`),
+    queryKey: planKey(pid, id ?? ''),
+    queryFn: () => fetchJson<PlanWithEntries>(apiPath(pid, 'plans', id!)),
     enabled: !!id,
   });
 }
@@ -1534,29 +1559,32 @@ export interface PlanCreateInput {
 }
 
 export function useCreatePlan() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: PlanCreateInput) =>
-      fetchJson<PlanWithEntries>('/api/plans', { method: 'POST', body: JSON.stringify(input) }),
-    onSuccess: (plan) => qc.setQueryData(planKey(plan.id), plan),
-    onSettled: () => qc.invalidateQueries({ queryKey: plansKey }),
+      fetchJson<PlanWithEntries>(apiPath(pid, 'plans'), { method: 'POST', body: JSON.stringify(input) }),
+    onSuccess: (plan) => qc.setQueryData(planKey(pid, plan.id), plan),
+    onSettled: () => qc.invalidateQueries({ queryKey: plansKey(pid) }),
   });
 }
 
 export function useRenamePlan() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, name }: { id: string; name: string }) =>
-      fetchJson<Plan>(`/api/plans/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
-    onSettled: () => qc.invalidateQueries({ queryKey: plansKey }),
+      fetchJson<Plan>(apiPath(pid, 'plans', id), { method: 'PATCH', body: JSON.stringify({ name }) }),
+    onSettled: () => qc.invalidateQueries({ queryKey: plansKey(pid) }),
   });
 }
 
 export function useDeletePlan() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => fetchJson<void>(`/api/plans/${id}`, { method: 'DELETE' }),
-    onSettled: () => qc.invalidateQueries({ queryKey: plansKey }),
+    mutationFn: (id: string) => fetchJson<void>(apiPath(pid, 'plans', id), { method: 'DELETE' }),
+    onSettled: () => qc.invalidateQueries({ queryKey: plansKey(pid) }),
   });
 }
 
@@ -1569,21 +1597,22 @@ export interface PlanEntryUpdateVars {
 }
 
 /**
- * PUT /api/plans/:id/entries/:featureId — scenario editing. Touches plan
- * entries ONLY (never features); optimistic so drags settle instantly.
+ * PUT /api/projects/:pid/plans/:id/entries/:featureId — scenario editing.
+ * Touches plan entries ONLY (never features); optimistic so drags settle instantly.
  */
 export function useUpdatePlanEntry() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ planId, featureId, ...patch }: PlanEntryUpdateVars) =>
       fetchJson<PlanWithEntries['entries'][number]>(
-        `/api/plans/${planId}/entries/${featureId}`,
+        apiPath(pid, 'plans', planId, 'entries', featureId),
         { method: 'PUT', body: JSON.stringify(patch) },
       ),
     onMutate: async ({ planId, featureId, ...patch }) => {
-      await qc.cancelQueries({ queryKey: planKey(planId) });
-      const previous = qc.getQueryData<PlanWithEntries>(planKey(planId));
-      qc.setQueryData<PlanWithEntries>(planKey(planId), (old) => {
+      await qc.cancelQueries({ queryKey: planKey(pid, planId) });
+      const previous = qc.getQueryData<PlanWithEntries>(planKey(pid, planId));
+      qc.setQueryData<PlanWithEntries>(planKey(pid, planId), (old) => {
         if (!old) return old;
         const exists = old.entries.some((e) => e.featureId === featureId);
         const entries = exists
@@ -1605,21 +1634,22 @@ export function useUpdatePlanEntry() {
       return { previous };
     },
     onError: (_err, { planId }, ctx) => {
-      if (ctx?.previous) qc.setQueryData(planKey(planId), ctx.previous);
+      if (ctx?.previous) qc.setQueryData(planKey(pid, planId), ctx.previous);
     },
     onSettled: (_data, _err, { planId }) =>
-      qc.invalidateQueries({ queryKey: planKey(planId) }),
+      qc.invalidateQueries({ queryKey: planKey(pid, planId) }),
   });
 }
 
-/** POST /api/plans/:id/apply — promote the scenario to the real roadmap. */
+/** POST /api/projects/:pid/plans/:id/apply — promote the scenario to the real roadmap. */
 export function useApplyPlan() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (planId: string) =>
-      fetchJson<PlanApplyResult>(`/api/plans/${planId}/apply`, { method: 'POST' }),
+      fetchJson<PlanApplyResult>(apiPath(pid, 'plans', planId, 'apply'), { method: 'POST' }),
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: plansKey });
+      qc.invalidateQueries({ queryKey: plansKey(pid) });
       qc.invalidateQueries({ queryKey: queryKeys.features });
       qc.invalidateQueries({ queryKey: queryKeys.overview });
     },

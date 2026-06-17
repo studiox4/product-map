@@ -9,6 +9,7 @@ import type { DocumentFull, Feature } from '@productmap/shared';
 import type { ReleaseListItem } from '@/lib/api';
 import ReleasesPage from '@/routes/Releases';
 import ReleaseDetail from '@/components/releases/ReleaseDetail';
+import { ProjectProvider } from '@/lib/project';
 
 // Shipping triggers confetti — assert the call, skip the canvas.
 vi.mock('@/lib/delight', () => ({ confettiBurst: vi.fn() }));
@@ -29,9 +30,11 @@ beforeAll(() => {
   }
 });
 
+const TEST_PROJECT_ID = 'p1';
+
 function makeFeature(overrides: Partial<Feature> & { id: string; title: string }): Feature {
   return {
-    projectId: 'p1',
+    projectId: TEST_PROJECT_ID,
     horizon: 'now',
     status: 'planned',
     startDate: null,
@@ -92,13 +95,19 @@ const unassignedFeatures = [
 ];
 
 const server = setupServer(
-  http.get('/api/releases', () => HttpResponse.json(releaseList)),
-  http.get('/api/releases/r1', () =>
+  // ProjectProvider needs /api/projects to resolve the active project id
+  http.get('/api/projects', () =>
+    HttpResponse.json([{ id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'owner' }]),
+  ),
+  // Nested releases endpoints
+  http.get(`/api/projects/${TEST_PROJECT_ID}/releases`, () => HttpResponse.json(releaseList)),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/releases/r1`, () =>
     HttpResponse.json({ ...releaseList[0], features: memberFeatures }),
   ),
+  // features and documents stay flat (PR-B migration)
   http.get('/api/features', () => HttpResponse.json([...memberFeatures, ...unassignedFeatures])),
   http.get('/api/documents/d1', () => HttpResponse.json(notesDoc)),
-  http.patch('/api/releases/:id', async ({ params, request }) => {
+  http.patch(`/api/projects/${TEST_PROJECT_ID}/releases/:id`, async ({ params, request }) => {
     const body = (await request.json()) as Record<string, unknown>;
     patchCalls.push({ id: params.id as string, body });
     const release = releaseList.find((r) => r.id === params.id)!;
@@ -108,7 +117,7 @@ const server = setupServer(
     }
     return HttpResponse.json(release);
   }),
-  http.put('/api/releases/r1/features', async ({ request }) => {
+  http.put(`/api/projects/${TEST_PROJECT_ID}/releases/r1/features`, async ({ request }) => {
     const { featureIds } = (await request.json()) as { featureIds: string[] };
     putFeatureIds.push(featureIds);
     return HttpResponse.json({
@@ -118,16 +127,16 @@ const server = setupServer(
       ),
     });
   }),
-  http.post('/api/releases/r1/notes-doc', () => {
+  http.post(`/api/projects/${TEST_PROJECT_ID}/releases/r1/notes-doc`, () => {
     notesDocCreated += 1;
     releaseList[0].notesDocId = 'd1';
     return HttpResponse.json(notesDoc, { status: 201 });
   }),
-  http.post('/api/releases/r1/generate-notes', () => {
+  http.post(`/api/projects/${TEST_PROJECT_ID}/releases/r1/generate-notes`, () => {
     generateCalls += 1;
     return HttpResponse.json(notesDoc);
   }),
-  http.post('/api/releases', async ({ request }) => {
+  http.post(`/api/projects/${TEST_PROJECT_ID}/releases`, async ({ request }) => {
     const body = (await request.json()) as { name: string; targetDate: string | null };
     const row: ReleaseListItem = {
       ...baseRelease,
@@ -186,14 +195,16 @@ function renderAt(initialEntry: string, options: { withNotesDoc?: boolean } = {}
   });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[initialEntry]}>
-        <Routes>
-          <Route path="/releases" element={<ReleasesPage />} />
-          <Route path="/releases/:id" element={<ReleaseDetail />} />
-          <Route path="/features/:id" element={<div>feature route</div>} />
-          <Route path="/docs/:id" element={<div>doc editor route</div>} />
-        </Routes>
-      </MemoryRouter>
+      <ProjectProvider>
+        <MemoryRouter initialEntries={[initialEntry]}>
+          <Routes>
+            <Route path="/releases" element={<ReleasesPage />} />
+            <Route path="/releases/:id" element={<ReleaseDetail />} />
+            <Route path="/features/:id" element={<div>feature route</div>} />
+            <Route path="/docs/:id" element={<div>doc editor route</div>} />
+          </Routes>
+        </MemoryRouter>
+      </ProjectProvider>
     </QueryClientProvider>,
   );
 }

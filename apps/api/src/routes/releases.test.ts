@@ -1,8 +1,16 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
-import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
+import {
+  setupTestDb,
+  truncateAll,
+  closeTestDb,
+  createTestUser,
+  createTestProject,
+  addMembership,
+  authCookie,
+} from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { projects, features, documents, releases, activity, templates } from '@productmap/db';
+import { features, documents, releases, activity, templates } from '@productmap/db';
 import { markdownToTiptap } from '../lib/markdown';
 import { asc, eq } from 'drizzle-orm';
 
@@ -26,7 +34,7 @@ beforeEach(async () => {
   const actor = await createTestUser({ role: 'admin', name: 'Corban', email: 'corban@test.co' });
   userId = actor.id;
   auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
-  const [p] = await db.insert(projects).values({ name: 'ProductMap', vision: 'v', aboutMd: '' }).returning();
+  const p = await createTestProject('ProductMap');
   projectId = p.id;
   const [r] = await db
     .insert(releases)
@@ -53,7 +61,7 @@ const json = (method: string, body: unknown) => ({
 
 describe('releases CRUD', () => {
   it('lists releases with featureCount', async () => {
-    const res = await app.request('/api/releases', { headers: auth });
+    const res = await app.request(`/api/projects/${projectId}/releases`, { headers: auth });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toHaveLength(1);
@@ -61,37 +69,43 @@ describe('releases CRUD', () => {
   });
 
   it('creates a release with 201', async () => {
-    const res = await app.request('/api/releases', json('POST', { name: 'v0.3', targetDate: '2026-09-01' }));
+    const res = await app.request(
+      `/api/projects/${projectId}/releases`,
+      json('POST', { name: 'v0.3', targetDate: '2026-09-01' }),
+    );
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body).toMatchObject({ name: 'v0.3', targetDate: '2026-09-01', status: 'planned', shippedAt: null });
   });
 
   it('400s on invalid create body', async () => {
-    const res = await app.request('/api/releases', json('POST', { name: '' }));
+    const res = await app.request(`/api/projects/${projectId}/releases`, json('POST', { name: '' }));
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe('validation');
   });
 
   it('gets a release with its features', async () => {
-    const res = await app.request(`/api/releases/${releaseId}`, { headers: auth });
+    const res = await app.request(`/api/projects/${projectId}/releases/${releaseId}`, { headers: auth });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.name).toBe('v0.2 — Team ready');
     expect(body.features.map((f: { id: string }) => f.id)).toEqual([featureA, featureB]);
   });
 
-  // dream-tier-2: notes_md became a full release_notes doc (notes_doc_id), so
-  // PATCH covers name/targetDate here; status transitions land with the
-  // releases agent.
   it('patches a release', async () => {
-    const res = await app.request(`/api/releases/${releaseId}`, json('PATCH', { name: 'v0.2.1', targetDate: '2026-08-01' }));
+    const res = await app.request(
+      `/api/projects/${projectId}/releases/${releaseId}`,
+      json('PATCH', { name: 'v0.2.1', targetDate: '2026-08-01' }),
+    );
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ name: 'v0.2.1', targetDate: '2026-08-01' });
   });
 
   it('deletes a release and nulls feature linkage', async () => {
-    const res = await app.request(`/api/releases/${releaseId}`, { method: 'DELETE', headers: auth });
+    const res = await app.request(`/api/projects/${projectId}/releases/${releaseId}`, {
+      method: 'DELETE',
+      headers: auth,
+    });
     expect(res.status).toBe(204);
     const [f] = await db.select().from(features).where(eq(features.id, featureA));
     expect(f.releaseId).toBeNull();
@@ -99,18 +113,27 @@ describe('releases CRUD', () => {
 
   it('404s on unknown release for get/patch/delete', async () => {
     const missing = '00000000-0000-4000-8000-000000000000';
-    expect((await app.request(`/api/releases/${missing}`, { headers: auth })).status).toBe(404);
-    expect((await app.request(`/api/releases/${missing}`, json('PATCH', { name: 'x' }))).status).toBe(404);
-    expect((await app.request(`/api/releases/${missing}`, { method: 'DELETE', headers: auth })).status).toBe(404);
+    expect((await app.request(`/api/projects/${projectId}/releases/${missing}`, { headers: auth })).status).toBe(404);
+    expect(
+      (await app.request(`/api/projects/${projectId}/releases/${missing}`, json('PATCH', { name: 'x' }))).status,
+    ).toBe(404);
+    expect(
+      (
+        await app.request(`/api/projects/${projectId}/releases/${missing}`, { method: 'DELETE', headers: auth })
+      ).status,
+    ).toBe(404);
   });
 });
 
 // dream-tier-2: status moves both ways via PATCH; activity kind is now
 // release_status_changed (from,to) — the old release_shipped expectations here
 // were updated intentionally per the dream-tier-2 spec.
-describe('PATCH /api/releases/:id status transitions', () => {
+describe('PATCH /api/projects/:projectId/releases/:id status transitions', () => {
   it('planned→shipped sets shippedAt and records release_status_changed on each feature', async () => {
-    const res = await app.request(`/api/releases/${releaseId}`, json('PATCH', { status: 'shipped' }));
+    const res = await app.request(
+      `/api/projects/${projectId}/releases/${releaseId}`,
+      json('PATCH', { status: 'shipped' }),
+    );
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.status).toBe('shipped');
@@ -132,8 +155,11 @@ describe('PATCH /api/releases/:id status transitions', () => {
   });
 
   it('round-trips: shipped→planned clears shippedAt and records the reverse transition', async () => {
-    await app.request(`/api/releases/${releaseId}`, json('PATCH', { status: 'shipped' }));
-    const res = await app.request(`/api/releases/${releaseId}`, json('PATCH', { status: 'planned' }));
+    await app.request(`/api/projects/${projectId}/releases/${releaseId}`, json('PATCH', { status: 'shipped' }));
+    const res = await app.request(
+      `/api/projects/${projectId}/releases/${releaseId}`,
+      json('PATCH', { status: 'planned' }),
+    );
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.status).toBe('planned');
@@ -149,9 +175,12 @@ describe('PATCH /api/releases/:id status transitions', () => {
   });
 
   it('same-status PATCH is a no-op for shippedAt and activity', async () => {
-    await app.request(`/api/releases/${releaseId}`, json('PATCH', { status: 'shipped' }));
+    await app.request(`/api/projects/${projectId}/releases/${releaseId}`, json('PATCH', { status: 'shipped' }));
     const [before] = await db.select().from(releases).where(eq(releases.id, releaseId));
-    const res = await app.request(`/api/releases/${releaseId}`, json('PATCH', { status: 'shipped' }));
+    const res = await app.request(
+      `/api/projects/${projectId}/releases/${releaseId}`,
+      json('PATCH', { status: 'shipped' }),
+    );
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.status).toBe('shipped');
@@ -160,7 +189,10 @@ describe('PATCH /api/releases/:id status transitions', () => {
   });
 
   it('renaming alongside a status change applies both', async () => {
-    const res = await app.request(`/api/releases/${releaseId}`, json('PATCH', { name: 'v0.2 GA', status: 'shipped' }));
+    const res = await app.request(
+      `/api/projects/${projectId}/releases/${releaseId}`,
+      json('PATCH', { name: 'v0.2 GA', status: 'shipped' }),
+    );
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ name: 'v0.2 GA', status: 'shipped' });
     const acts = await db.select().from(activity);
@@ -168,9 +200,12 @@ describe('PATCH /api/releases/:id status transitions', () => {
   });
 });
 
-describe('POST /api/releases/:id/ship (alias of PATCH status)', () => {
+describe('POST /api/projects/:projectId/releases/:id/ship (alias of PATCH status)', () => {
   it('ships the release and records release_status_changed activity on each feature', async () => {
-    const res = await app.request(`/api/releases/${releaseId}/ship`, { method: 'POST', headers: auth });
+    const res = await app.request(`/api/projects/${projectId}/releases/${releaseId}/ship`, {
+      method: 'POST',
+      headers: auth,
+    });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.status).toBe('shipped');
@@ -182,13 +217,24 @@ describe('POST /api/releases/:id/ship (alias of PATCH status)', () => {
     for (const act of acts) {
       expect(act.kind).toBe('release_status_changed');
       expect(act.actorId).toBe(userId);
-      expect(act.payload).toMatchObject({ releaseId, releaseName: 'v0.2 — Team ready', from: 'planned', to: 'shipped' });
+      expect(act.payload).toMatchObject({
+        releaseId,
+        releaseName: 'v0.2 — Team ready',
+        from: 'planned',
+        to: 'shipped',
+      });
     }
   });
 
   it('is idempotent: shipping twice logs no duplicate activity', async () => {
-    await app.request(`/api/releases/${releaseId}/ship`, { method: 'POST', headers: auth });
-    const res = await app.request(`/api/releases/${releaseId}/ship`, { method: 'POST', headers: auth });
+    await app.request(`/api/projects/${projectId}/releases/${releaseId}/ship`, {
+      method: 'POST',
+      headers: auth,
+    });
+    const res = await app.request(`/api/projects/${projectId}/releases/${releaseId}/ship`, {
+      method: 'POST',
+      headers: auth,
+    });
     expect(res.status).toBe(200);
     expect((await res.json()).status).toBe('shipped');
     const acts = await db.select().from(activity);
@@ -196,24 +242,32 @@ describe('POST /api/releases/:id/ship (alias of PATCH status)', () => {
   });
 
   it('404s on unknown release', async () => {
-    const res = await app.request('/api/releases/00000000-0000-4000-8000-000000000000/ship', { method: 'POST', headers: auth });
+    const res = await app.request(
+      `/api/projects/${projectId}/releases/00000000-0000-4000-8000-000000000000/ship`,
+      { method: 'POST', headers: auth },
+    );
     expect(res.status).toBe(404);
   });
 });
 
-describe('POST /api/releases/:id/notes-doc', () => {
+describe('POST /api/projects/:projectId/releases/:id/notes-doc', () => {
   beforeEach(async () => {
     await db.insert(templates).values({
       type: 'release_notes',
       name: 'Release notes',
       bodyMd: '# {{title}}\n\n## Highlights\n\n## What’s new\n\n## Improvements\n\n## Fixes\n\n## Thanks',
-      bodyJson: markdownToTiptap('# {{title}}\n\n## Highlights\n\n## What’s new\n\n## Improvements\n\n## Fixes\n\n## Thanks'),
+      bodyJson: markdownToTiptap(
+        '# {{title}}\n\n## Highlights\n\n## What’s new\n\n## Improvements\n\n## Fixes\n\n## Thanks',
+      ),
       isDefault: true,
     });
   });
 
   it('creates a release_notes doc from the default template and links notesDocId', async () => {
-    const res = await app.request(`/api/releases/${releaseId}/notes-doc`, { method: 'POST', headers: auth });
+    const res = await app.request(
+      `/api/projects/${projectId}/releases/${releaseId}/notes-doc`,
+      { method: 'POST', headers: auth },
+    );
     expect(res.status).toBe(201);
     const doc = await res.json();
     expect(doc).toMatchObject({
@@ -232,8 +286,16 @@ describe('POST /api/releases/:id/notes-doc', () => {
   });
 
   it('returns the existing doc (200) when one is already linked', async () => {
-    const first = await (await app.request(`/api/releases/${releaseId}/notes-doc`, { method: 'POST', headers: auth })).json();
-    const res = await app.request(`/api/releases/${releaseId}/notes-doc`, { method: 'POST', headers: auth });
+    const first = await (
+      await app.request(`/api/projects/${projectId}/releases/${releaseId}/notes-doc`, {
+        method: 'POST',
+        headers: auth,
+      })
+    ).json();
+    const res = await app.request(
+      `/api/projects/${projectId}/releases/${releaseId}/notes-doc`,
+      { method: 'POST', headers: auth },
+    );
     expect(res.status).toBe(200);
     expect((await res.json()).id).toBe(first.id);
     const docs = await db.select().from(documents);
@@ -242,7 +304,10 @@ describe('POST /api/releases/:id/notes-doc', () => {
 
   it('creates a blank doc when no default template exists', async () => {
     await db.delete(templates);
-    const res = await app.request(`/api/releases/${releaseId}/notes-doc`, { method: 'POST', headers: auth });
+    const res = await app.request(
+      `/api/projects/${projectId}/releases/${releaseId}/notes-doc`,
+      { method: 'POST', headers: auth },
+    );
     expect(res.status).toBe(201);
     const doc = await res.json();
     expect(doc.contentMd).toBe('');
@@ -250,12 +315,15 @@ describe('POST /api/releases/:id/notes-doc', () => {
   });
 
   it('404s on unknown release', async () => {
-    const res = await app.request('/api/releases/00000000-0000-4000-8000-000000000000/notes-doc', { method: 'POST', headers: auth });
+    const res = await app.request(
+      `/api/projects/${projectId}/releases/00000000-0000-4000-8000-000000000000/notes-doc`,
+      { method: 'POST', headers: auth },
+    );
     expect(res.status).toBe(404);
   });
 });
 
-describe('POST /api/releases/:id/generate-notes', () => {
+describe('POST /api/projects/:projectId/releases/:id/generate-notes', () => {
   beforeEach(async () => {
     await db.insert(documents).values([
       {
@@ -286,8 +354,16 @@ describe('POST /api/releases/:id/generate-notes', () => {
   });
 
   it('overwrites the notes doc with markdown assembled from member features + final docs', async () => {
-    const created = await (await app.request(`/api/releases/${releaseId}/notes-doc`, { method: 'POST', headers: auth })).json();
-    const res = await app.request(`/api/releases/${releaseId}/generate-notes`, { method: 'POST', headers: auth });
+    const created = await (
+      await app.request(`/api/projects/${projectId}/releases/${releaseId}/notes-doc`, {
+        method: 'POST',
+        headers: auth,
+      })
+    ).json();
+    const res = await app.request(
+      `/api/projects/${projectId}/releases/${releaseId}/generate-notes`,
+      { method: 'POST', headers: auth },
+    );
     expect(res.status).toBe(200);
     const doc = await res.json();
     expect(doc.id).toBe(created.id);
@@ -306,7 +382,10 @@ describe('POST /api/releases/:id/generate-notes', () => {
   });
 
   it('creates the notes doc first when none exists', async () => {
-    const res = await app.request(`/api/releases/${releaseId}/generate-notes`, { method: 'POST', headers: auth });
+    const res = await app.request(
+      `/api/projects/${projectId}/releases/${releaseId}/generate-notes`,
+      { method: 'POST', headers: auth },
+    );
     expect(res.status).toBe(200);
     const doc = await res.json();
     expect(doc.type).toBe('release_notes');
@@ -316,15 +395,15 @@ describe('POST /api/releases/:id/generate-notes', () => {
   });
 
   it('404s on unknown release', async () => {
-    const res = await app.request('/api/releases/00000000-0000-4000-8000-000000000000/generate-notes', {
-      method: 'POST',
-      headers: auth,
-    });
+    const res = await app.request(
+      `/api/projects/${projectId}/releases/00000000-0000-4000-8000-000000000000/generate-notes`,
+      { method: 'POST', headers: auth },
+    );
     expect(res.status).toBe(404);
   });
 });
 
-describe('PUT /api/releases/:id/features (replace-set membership)', () => {
+describe('PUT /api/projects/:projectId/releases/:id/features (replace-set membership)', () => {
   let featureC: string;
   let otherReleaseId: string;
 
@@ -339,7 +418,10 @@ describe('PUT /api/releases/:id/features (replace-set membership)', () => {
   });
 
   it('replaces the member set: removed features are cleared, new ones assigned', async () => {
-    const res = await app.request(`/api/releases/${releaseId}/features`, json('PUT', { featureIds: [featureA] }));
+    const res = await app.request(
+      `/api/projects/${projectId}/releases/${releaseId}/features`,
+      json('PUT', { featureIds: [featureA] }),
+    );
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.features.map((f: { id: string }) => f.id)).toEqual([featureA]);
@@ -349,7 +431,7 @@ describe('PUT /api/releases/:id/features (replace-set membership)', () => {
 
   it('steals a feature already assigned to another release', async () => {
     const res = await app.request(
-      `/api/releases/${releaseId}/features`,
+      `/api/projects/${projectId}/releases/${releaseId}/features`,
       json('PUT', { featureIds: [featureA, featureB, featureC] }),
     );
     expect(res.status).toBe(200);
@@ -363,7 +445,10 @@ describe('PUT /api/releases/:id/features (replace-set membership)', () => {
   });
 
   it('empty list clears all membership', async () => {
-    const res = await app.request(`/api/releases/${releaseId}/features`, json('PUT', { featureIds: [] }));
+    const res = await app.request(
+      `/api/projects/${projectId}/releases/${releaseId}/features`,
+      json('PUT', { featureIds: [] }),
+    );
     expect(res.status).toBe(200);
     expect((await res.json()).features).toEqual([]);
     const members = await db.select().from(features).where(eq(features.releaseId, releaseId));
@@ -372,7 +457,7 @@ describe('PUT /api/releases/:id/features (replace-set membership)', () => {
 
   it('404s when a feature id does not exist', async () => {
     const res = await app.request(
-      `/api/releases/${releaseId}/features`,
+      `/api/projects/${projectId}/releases/${releaseId}/features`,
       json('PUT', { featureIds: ['00000000-0000-4000-8000-000000000000'] }),
     );
     expect(res.status).toBe(404);
@@ -384,15 +469,25 @@ describe('PUT /api/releases/:id/features (replace-set membership)', () => {
   it('404s on unknown release and 400s on invalid body', async () => {
     const missing = '00000000-0000-4000-8000-000000000000';
     expect(
-      (await app.request(`/api/releases/${missing}/features`, json('PUT', { featureIds: [] }))).status,
+      (
+        await app.request(
+          `/api/projects/${projectId}/releases/${missing}/features`,
+          json('PUT', { featureIds: [] }),
+        )
+      ).status,
     ).toBe(404);
     expect(
-      (await app.request(`/api/releases/${releaseId}/features`, json('PUT', { featureIds: ['nope'] }))).status,
+      (
+        await app.request(
+          `/api/projects/${projectId}/releases/${releaseId}/features`,
+          json('PUT', { featureIds: ['nope'] }),
+        )
+      ).status,
     ).toBe(400);
   });
 });
 
-describe('GET /api/releases/:id/notes.md', () => {
+describe('GET /api/projects/:projectId/releases/:id/notes.md', () => {
   it('assembles ## sections from feature titles with final-doc first paragraphs', async () => {
     await db.insert(documents).values([
       {
@@ -420,7 +515,9 @@ describe('GET /api/releases/:id/notes.md', () => {
         contentMd: '\n\nUp/down votes with per-user toggles.\n\nMore detail.',
       },
     ]);
-    const res = await app.request(`/api/releases/${releaseId}/notes.md`, { headers: auth });
+    const res = await app.request(`/api/projects/${projectId}/releases/${releaseId}/notes.md`, {
+      headers: auth,
+    });
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/markdown');
     const md = await res.text();
@@ -434,7 +531,9 @@ describe('GET /api/releases/:id/notes.md', () => {
   });
 
   it('renders a heading-only section for features without final docs', async () => {
-    const res = await app.request(`/api/releases/${releaseId}/notes.md`, { headers: auth });
+    const res = await app.request(`/api/projects/${projectId}/releases/${releaseId}/notes.md`, {
+      headers: auth,
+    });
     expect(res.status).toBe(200);
     const md = await res.text();
     expect(md).toContain('## Comments & review');
@@ -442,7 +541,128 @@ describe('GET /api/releases/:id/notes.md', () => {
   });
 
   it('404s on unknown release', async () => {
-    const res = await app.request('/api/releases/00000000-0000-4000-8000-000000000000/notes.md', { headers: auth });
+    const res = await app.request(
+      `/api/projects/${projectId}/releases/00000000-0000-4000-8000-000000000000/notes.md`,
+      { headers: auth },
+    );
+    expect(res.status).toBe(404);
+  });
+});
+
+// ---- Cross-project isolation tests (Task A6 new tests) ----
+describe('releases cross-project isolation', () => {
+  it('member-of-A GET /api/projects/A/releases/:releaseInB → 404 (path-id IDOR)', async () => {
+    const projectB = await createTestProject('Project B');
+    const [releaseInB] = await db
+      .insert(releases)
+      .values({ projectId: projectB.id, name: 'B Release' })
+      .returning();
+
+    const memberA = await createTestUser({ role: 'member' });
+    await addMembership(memberA.id, projectId, 'editor');
+    const memberAAuth = {
+      cookie: await authCookie(memberA),
+      origin: 'http://localhost',
+      host: 'localhost',
+    };
+
+    const res = await app.request(
+      `/api/projects/${projectId}/releases/${releaseInB.id}`,
+      { headers: memberAAuth },
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it('GET list in A does not include B\'s releases (list isolation)', async () => {
+    const projectB = await createTestProject('Project B');
+    await db.insert(releases).values({ projectId: projectB.id, name: 'B Release' });
+
+    const res = await app.request(`/api/projects/${projectId}/releases`, { headers: auth });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const names = body.map((r: { name: string }) => r.name);
+    expect(names).toContain('v0.2 — Team ready');
+    expect(names).not.toContain('B Release');
+  });
+
+  it('viewer POST → 403 (write gate)', async () => {
+    const viewer = await createTestUser({ role: 'member' });
+    await addMembership(viewer.id, projectId, 'viewer');
+    const viewerAuth = {
+      cookie: await authCookie(viewer),
+      origin: 'http://localhost',
+      host: 'localhost',
+    };
+
+    const res = await app.request(`/api/projects/${projectId}/releases`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...viewerAuth },
+      body: JSON.stringify({ name: 'Should fail' }),
+    });
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe('forbidden');
+  });
+
+  it('PUT /:id/features with a feature from project B → 404 (body-reference leak)', async () => {
+    // Set up project B with its own release and feature
+    const projectB = await createTestProject('Project B');
+    const [bFeature] = await db
+      .insert(features)
+      .values({ projectId: projectB.id, title: 'B Feature', horizon: 'now', sortOrder: 0 })
+      .returning();
+
+    // member of A tries to assign B's feature to A's release
+    const memberA = await createTestUser({ role: 'member' });
+    await addMembership(memberA.id, projectId, 'editor');
+    const memberAAuth = {
+      cookie: await authCookie(memberA),
+      origin: 'http://localhost',
+      host: 'localhost',
+    };
+
+    const res = await app.request(`/api/projects/${projectId}/releases/${releaseId}/features`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json', ...memberAAuth },
+      body: JSON.stringify({ featureIds: [bFeature.id] }),
+    });
+    // Body reference to another project's feature must be 404, not 200
+    expect(res.status).toBe(404);
+    // Release membership must be untouched
+    const members = await db.select().from(features).where(eq(features.releaseId, releaseId));
+    expect(members).toHaveLength(2);
+  });
+
+  it('viewer → 403 on PUT /:id/features', async () => {
+    const viewer = await createTestUser({ role: 'member' });
+    await addMembership(viewer.id, projectId, 'viewer');
+    const viewerAuth = { cookie: await authCookie(viewer), origin: 'http://localhost', host: 'localhost' };
+
+    const res = await app.request(`/api/projects/${projectId}/releases/${releaseId}/features`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json', ...viewerAuth },
+      body: JSON.stringify({ featureIds: [] }),
+    });
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe('forbidden');
+  });
+
+  it('viewer → 403 on POST /:id/ship', async () => {
+    const viewer = await createTestUser({ role: 'member' });
+    await addMembership(viewer.id, projectId, 'viewer');
+    const viewerAuth = { cookie: await authCookie(viewer), origin: 'http://localhost', host: 'localhost' };
+
+    const res = await app.request(`/api/projects/${projectId}/releases/${releaseId}/ship`, {
+      method: 'POST',
+      headers: viewerAuth,
+    });
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe('forbidden');
+  });
+
+  it('non-member GET /api/projects/:projectId/releases → 404', async () => {
+    const nonMember = await createTestUser({ role: 'member' });
+    const nonMemberAuth = { cookie: await authCookie(nonMember), origin: 'http://localhost', host: 'localhost' };
+    const res = await app.request(`/api/projects/${projectId}/releases`, { headers: nonMemberAuth });
     expect(res.status).toBe(404);
   });
 });

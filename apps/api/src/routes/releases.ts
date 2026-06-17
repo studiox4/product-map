@@ -1,12 +1,12 @@
-// Mounted at /api/releases (app.ts).
+// Mounted at /api/projects/:projectId/releases (project-scoped.ts).
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { and, asc, count, eq, inArray, isNull, notInArray, sql } from 'drizzle-orm';
 import { releaseCreate, releaseUpdate, releaseFeaturesPut } from '@productmap/shared';
 import { releases, features, documents, templates } from '@productmap/db';
 import { db } from '../db';
-import { getDefaultProjectId } from '../lib/project';
-import { type CurrentUserEnv } from '../middleware/current-user';
+import { type MembershipEnv } from '../middleware/membership';
+import { loadScoped } from '../lib/scope';
 import { recordActivity } from '../lib/activity';
 import { markdownToTiptap } from '../lib/markdown';
 
@@ -14,11 +14,15 @@ const EMPTY_DOC = { type: 'doc', content: [] };
 
 type ReleaseRow = typeof releases.$inferSelect;
 
-async function releaseFeatures(releaseId: string) {
+async function releaseFeatures(releaseId: string, projectId?: string) {
   return db
     .select()
     .from(features)
-    .where(eq(features.releaseId, releaseId))
+    .where(
+      projectId
+        ? and(eq(features.releaseId, releaseId), eq(features.projectId, projectId))
+        : eq(features.releaseId, releaseId),
+    )
     .orderBy(asc(features.sortOrder), asc(features.createdAt));
 }
 
@@ -47,7 +51,7 @@ async function updateRelease(
   if (Object.keys(set).length === 0) return prev;
   const [row] = await db.update(releases).set(set).where(eq(releases.id, id)).returning();
   if (statusChanged) {
-    for (const feature of await releaseFeatures(id)) {
+    for (const feature of await releaseFeatures(id, prev.projectId)) {
       await recordActivity(feature.id, userId, 'release_status_changed', {
         releaseId: row.id,
         releaseName: row.name,
@@ -114,8 +118,9 @@ function firstParagraph(contentMd: string): string {
   );
 }
 
-export const releasesRoutes = new Hono<CurrentUserEnv>()
+export const releasesRoutes = new Hono<MembershipEnv>()
   .get('/', async (c) => {
+    const pid = c.get('currentProjectId');
     const rows = await db
       .select({
         id: releases.id,
@@ -129,6 +134,7 @@ export const releasesRoutes = new Hono<CurrentUserEnv>()
       })
       .from(releases)
       .leftJoin(features, eq(features.releaseId, releases.id))
+      .where(eq(releases.projectId, pid))
       .groupBy(releases.id)
       .orderBy(asc(releases.createdAt));
     return c.json(rows);
@@ -142,7 +148,7 @@ export const releasesRoutes = new Hono<CurrentUserEnv>()
     }),
     async (c) => {
       const body = c.req.valid('json');
-      const projectId = await getDefaultProjectId();
+      const projectId = c.get('currentProjectId');
       const [row] = await db
         .insert(releases)
         .values({ projectId, name: body.name, targetDate: body.targetDate ?? null })
@@ -152,9 +158,9 @@ export const releasesRoutes = new Hono<CurrentUserEnv>()
   )
   .get('/:id', async (c) => {
     const id = c.req.param('id');
-    const [row] = await db.select().from(releases).where(eq(releases.id, id));
-    if (!row) return c.json({ error: 'not_found' }, 404);
-    return c.json({ ...row, features: await releaseFeatures(id) });
+    const pid = c.get('currentProjectId');
+    const row = await loadScoped(releases, id, pid);
+    return c.json({ ...row, features: await releaseFeatures(id, pid) });
   })
   .patch(
     '/:id',
@@ -165,6 +171,8 @@ export const releasesRoutes = new Hono<CurrentUserEnv>()
     }),
     async (c) => {
       const id = c.req.param('id');
+      const pid = c.get('currentProjectId');
+      await loadScoped(releases, id, pid);
       const updates = c.req.valid('json');
       const row = await updateRelease(id, updates, c.get('currentUser')?.id);
       if (!row) return c.json({ error: 'not_found' }, 404);
@@ -173,6 +181,8 @@ export const releasesRoutes = new Hono<CurrentUserEnv>()
   )
   .delete('/:id', async (c) => {
     const id = c.req.param('id');
+    const pid = c.get('currentProjectId');
+    await loadScoped(releases, id, pid);
     const deleted = await db.delete(releases).where(eq(releases.id, id)).returning({ id: releases.id });
     if (deleted.length === 0) return c.json({ error: 'not_found' }, 404);
     return c.body(null, 204);
@@ -180,15 +190,18 @@ export const releasesRoutes = new Hono<CurrentUserEnv>()
   // Thin back-compat alias for PATCH {status:'shipped'} (same logic, same
   // release_status_changed activity). Idempotent: re-shipping is a no-op.
   .post('/:id/ship', async (c) => {
-    const row = await updateRelease(c.req.param('id'), { status: 'shipped' }, c.get('currentUser')?.id);
+    const id = c.req.param('id');
+    const pid = c.get('currentProjectId');
+    await loadScoped(releases, id, pid);
+    const row = await updateRelease(id, { status: 'shipped' }, c.get('currentUser')?.id);
     if (!row) return c.json({ error: 'not_found' }, 404);
     return c.json(row);
   })
   // POST /:id/notes-doc → DocumentFull (201 created from default template, 200 existing).
   .post('/:id/notes-doc', async (c) => {
     const id = c.req.param('id');
-    const [release] = await db.select().from(releases).where(eq(releases.id, id));
-    if (!release) return c.json({ error: 'not_found' }, 404);
+    const pid = c.get('currentProjectId');
+    const release = (await loadScoped(releases, id, pid)) as ReleaseRow;
     const { doc, created } = await ensureNotesDoc(release, c.get('currentUser')?.id);
     return c.json(doc, created ? 201 : 200);
   })
@@ -197,13 +210,13 @@ export const releasesRoutes = new Hono<CurrentUserEnv>()
   // docs, run through the markdown→tiptap pipeline, overwriting the notes doc.
   .post('/:id/generate-notes', async (c) => {
     const id = c.req.param('id');
+    const pid = c.get('currentProjectId');
     const user = c.get('currentUser');
-    const [release] = await db.select().from(releases).where(eq(releases.id, id));
-    if (!release) return c.json({ error: 'not_found' }, 404);
+    const release = (await loadScoped(releases, id, pid)) as ReleaseRow;
     const { doc } = await ensureNotesDoc(release, user?.id);
 
     const sections: string[] = [];
-    for (const feature of await releaseFeatures(id)) {
+    for (const feature of await releaseFeatures(id, pid)) {
       const lines: string[] = [`## ${feature.title}`];
       const finals = await db
         .select({ contentMd: documents.contentMd })
@@ -241,12 +254,16 @@ export const releasesRoutes = new Hono<CurrentUserEnv>()
     }),
     async (c) => {
       const id = c.req.param('id');
+      const pid = c.get('currentProjectId');
+      const release = await loadScoped(releases, id, pid);
       const { featureIds } = c.req.valid('json');
-      const [release] = await db.select().from(releases).where(eq(releases.id, id));
-      if (!release) return c.json({ error: 'not_found' }, 404);
       const ids = [...new Set(featureIds)];
       if (ids.length > 0) {
-        const existing = await db.select({ id: features.id }).from(features).where(inArray(features.id, ids));
+        // Project-scoped membership check: reject body ids that belong to another project.
+        const existing = await db
+          .select({ id: features.id })
+          .from(features)
+          .where(and(inArray(features.id, ids), eq(features.projectId, pid)));
         if (existing.length !== ids.length) return c.json({ error: 'not_found' }, 404);
       }
       await db
@@ -254,20 +271,22 @@ export const releasesRoutes = new Hono<CurrentUserEnv>()
         .set({ releaseId: null })
         .where(
           ids.length > 0
-            ? and(eq(features.releaseId, id), notInArray(features.id, ids))
-            : eq(features.releaseId, id),
+            ? and(eq(features.releaseId, id), notInArray(features.id, ids), eq(features.projectId, pid))
+            : and(eq(features.releaseId, id), eq(features.projectId, pid)),
         );
       if (ids.length > 0) {
-        await db.update(features).set({ releaseId: id }).where(inArray(features.id, ids));
+        // ids are pre-validated to belong to pid above; the projectId predicate
+        // is belt-and-suspenders so the assignment can never cross projects.
+        await db.update(features).set({ releaseId: id }).where(and(inArray(features.id, ids), eq(features.projectId, pid)));
       }
-      return c.json({ ...release, features: await releaseFeatures(id) });
+      return c.json({ ...release, features: await releaseFeatures(id, pid) });
     },
   )
   .get('/:id/notes.md', async (c) => {
     const id = c.req.param('id');
-    const [release] = await db.select().from(releases).where(eq(releases.id, id));
-    if (!release) return c.json({ error: 'not_found' }, 404);
-    const rows = await releaseFeatures(id);
+    const pid = c.get('currentProjectId');
+    const release = (await loadScoped(releases, id, pid)) as ReleaseRow;
+    const rows = await releaseFeatures(id, pid);
     const sections: string[] = [`# ${release.name}`];
     for (const feature of rows) {
       const lines: string[] = [`## ${feature.title}`];

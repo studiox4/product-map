@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { FeatureWithDocs, Objective, Release } from '@productmap/shared';
 import { PlanningRail } from '@/components/feature/PlanningRail';
+import { ProjectProvider } from '@/lib/project';
 
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
@@ -81,9 +82,14 @@ const releases: Release[] = [
 
 let patched: Record<string, unknown> | null = null;
 
+const TEST_PROJECT_ID = 'p1';
+
 const server = setupServer(
-  http.get('/api/objectives', () => HttpResponse.json(objectives)),
-  http.get('/api/releases', () =>
+  http.get('/api/projects', () =>
+    HttpResponse.json([{ id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'owner' }]),
+  ),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/objectives`, () => HttpResponse.json(objectives)),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/releases`, () =>
     HttpResponse.json(releases.map((r) => ({ ...r, featureCount: 0 }))),
   ),
   http.patch('/api/features/f1', async ({ request }) => {
@@ -108,9 +114,11 @@ function renderRail(f: FeatureWithDocs = feature) {
   });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter>
-        <PlanningRail feature={f} />
-      </MemoryRouter>
+      <ProjectProvider>
+        <MemoryRouter>
+          <PlanningRail feature={f} />
+        </MemoryRouter>
+      </ProjectProvider>
     </QueryClientProvider>,
   );
 }

@@ -20,11 +20,9 @@ import { ideasRoutes } from './routes/ideas';
 import { evidenceRoutes } from './routes/evidence';
 import { decisionsRoutes } from './routes/decisions';
 import { depsRoutes } from './routes/deps';
-import { releasesRoutes } from './routes/releases';
-import { objectivesRoutes } from './routes/objectives';
 import { shareRoutes } from './routes/share';
 import { copilotRoutes } from './routes/copilot';
-import { plansRoutes } from './routes/plans';
+import { projectScopedContent } from './routes/project-scoped';
 
 export const app = new Hono()
   .get('/api/healthz', (c) => c.json({ ok: true }))
@@ -52,6 +50,9 @@ export const app = new Hono()
   .route('/api/activity', activityRoutes)
   .route('/api/comments', commentsRoutes)
   .route('/api/projects', projectsRoutes)
+  // Content sub-app: registered AFTER mgmt so projectsRoutes /:projectId* get
+  // first crack. A non-match falls through to this mount (Hono chain semantics).
+  .route('/api/projects/:projectId', projectScopedContent)
   .route('/api/documents', documentsRoutes)
   .route('/api', exportRoutes)
   .route('/api/uploads', uploadsRoutes)
@@ -67,10 +68,7 @@ export const app = new Hono()
   .route('/api', decisionsRoutes)
   // deps defines /:id/dependencies
   .route('/api/features', depsRoutes)
-  .route('/api/releases', releasesRoutes)
-  .route('/api/objectives', objectivesRoutes)
   .route('/api/share', shareRoutes)
-  .route('/api/plans', plansRoutes)
   // copilot defines /ai/review-doc, /ai/chat, /copilot/nudges
   .route('/api', copilotRoutes);
 
