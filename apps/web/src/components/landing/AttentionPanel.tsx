@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { CalendarX, Eye, FileQuestion, FileText, MessageCircle, type LucideIcon } from 'lucide-react';
 import type { AttentionItem } from '@productmap/shared';
+import { appRoutes } from '@/lib/routes';
 
 const KIND_META: Record<
   AttentionItem['kind'],
@@ -18,11 +19,11 @@ export function AttentionPanel({ items }: { items: AttentionItem[] }) {
 
   function open(item: AttentionItem) {
     if (item.kind === 'open_comments') {
-      navigate(`/features/${item.featureId}#comments`);
+      navigate(`${appRoutes.feature(item.featureId)}#comments`);
     } else if (item.kind === 'draft_doc' || item.kind === 'in_review_doc') {
-      navigate(`/docs/${item.documentId}`);
+      navigate(appRoutes.doc(item.documentId));
     } else {
-      navigate(`/board?feature=${item.featureId}`);
+      navigate(`${appRoutes.board}?feature=${item.featureId}`);
     }
   }
 

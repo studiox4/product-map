@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { OBJECTIVE_STATUS_LABELS } from './ObjectiveDialog';
+import { appRoutes } from '@/lib/routes';
 
 /** on_track sage / at_risk warm / achieved action / dropped slate (spec §3). */
 const OBJECTIVE_STATUS_CLASSES: Record<ObjectiveStatus, string> = {
@@ -48,7 +49,7 @@ export function FeatureMiniRow({ feature }: { feature: Feature }) {
   return (
     <li className="flex items-center gap-2 py-1.5">
       <Link
-        to={`/features/${feature.id}`}
+        to={appRoutes.feature(feature.id)}
         className="min-w-0 flex-1 truncate text-sm font-medium text-ink outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
       >
         {feature.title}

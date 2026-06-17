@@ -42,6 +42,7 @@ import { PeopleRail } from '@/components/feature/PeopleRail';
 import { morphStyle } from '@/lib/transitions';
 import { confettiBurst } from '@/lib/delight';
 import { VoteWidget } from '@/components/VoteWidget';
+import { appRoutes } from '@/lib/routes';
 
 function FeatureSkeleton() {
   return (
@@ -112,7 +113,7 @@ function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
       onSuccess: () => {
         toast.success(`Deleted '${feature.title}'`);
         setConfirmDeleteOpen(false);
-        navigate('/board');
+        navigate(appRoutes.board);
       },
       onError: () => toast.error(`Couldn't delete '${feature.title}'`),
     });
@@ -122,7 +123,7 @@ function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
     <div className="mx-auto max-w-[1280px] px-6 py-8">
       <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm text-muted-ink">
         <Link
-          to="/board"
+          to={appRoutes.board}
           className="rounded-full outline-none transition-colors duration-150 ease-out hover:text-ink focus-visible:ring-2 focus-visible:ring-ring"
         >
           Board
