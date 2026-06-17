@@ -1,16 +1,17 @@
-// Mounted at /api/objectives (app.ts).
+// Mounted at /api/projects/:projectId/objectives (project-scoped.ts).
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { asc, count, eq } from 'drizzle-orm';
 import { objectiveCreate, objectiveUpdate } from '@productmap/shared';
 import { objectives, users, features } from '@productmap/db';
 import { db } from '../db';
-import { getDefaultProjectId } from '../lib/project';
-import { type CurrentUserEnv } from '../middleware/current-user';
+import { type MembershipEnv } from '../middleware/membership';
+import { loadScoped } from '../lib/scope';
 
-export const objectivesRoutes = new Hono<CurrentUserEnv>()
+export const objectivesRoutes = new Hono<MembershipEnv>()
   // GET / → Objective[] with joined owner {name,color} + featureCount.
   .get('/', async (c) => {
+    const pid = c.get('currentProjectId');
     const rows = await db
       .select({
         id: objectives.id,
@@ -30,6 +31,7 @@ export const objectivesRoutes = new Hono<CurrentUserEnv>()
       .from(objectives)
       .leftJoin(users, eq(objectives.ownerId, users.id))
       .leftJoin(features, eq(features.objectiveId, objectives.id))
+      .where(eq(objectives.projectId, pid))
       .groupBy(objectives.id, users.id)
       // id tiebreaker: bulk-seeded rows share one created_at and the GROUP BY
       // plan otherwise returns them in nondeterministic order.
@@ -50,15 +52,15 @@ export const objectivesRoutes = new Hono<CurrentUserEnv>()
     }),
     async (c) => {
       const body = c.req.valid('json');
-      const projectId = await getDefaultProjectId();
+      const projectId = c.get('currentProjectId');
       const [row] = await db.insert(objectives).values({ ...body, projectId }).returning();
       return c.json(row, 201);
     },
   )
   .get('/:id', async (c) => {
     const id = c.req.param('id');
-    const [row] = await db.select().from(objectives).where(eq(objectives.id, id));
-    if (!row) return c.json({ error: 'not_found' }, 404);
+    const pid = c.get('currentProjectId');
+    const row = await loadScoped(objectives, id, pid);
     return c.json(row);
   })
   .patch(
@@ -70,6 +72,8 @@ export const objectivesRoutes = new Hono<CurrentUserEnv>()
     }),
     async (c) => {
       const id = c.req.param('id');
+      const pid = c.get('currentProjectId');
+      await loadScoped(objectives, id, pid);
       const updates = c.req.valid('json');
       const [row] = await db.update(objectives).set(updates).where(eq(objectives.id, id)).returning();
       if (!row) return c.json({ error: 'not_found' }, 404);
@@ -78,6 +82,8 @@ export const objectivesRoutes = new Hono<CurrentUserEnv>()
   )
   .delete('/:id', async (c) => {
     const id = c.req.param('id');
+    const pid = c.get('currentProjectId');
+    await loadScoped(objectives, id, pid);
     const deleted = await db.delete(objectives).where(eq(objectives.id, id)).returning({ id: objectives.id });
     if (deleted.length === 0) return c.json({ error: 'not_found' }, 404);
     return c.body(null, 204);

@@ -2,16 +2,15 @@
  * Task A2 (SPIKE) — mount scaffold + method gate
  *
  * Proves that:
- *  1. viewer content GET  → 200 (gate allows viewer read)
- *  2. viewer content POST → 403 (gate blocks editor-required write)
- *  3. non-member GET      → 404 (gate hides project existence)
+ *  1. viewer content GET  → 200 (gate allows viewer read, using real /objectives route)
+ *  2. viewer content POST → 403 (gate blocks editor-required write, using real /objectives route)
+ *  3. non-member GET      → 404 (gate hides project existence, using real /objectives route)
  *  4. mgmt GET /api/projects/:projectId → 200 for viewer
  *     (content mount does NOT shadow mgmt)
  *  5. mgmt POST /api/projects/:projectId/members → 403 for editor
  *     (method-gate does NOT leak onto mgmt; mgmt keeps its own owner-gate)
  *
- * The __probe routes in project-scoped.ts are spike scaffolding and will be
- * removed once objectives lands in A5.
+ * Assertions 1-3 use the real /objectives route (A5 migrated; __probe removed).
  */
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import {
@@ -66,27 +65,27 @@ describe('A2 spike — mount scaffold + method gate', () => {
     // nonMember intentionally has no membership row
   });
 
-  it('1. viewer content GET /__probe → 200 with pid', async () => {
+  it('1. viewer content GET /objectives → 200 (gate allows viewer read)', async () => {
     const res = await app.request(
-      `/api/projects/${projectId}/__probe`,
+      `/api/projects/${projectId}/objectives`,
       { headers: await memberHeaders(viewerUser) },
     );
     expect(res.status).toBe(200);
+    // Returns an array (empty is fine — proves gate + route resolved)
     const body = await res.json();
-    // Confirm the param resolved and currentProjectId was set correctly
-    expect(body.pid).toBe(projectId);
+    expect(Array.isArray(body)).toBe(true);
   });
 
-  it('2. viewer content POST /__probe → 403 (editor required by method-gate, not forbidden_origin)', async () => {
+  it('2. viewer content POST /objectives → 403 (editor required by method-gate, not forbidden_origin)', async () => {
     const res = await app.request(
-      `/api/projects/${projectId}/__probe`,
+      `/api/projects/${projectId}/objectives`,
       {
         method: 'POST',
         headers: {
           ...await memberHeaders(viewerUser),
           'content-type': 'application/json',
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ title: 'Test Objective' }),
       },
     );
     expect(res.status).toBe(403);
@@ -95,9 +94,9 @@ describe('A2 spike — mount scaffold + method gate', () => {
     expect(body.error).toBe('forbidden');
   });
 
-  it('3. non-member content GET /__probe → 404', async () => {
+  it('3. non-member content GET /objectives → 404', async () => {
     const res = await app.request(
-      `/api/projects/${projectId}/__probe`,
+      `/api/projects/${projectId}/objectives`,
       { headers: await memberHeaders(nonMember) },
     );
     expect(res.status).toBe(404);

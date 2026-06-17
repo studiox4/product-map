@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import type { FeatureWithDocs, Objective, User } from '@productmap/shared';
 import Outcomes from '@/routes/Outcomes';
+import { ProjectProvider } from '@/lib/project';
 
 // jsdom polyfills for Radix Select / DropdownMenu
 beforeAll(() => {
@@ -92,18 +93,23 @@ const features: FeatureWithDocs[] = [
   makeFeature({ id: 'f5', title: 'Public roadmap share', objectiveId: null }),
 ];
 
+const TEST_PROJECT_ID = 'p1';
+
 const server = setupServer(
-  http.get('/api/objectives', () => HttpResponse.json(objectives)),
+  http.get('/api/projects', () =>
+    HttpResponse.json([{ id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'owner' }]),
+  ),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/objectives`, () => HttpResponse.json(objectives)),
   http.get('/api/features', () => HttpResponse.json(features)),
   http.get('/api/users', () => HttpResponse.json(users)),
-  http.post('/api/objectives', async ({ request }) => {
+  http.post(`/api/projects/${TEST_PROJECT_ID}/objectives`, async ({ request }) => {
     postBody = (await request.json()) as Record<string, unknown>;
     return HttpResponse.json(
       makeObjective({ id: 'o-new', title: postBody.title as string }),
       { status: 201 },
     );
   }),
-  http.patch('/api/objectives/:id', async ({ params, request }) => {
+  http.patch(`/api/projects/${TEST_PROJECT_ID}/objectives/:id`, async ({ params, request }) => {
     const body = (await request.json()) as Record<string, unknown>;
     patchCalls.push({ id: params.id as string, body });
     const row = objectives.find((o) => o.id === params.id)!;
@@ -152,12 +158,14 @@ function renderOutcomes() {
   });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={['/outcomes']}>
-        <Routes>
-          <Route path="/outcomes" element={<Outcomes />} />
-          <Route path="/features/:id" element={<div>feature route</div>} />
-        </Routes>
-      </MemoryRouter>
+      <ProjectProvider>
+        <MemoryRouter initialEntries={['/outcomes']}>
+          <Routes>
+            <Route path="/outcomes" element={<Outcomes />} />
+            <Route path="/features/:id" element={<div>feature route</div>} />
+          </Routes>
+        </MemoryRouter>
+      </ProjectProvider>
     </QueryClientProvider>,
   );
 }

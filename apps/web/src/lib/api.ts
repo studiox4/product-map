@@ -5,6 +5,7 @@ import {
   useQueryClient,
   type QueryClient,
 } from '@tanstack/react-query';
+import { useProjectId } from './project';
 import type {
   ActivityItem,
   Comment,
@@ -850,7 +851,6 @@ export interface ReleaseUpdateInput {
 
 export const releasesKey = ['releases'] as const;
 export const releaseKey = (id: string) => ['releases', id] as const;
-export const objectivesKey = ['objectives'] as const;
 
 export function useReleases() {
   return useQuery({
@@ -915,10 +915,15 @@ export function useDeleteRelease() {
   });
 }
 
+export function objectivesKey(pid: string) {
+  return ['p', pid, 'objectives'] as const;
+}
+
 export function useObjectives() {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: objectivesKey,
-    queryFn: () => fetchJson<Objective[]>('/api/objectives'),
+    queryKey: objectivesKey(pid),
+    queryFn: () => fetchJson<Objective[]>(apiPath(pid, 'objectives')),
   });
 }
 
@@ -1401,15 +1406,16 @@ export interface ObjectiveCreateInput {
 export type ObjectiveUpdateInput = Partial<ObjectiveCreateInput>;
 
 export function useCreateObjective() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: ObjectiveCreateInput) =>
-      fetchJson<Objective>('/api/objectives', {
+      fetchJson<Objective>(apiPath(pid, 'objectives'), {
         method: 'POST',
         body: JSON.stringify(input),
       }),
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: objectivesKey });
+      qc.invalidateQueries({ queryKey: objectivesKey(pid) });
     },
   });
 }
@@ -1419,15 +1425,16 @@ export interface UpdateObjectiveVars extends ObjectiveUpdateInput {
 }
 
 export function useUpdateObjective() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, ...patch }: UpdateObjectiveVars) =>
-      fetchJson<Objective>(`/api/objectives/${id}`, {
+      fetchJson<Objective>(apiPath(pid, 'objectives', id), {
         method: 'PATCH',
         body: JSON.stringify(patch),
       }),
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: objectivesKey });
+      qc.invalidateQueries({ queryKey: objectivesKey(pid) });
     },
   });
 }

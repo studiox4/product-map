@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import type { ActivityItem, DocumentListItem, FeatureWithDocs, User } from '@productmap/shared';
 import FeaturePage from '@/routes/FeaturePage';
+import { ProjectProvider } from '@/lib/project';
 
 // jsdom polyfills for Radix
 beforeAll(() => {
@@ -93,7 +94,13 @@ const activity: ActivityItem[] = [
   },
 ];
 
+const TEST_PROJECT_ID = 'p1';
+
 const server = setupServer(
+  http.get('/api/projects', () =>
+    HttpResponse.json([{ id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'owner' }]),
+  ),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/objectives`, () => HttpResponse.json([])),
   http.get('/api/users', () => HttpResponse.json([corban, ada])),
   http.get('/api/features/f1', () => HttpResponse.json(feature)),
   http.get('/api/features/f1/activity', () => HttpResponse.json(activity)),
@@ -107,6 +114,7 @@ const server = setupServer(
     HttpResponse.json({ blockers: [], blocked: [] }),
   ),
   http.get('/api/features', () => HttpResponse.json([feature])),
+  http.get('/api/releases', () => HttpResponse.json([])),
   http.patch('/api/features/f1', async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
     return HttpResponse.json({ ...feature, ...body, documents: undefined });
@@ -128,13 +136,15 @@ function renderPage() {
   });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={['/features/f1']}>
-        <Routes>
-          <Route path="/features/:id" element={<FeaturePage />} />
-          <Route path="/board" element={<div>board page</div>} />
-          <Route path="/docs/:id" element={<div>doc page</div>} />
-        </Routes>
-      </MemoryRouter>
+      <ProjectProvider>
+        <MemoryRouter initialEntries={['/features/f1']}>
+          <Routes>
+            <Route path="/features/:id" element={<FeaturePage />} />
+            <Route path="/board" element={<div>board page</div>} />
+            <Route path="/docs/:id" element={<div>doc page</div>} />
+          </Routes>
+        </MemoryRouter>
+      </ProjectProvider>
     </QueryClientProvider>,
   );
 }
@@ -142,7 +152,7 @@ function renderPage() {
 describe('FeaturePage', () => {
   it('renders breadcrumb, title and rendered markdown description', async () => {
     renderPage();
-    expect(screen.getByTestId('feature-skeleton')).toBeTruthy();
+    expect(await screen.findByTestId('feature-skeleton')).toBeTruthy();
     expect(await screen.findByDisplayValue('Rich markdown editor')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Board' })).toBeTruthy();
     // markdown rendered to a real heading inside the description card
