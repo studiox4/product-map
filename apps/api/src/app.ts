@@ -18,7 +18,6 @@ import { adminRoutes } from './routes/admin';
 import { ideasRoutes } from './routes/ideas';
 import { evidenceRoutes } from './routes/evidence';
 import { decisionsRoutes } from './routes/decisions';
-import { depsRoutes } from './routes/deps';
 import { shareRoutes } from './routes/share';
 import { copilotRoutes } from './routes/copilot';
 import { projectScopedContent } from './routes/project-scoped';
@@ -64,8 +63,6 @@ export const app = new Hono()
   .route('/api', evidenceRoutes)
   // decisions defines /decisions… + /ai/suggest-decision
   .route('/api', decisionsRoutes)
-  // deps defines /:id/dependencies
-  .route('/api/features', depsRoutes)
   .route('/api/share', shareRoutes)
   // copilot defines /ai/review-doc, /ai/chat, /copilot/nudges
   .route('/api', copilotRoutes);

@@ -122,7 +122,7 @@ const server = setupServer(
     const url = new URL(request.url);
     return HttpResponse.json(url.searchParams.get('featureId') === 'f1' ? decisionRows : []);
   }),
-  http.get('/api/features/f1/dependencies', () =>
+  http.get(`/api/projects/${TEST_PROJECT_ID}/features/f1/dependencies`, () =>
     HttpResponse.json({ blockers: [blockerFeature], blocked: [] }),
   ),
 );
@@ -235,7 +235,7 @@ describe('DependenciesRail', () => {
 
   it('clears the badge when every blocker is shipped', async () => {
     server.use(
-      http.get('/api/features/f1/dependencies', () =>
+      http.get(`/api/projects/${TEST_PROJECT_ID}/features/f1/dependencies`, () =>
         HttpResponse.json({
           blockers: [{ ...blockerFeature, status: 'shipped' }],
           blocked: [],
@@ -251,7 +251,7 @@ describe('DependenciesRail', () => {
   it('saves the replace-set of blockers via PUT from the edit popover', async () => {
     let putBody: unknown = null;
     server.use(
-      http.put('/api/features/f1/dependencies', async ({ request }) => {
+      http.put(`/api/projects/${TEST_PROJECT_ID}/features/f1/dependencies`, async ({ request }) => {
         putBody = await request.json();
         return HttpResponse.json({ blockers: [], blocked: [] });
       }),
@@ -270,7 +270,7 @@ describe('DependenciesRail', () => {
 
   it("cycle rejection (400) toasts 'That would create a loop'", async () => {
     server.use(
-      http.put('/api/features/f1/dependencies', () =>
+      http.put(`/api/projects/${TEST_PROJECT_ID}/features/f1/dependencies`, () =>
         HttpResponse.json({ error: 'cycle' }, { status: 400 }),
       ),
     );

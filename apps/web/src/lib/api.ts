@@ -1175,7 +1175,7 @@ export function useDependencies(featureId: string) {
   const pid = useProjectId();
   return useQuery({
     queryKey: dependenciesKey(pid, featureId),
-    queryFn: () => fetchJson<FeatureDependencies>(`/api/features/${featureId}/dependencies`),
+    queryFn: () => fetchJson<FeatureDependencies>(apiPath(pid, 'features', featureId, 'dependencies')),
     enabled: !!featureId,
   });
 }
@@ -1196,7 +1196,7 @@ export function useSetDependencies() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ featureId, blockerIds }: SetDependenciesVars) =>
-      fetchJson<FeatureDependencies>(`/api/features/${featureId}/dependencies`, {
+      fetchJson<FeatureDependencies>(apiPath(pid, 'features', featureId, 'dependencies'), {
         method: 'PUT',
         body: JSON.stringify({ blockerIds }),
       }),
@@ -1387,26 +1387,27 @@ import type { DependencyEdge } from '@/components/gantt/DependencyArrows';
 // releasesKey / useReleases live in the releases & objectives block above;
 // FeatureDependencies is already imported by the feature-page block.
 
-export function allDependenciesKey(featureIds: string[]) {
-  return ['dependencies', 'all', [...featureIds].sort().join(',')] as const;
+export function allDependenciesKey(pid: string, featureIds: string[]) {
+  return ['p', pid, 'dependencies', 'all', [...featureIds].sort().join(',')] as const;
 }
 
 /**
  * Workspace dependency edges (blocker → blocked), assembled client-side from
- * the per-feature GET /api/features/:id/dependencies endpoint (the spec
+ * the per-feature GET /api/projects/:pid/features/:id/dependencies endpoint (the spec
  * defines no all-edges endpoint). Each blocker entry yields one edge; the
  * `blocked` halves are the same edges seen from the other side, so reading
  * blockers alone covers the whole graph without duplicates.
  */
 export function useAllDependencies(featureIds: string[]) {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: allDependenciesKey(featureIds),
+    queryKey: allDependenciesKey(pid, featureIds),
     enabled: featureIds.length > 0,
     queryFn: async (): Promise<DependencyEdge[]> => {
       const perFeature = await Promise.all(
         featureIds.map(async (id) => ({
           id,
-          deps: await fetchJson<FeatureDependencies>(`/api/features/${id}/dependencies`),
+          deps: await fetchJson<FeatureDependencies>(apiPath(pid, 'features', id, 'dependencies')),
         })),
       );
       return perFeature.flatMap(({ id, deps }) =>
