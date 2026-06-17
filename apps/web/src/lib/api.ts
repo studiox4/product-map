@@ -1234,18 +1234,21 @@ export function isCycleError(err: unknown): boolean {
 
 import type { IdeaStatus, IdeaWithVotes } from '@productmap/shared';
 
-export const ideasRootKey = ['ideas'] as const;
+export function ideasRootKey(pid: string) {
+  return ['p', pid, 'ideas'] as const;
+}
 
-export function ideasKey(status?: IdeaStatus) {
-  return ['ideas', status ?? 'all'] as const;
+export function ideasKey(pid: string, status?: IdeaStatus) {
+  return ['p', pid, 'ideas', status ?? 'all'] as const;
 }
 
 /** Ideas, newest first, optionally filtered by status (server-side). */
 export function useIdeas(status?: IdeaStatus) {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: ideasKey(status),
+    queryKey: ideasKey(pid, status),
     queryFn: () =>
-      fetchJson<IdeaWithVotes[]>(`/api/ideas${status ? `?status=${status}` : ''}`),
+      fetchJson<IdeaWithVotes[]>(apiPath(pid, 'ideas') + (status ? `?status=${status}` : '')),
   });
 }
 
@@ -1256,15 +1259,16 @@ export interface IdeaCreateInput {
 }
 
 export function useCreateIdea() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: IdeaCreateInput) =>
-      fetchJson<IdeaWithVotes>('/api/ideas', {
+      fetchJson<IdeaWithVotes>(apiPath(pid, 'ideas'), {
         method: 'POST',
         body: JSON.stringify(input),
       }),
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: ideasRootKey });
+      qc.invalidateQueries({ queryKey: ideasRootKey(pid) });
     },
   });
 }
@@ -1281,15 +1285,16 @@ export interface UpdateIdeaVars extends IdeaUpdateInput {
 }
 
 export function useUpdateIdea() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, ...patch }: UpdateIdeaVars) =>
-      fetchJson<IdeaWithVotes>(`/api/ideas/${id}`, {
+      fetchJson<IdeaWithVotes>(apiPath(pid, 'ideas', id), {
         method: 'PATCH',
         body: JSON.stringify(patch),
       }),
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: ideasRootKey });
+      qc.invalidateQueries({ queryKey: ideasRootKey(pid) });
     },
   });
 }
@@ -1300,17 +1305,18 @@ export function useUpdateIdea() {
  * applies the derived summary immediately, rolls back on error.
  */
 export function useIdeaVote(ideaId: string) {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (value: VoteInput) =>
-      fetchJson<VoteCounts>(`/api/ideas/${ideaId}/vote`, {
+      fetchJson<VoteCounts>(apiPath(pid, 'ideas', ideaId, 'vote'), {
         method: 'PUT',
         body: JSON.stringify({ value }),
       }),
     onMutate: async (value) => {
-      await qc.cancelQueries({ queryKey: ideasRootKey });
-      const snapshot = qc.getQueriesData<IdeaWithVotes[]>({ queryKey: ideasRootKey });
-      qc.setQueriesData<IdeaWithVotes[]>({ queryKey: ideasRootKey }, (old) =>
+      await qc.cancelQueries({ queryKey: ideasRootKey(pid) });
+      const snapshot = qc.getQueriesData<IdeaWithVotes[]>({ queryKey: ideasRootKey(pid) });
+      qc.setQueriesData<IdeaWithVotes[]>({ queryKey: ideasRootKey(pid) }, (old) =>
         old?.map((i) => (i.id === ideaId ? applyVote(i, value) : i)),
       );
       return snapshot;
@@ -1321,7 +1327,7 @@ export function useIdeaVote(ideaId: string) {
       }
     },
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: ideasRootKey });
+      qc.invalidateQueries({ queryKey: ideasRootKey(pid) });
     },
   });
 }
@@ -1332,18 +1338,18 @@ export interface PromoteIdeaVars {
   withAiBrief?: boolean;
 }
 
-/** POST /api/ideas/:id/promote — idea → feature (optionally drafting an AI brief). Returns the new feature. */
+/** POST /api/projects/:pid/ideas/:id/promote — idea → feature (optionally drafting an AI brief). Returns the new feature. */
 export function usePromoteIdea() {
   const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, ...body }: PromoteIdeaVars) =>
-      fetchJson<Feature>(`/api/ideas/${id}/promote`, {
+      fetchJson<Feature>(apiPath(pid, 'ideas', id, 'promote'), {
         method: 'POST',
         body: JSON.stringify(body),
       }),
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: ideasRootKey });
+      qc.invalidateQueries({ queryKey: ideasRootKey(pid) });
       qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
       qc.invalidateQueries({ queryKey: queryKeys.overview(pid) });
     },
@@ -1352,21 +1358,22 @@ export function usePromoteIdea() {
 
 // -- dream tier 2: idea editing + pitch docs (Inbox agent additions) --
 
-export function ideaKey(id: string) {
-  return ['ideas', 'detail', id] as const;
+export function ideaKey(pid: string, id: string) {
+  return ['p', pid, 'ideas', 'detail', id] as const;
 }
 
-/** Single idea with creator + pitchDoc meta (GET /api/ideas/:id). Used by the editor back-link for idea-owned docs. */
+/** Single idea with creator + pitchDoc meta (GET /api/projects/:pid/ideas/:id). Used by the editor back-link for idea-owned docs. */
 export function useIdea(id: string) {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: ideaKey(id),
-    queryFn: () => fetchJson<IdeaWithVotes>(`/api/ideas/${id}`),
+    queryKey: ideaKey(pid, id),
+    queryFn: () => fetchJson<IdeaWithVotes>(apiPath(pid, 'ideas', id)),
     enabled: !!id,
   });
 }
 
 /**
- * POST /api/ideas/:id/pitch — create the idea's pitch doc from the default
+ * POST /api/projects/:pid/ideas/:id/pitch — create the idea's pitch doc from the default
  * idea_pitch template (409 when one exists). Seeds the document cache so
  * navigating straight to /docs/:id renders without a refetch.
  */
@@ -1375,12 +1382,12 @@ export function useCreatePitch() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (ideaId: string) =>
-      fetchJson<DocumentFull>(`/api/ideas/${ideaId}/pitch`, { method: 'POST' }),
+      fetchJson<DocumentFull>(apiPath(pid, 'ideas', ideaId, 'pitch'), { method: 'POST' }),
     onSuccess: (doc) => {
       qc.setQueryData(queryKeys.document(pid, doc.id), doc);
     },
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: ideasRootKey });
+      qc.invalidateQueries({ queryKey: ideasRootKey(pid) });
       qc.invalidateQueries({ queryKey: queryKeys.allDocuments(pid) });
     },
   });

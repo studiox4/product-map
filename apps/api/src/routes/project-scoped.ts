@@ -10,6 +10,7 @@ import { documentsRoutes, exportRoutes } from './documents';
 import { commentsRoutes } from './comments';
 import { activityRoutes } from './activity';
 import { overviewRoutes } from './overview';
+import { ideasRoutes } from './ideas';
 
 /**
  * Content routes scoped to /api/projects/:projectId. One method-based gate:
@@ -33,4 +34,5 @@ export const projectScopedContent = new Hono<MembershipEnv>()
   .route('/', exportRoutes)
   .route('/comments', commentsRoutes)
   .route('/activity', activityRoutes)
-  .route('/overview', overviewRoutes);
+  .route('/overview', overviewRoutes)
+  .route('/ideas', ideasRoutes);
