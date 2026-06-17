@@ -1,9 +1,10 @@
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { app } from './app';
+import { mountWebStatic } from './serve-web';
 import { assertConfig } from './config';
 assertConfig(); // fail fast if AUTH_SECRET missing in production
 
@@ -17,6 +18,15 @@ app.use(
   '/uploads/*',
   serveStatic({ root: path.relative(process.cwd(), repoRoot) || '.' })
 );
+
+// Production web serving: serve the built SPA + prerendered marketing when a
+// build is present and SERVE_WEB is on. Mounted AFTER /api/* and /uploads/* so
+// it never shadows them. Dev/test default (no dist / SERVE_WEB unset) = inactive.
+const webDistDir = path.join(repoRoot, 'apps', 'web', 'dist');
+mountWebStatic(app, {
+  distDir: webDistDir,
+  enabled: process.env.SERVE_WEB === '1' && existsSync(path.join(webDistDir, 'index.html')),
+});
 
 const port = Number(process.env.PORT ?? 3411);
 serve({ fetch: app.fetch, port }, (info) => {
