@@ -60,3 +60,11 @@ export const USER_COLORS = ['#2b557e', '#3c6b46', '#9a6428', '#6d3f9e', '#0e7490
 
 /** Minimum password length, enforced in shared schemas and reused on the client. */
 export const MIN_PASSWORD_LENGTH = 10;
+
+/** Canonical ordered tuple of project member roles (least → most privileged). */
+export const MEMBER_ROLES = ['owner', 'editor', 'viewer'] as const;
+export type MemberRoleConst = (typeof MEMBER_ROLES)[number];
+
+/** Project role hierarchy — higher rank ⊇ lower rank's capabilities.
+ *  Keyed by MemberRoleConst so a missing entry is a compile error. */
+export const ROLE_RANK: Record<MemberRoleConst, number> = { viewer: 1, editor: 2, owner: 3 } as const;

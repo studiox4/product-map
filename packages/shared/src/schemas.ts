@@ -3,6 +3,7 @@ import {
   HORIZONS, FEATURE_STATUSES, DOC_TYPES, DOC_STATUSES,
   IDEA_STATUSES, EVIDENCE_KINDS, FEATURE_SIZES,
   RELEASE_STATUSES, OBJECTIVE_STATUSES, MIN_PASSWORD_LENGTH,
+  MEMBER_ROLES,
 } from './constants';
 
 export const featureCreate = z.object({
@@ -215,3 +216,21 @@ export const adminUpdateUserInput = z.object({
   isActive: z.boolean().optional(),
   resetPassword: z.boolean().optional(),
 });
+
+export const projectCreate = z.object({
+  name: z.string().min(1).max(120),
+  vision: z.string().max(2000).optional(),
+  aboutMd: z.string().max(20000).optional(),
+});
+
+const role = z.enum(MEMBER_ROLES);
+
+export const memberAdd = z
+  .object({
+    userId: z.string().uuid().optional(),
+    email: z.string().email().optional(),
+    role: role.default('editor'),
+  })
+  .refine((v) => !!v.userId || !!v.email, { message: 'userId or email required' });
+
+export const memberUpdate = z.object({ role });

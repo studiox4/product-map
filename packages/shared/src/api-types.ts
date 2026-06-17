@@ -1,11 +1,11 @@
 import type {
   Horizon, FeatureStatus, DocType, DocStatus, ActivityKind,
   IdeaStatus, EvidenceKind, ReleaseStatus, FeatureSize,
-  ObjectiveStatus, PlanStatus,
+  ObjectiveStatus, PlanStatus, MemberRoleConst,
 } from './constants';
 
 export interface Project { id: string; name: string; vision: string; aboutMd: string; }
-export type MemberRole = 'owner' | 'editor' | 'viewer';
+export type MemberRole = MemberRoleConst;
 export interface Membership { userId: string; projectId: string; role: MemberRole; createdAt: string; }
 export interface User { id: string; name: string; color: string; role: 'admin' | 'member'; createdAt?: string; }
 export type VoteValue = 1 | -1;

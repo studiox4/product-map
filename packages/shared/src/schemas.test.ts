@@ -11,7 +11,7 @@ import {
   resolveBody,
   voteBody,
 } from './schemas';
-import { registerInput, loginInput, changePasswordInput, MIN_PASSWORD_LENGTH } from './index';
+import { registerInput, loginInput, changePasswordInput, MIN_PASSWORD_LENGTH, projectCreate, memberAdd, memberUpdate, ROLE_RANK } from './index';
 
 const UUID = '4b6f9f6e-3f1a-4c8e-9a64-6a3d2c1b0e9f';
 
@@ -125,6 +125,22 @@ describe('voteBody', () => {
     expect(voteBody.safeParse({ value: 0 }).success).toBe(true);
     expect(voteBody.safeParse({ value: 2 }).success).toBe(false);
     expect(voteBody.safeParse({}).success).toBe(false);
+  });
+});
+
+describe('project/member schemas', () => {
+  it('projectCreate requires a name', () => {
+    expect(projectCreate.safeParse({ name: 'P' }).success).toBe(true);
+    expect(projectCreate.safeParse({ name: '' }).success).toBe(false);
+  });
+  it('memberAdd needs userId or email + a role', () => {
+    expect(memberAdd.safeParse({ userId: '00000000-0000-0000-0000-000000000000', role: 'editor' }).success).toBe(true);
+    expect(memberAdd.safeParse({ email: 'a@b.co', role: 'viewer' }).success).toBe(true);
+    expect(memberAdd.safeParse({ role: 'editor' }).success).toBe(false);
+    expect(memberAdd.safeParse({ userId: 'x', role: 'boss' }).success).toBe(false);
+  });
+  it('ROLE_RANK orders viewer < editor < owner', () => {
+    expect(ROLE_RANK.viewer < ROLE_RANK.editor && ROLE_RANK.editor < ROLE_RANK.owner).toBe(true);
   });
 });
 
