@@ -2,6 +2,7 @@ import { Suspense, lazy } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AppShell from '@/components/AppShell';
+import { NewProjectDialog } from '@/components/NewProjectDialog';
 import Landing from '@/routes/Landing';
 import Login from '@/routes/Login';
 import Register from '@/routes/Register';
@@ -70,7 +71,14 @@ function AuthedShell() {
       </Suspense>
     );
   }
-  return <AppShell />;
+  return (
+    <>
+      <AppShell />
+      {/* "New project…" (switcher) → ?new=1 opens this dialog for callers who
+          already have projects; zero-project users get FirstRun above. */}
+      <NewProjectDialog />
+    </>
+  );
 }
 
 export default function App() {

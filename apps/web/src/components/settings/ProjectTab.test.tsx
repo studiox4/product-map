@@ -198,4 +198,40 @@ describe('ProjectTab', () => {
       expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('last_owner')),
     );
   });
+
+  it('lists pending invites (bound-email + link-only branches) and revokes one', async () => {
+    let revokedToken: string | null = null;
+    server.use(
+      http.get('/api/projects/:id/invites', () =>
+        HttpResponse.json([
+          {
+            token: 'inv-bound',
+            projectId: 'p1',
+            role: 'editor',
+            email: 'pending@x.co',
+            expiresAt: '2026-07-01T00:00:00Z',
+          },
+          {
+            token: 'inv-link',
+            projectId: 'p1',
+            role: 'viewer',
+            email: null,
+            expiresAt: '2026-07-01T00:00:00Z',
+          },
+        ]),
+      ),
+      http.delete('/api/projects/:id/invites/:token', ({ params }) => {
+        revokedToken = params.token as string;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    renderTab();
+    // Bound-email branch shows the address; link-only branch shows "link only".
+    expect(await screen.findByText('pending@x.co')).toBeTruthy();
+    expect(screen.getByText('link only')).toBeTruthy();
+
+    await userEvent.click(screen.getByLabelText('Revoke invite inv-bound'));
+    await waitFor(() => expect(revokedToken).toBe('inv-bound'));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Invite revoked'));
+  });
 });

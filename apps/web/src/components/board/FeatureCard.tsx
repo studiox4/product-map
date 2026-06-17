@@ -6,7 +6,7 @@ import { Link2 } from 'lucide-react';
 import type { FeatureWithDocs } from '@productmap/shared';
 import { cn } from '@/lib/utils';
 import { apiPath, fetchJson, queryKeys, useFeatures } from '@/lib/api';
-import { useProjectId } from '@/lib/project';
+import { useCanEdit, useProjectId } from '@/lib/project';
 import { makeHoverPrefetch, prefersReducedMotion, SPRING_EASING } from '@/lib/delight';
 import { morphStyle } from '@/lib/transitions';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -19,8 +19,12 @@ interface FeatureCardProps {
 }
 
 export function FeatureCard({ feature, onOpen }: FeatureCardProps) {
+  const canEdit = useCanEdit();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: feature.id,
+    // Viewers can open cards but never reorder/move them (mirrors the gated
+    // "Add feature" control + the no-op drag handler in Board).
+    disabled: !canEdit,
     // Spring-feel settle on drop: slight overshoot, transform-only.
     transition: prefersReducedMotion() ? null : { duration: 200, easing: SPRING_EASING },
   });

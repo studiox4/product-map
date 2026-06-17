@@ -59,6 +59,9 @@ const server = setupServer(
   }),
   http.post('/api/invites/:token/accept', ({ params }) => {
     acceptCalls.push(params.token as string);
+    if (params.token === 'boom-tok') {
+      return new HttpResponse(null, { status: 500 });
+    }
     return HttpResponse.json({ projectId: 'p9', role: 'editor' });
   }),
 );
@@ -114,6 +117,17 @@ describe('AcceptInvite', () => {
     await waitFor(() => expect(acceptCalls).toEqual(['tok1']));
     expect(await screen.findByText('Landing route')).toBeDefined();
     expect(localStorage.getItem('pm.activeProjectId')).toBe('p9');
+  });
+
+  it('accept failure → shows inline error and does NOT navigate to /', async () => {
+    renderInvite('boom-tok');
+
+    const accept = await screen.findByRole('button', { name: /accept/i });
+    await userEvent.click(accept);
+
+    expect(await screen.findByText(/couldn't accept this invite/i)).toBeDefined();
+    expect(screen.queryByText('Landing route')).toBeNull();
+    expect(localStorage.getItem('pm.activeProjectId')).toBeNull();
   });
 
   it('expired preview → shows expired message and no Accept button', async () => {

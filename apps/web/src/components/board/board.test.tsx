@@ -339,4 +339,34 @@ describe('Board', () => {
     await screen.findByText('Rich markdown editor');
     expect(screen.queryByRole('button', { name: /add feature/i })).toBeNull();
   });
+
+  it('role-aware: viewer cards are not draggable (sortable disabled)', async () => {
+    server.use(
+      http.get('/api/projects', () =>
+        HttpResponse.json([
+          { id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'viewer' },
+        ]),
+      ),
+    );
+    renderBoard();
+    const card = (await screen.findByText('Rich markdown editor')).closest(
+      '[role="button"]',
+    ) as HTMLElement;
+    expect(card.getAttribute('aria-disabled')).toBe('true');
+  });
+
+  it('role-aware: editor cards are draggable (sortable enabled)', async () => {
+    server.use(
+      http.get('/api/projects', () =>
+        HttpResponse.json([
+          { id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'editor' },
+        ]),
+      ),
+    );
+    renderBoard();
+    const card = (await screen.findByText('Rich markdown editor')).closest(
+      '[role="button"]',
+    ) as HTMLElement;
+    expect(card.getAttribute('aria-disabled')).toBe('false');
+  });
 });

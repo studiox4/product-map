@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 
 /** Only honor same-origin path redirects (leading single slash) — never an absolute/protocol URL. */
 export function safeNext(next: string | null): string {
-  if (!next || !next.startsWith('/') || next.startsWith('//')) return '/';
+  if (!next || next[0] !== '/' || next[1] === '/' || next[1] === '\\') return '/';
   return next;
 }
 

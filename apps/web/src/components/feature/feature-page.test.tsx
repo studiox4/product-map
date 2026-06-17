@@ -271,6 +271,9 @@ describe('FeaturePage', () => {
     // Pure actions are hidden.
     expect(screen.queryByRole('button', { name: 'Delete feature' })).toBeNull();
     expect(screen.queryByRole('button', { name: /add evidence/i })).toBeNull();
+    // Dependencies rail's edit trigger is gated too.
+    const depRail = screen.getByRole('region', { name: 'Dependencies' });
+    expect(within(depRail).queryByRole('button', { name: 'Edit' })).toBeNull();
   });
 
   it('role-aware: editor keeps mutate affordances — delete present, title editable', async () => {

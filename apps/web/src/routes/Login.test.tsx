@@ -18,4 +18,12 @@ describe('safeNext (open-redirect guard)', () => {
     expect(safeNext('http://evil.com/path')).toBe('/');
     expect(safeNext('evil.com')).toBe('/');
   });
+
+  it('rejects a backslash second char (browser may normalize \\ to /)', () => {
+    expect(safeNext('/\\evil.com')).toBe('/');
+  });
+
+  it('passes through the bare root path', () => {
+    expect(safeNext('/')).toBe('/');
+  });
 });

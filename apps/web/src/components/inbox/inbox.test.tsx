@@ -397,6 +397,29 @@ describe('Idea Inbox', () => {
     expect(await screen.findByText('editor route')).toBeTruthy();
   });
 
+  it('role-aware: viewer detail pane is read-only — no promote/archive, title readOnly, status disabled', async () => {
+    server.use(
+      http.get('/api/projects', () =>
+        HttpResponse.json([
+          { id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'viewer' },
+        ]),
+      ),
+    );
+    renderInbox();
+    await screen.findAllByText('Bulk export to CSV');
+    const detail = screen.getByRole('region', { name: /idea detail/i });
+    // Pure actions hidden for viewers.
+    expect(within(detail).queryByRole('button', { name: /promote to feature/i })).toBeNull();
+    expect(within(detail).queryByRole('button', { name: /mark triaged/i })).toBeNull();
+    expect(within(detail).queryByRole('button', { name: /archive/i })).toBeNull();
+    // Inline editors locked.
+    expect((within(detail).getByLabelText('Idea title') as HTMLInputElement).readOnly).toBe(true);
+    expect(
+      (within(detail).getByRole('combobox', { name: /idea status/i }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    expect((within(detail).getByLabelText('Source') as HTMLInputElement).readOnly).toBe(true);
+  });
+
   it('renders the pitch doc card with chip, status, and word count', async () => {
     const withPitch = [
       { ...fixture[0], pitchDoc: { id: 'd-pitch', title: 'Bulk export to CSV — Idea pitch', status: 'draft' as const } },
