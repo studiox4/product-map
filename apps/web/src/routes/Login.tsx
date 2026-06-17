@@ -5,10 +5,11 @@ import { useLogin, apiErrorMessage } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { appRoutes } from '@/lib/routes';
 
 /** Only honor same-origin path redirects (leading single slash) — never an absolute/protocol URL. */
 export function safeNext(next: string | null): string {
-  if (!next || next[0] !== '/' || next[1] === '/' || next[1] === '\\') return '/';
+  if (!next || next[0] !== '/' || next[1] === '/' || next[1] === '\\') return appRoutes.dashboard;
   return next;
 }
 
@@ -40,7 +41,7 @@ export default function Login() {
         {error && <p className="text-sm text-red-600">{error}</p>}
         <Button type="submit" disabled={login.isPending} className="w-full">Sign in</Button>
       </form>
-      <p className="mt-4 text-sm text-muted-foreground">No account? <a href={`/register${next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`} className="text-action">Register</a></p>
+      <p className="mt-4 text-sm text-muted-foreground">No account? <a href={`/register${next !== appRoutes.dashboard ? `?next=${encodeURIComponent(next)}` : ''}`} className="text-action">Register</a></p>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useAcceptInvite, useInvitePreview, apiErrorMessage } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { appRoutes } from '@/lib/routes';
 
 /** Centered card chrome shared by every terminal state of the accept page. */
 function Card({ children }: { children: React.ReactNode }) {
@@ -89,7 +90,7 @@ export default function AcceptInvite() {
             accept.mutate(token, {
               onSuccess: ({ projectId }) => {
                 localStorage.setItem('pm.activeProjectId', projectId);
-                navigate('/');
+                navigate(appRoutes.dashboard);
               },
             })
           }
