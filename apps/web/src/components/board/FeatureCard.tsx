@@ -5,7 +5,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { Link2 } from 'lucide-react';
 import type { FeatureWithDocs } from '@productmap/shared';
 import { cn } from '@/lib/utils';
-import { fetchJson, queryKeys, useFeatures } from '@/lib/api';
+import { apiPath, fetchJson, queryKeys, useFeatures } from '@/lib/api';
+import { useProjectId } from '@/lib/project';
 import { makeHoverPrefetch, prefersReducedMotion, SPRING_EASING } from '@/lib/delight';
 import { morphStyle } from '@/lib/transitions';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -24,6 +25,7 @@ export function FeatureCard({ feature, onOpen }: FeatureCardProps) {
     transition: prefersReducedMotion() ? null : { duration: 200, easing: SPRING_EASING },
   });
   const queryClient = useQueryClient();
+  const pid = useProjectId();
 
   // Blocked badge (D4): amber while any blocker is unshipped. The board holds
   // every feature in the (already-fetched) features query, so derive locally —
@@ -41,11 +43,11 @@ export function FeatureCard({ feature, onOpen }: FeatureCardProps) {
     () =>
       makeHoverPrefetch(() => {
         void queryClient.prefetchQuery({
-          queryKey: queryKeys.feature(feature.projectId, feature.id),
-          queryFn: () => fetchJson<FeatureWithDocs>(`/api/features/${feature.id}`),
+          queryKey: queryKeys.feature(pid, feature.id),
+          queryFn: () => fetchJson<FeatureWithDocs>(apiPath(pid, 'features', feature.id)),
         });
       }),
-    [queryClient, feature.id],
+    [queryClient, pid, feature.id],
   );
 
   return (

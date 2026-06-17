@@ -673,15 +673,15 @@ export function useDeleteComment() {
 
 import type { WorkspaceActivityItem } from '@productmap/shared';
 
-/** @deprecated Use queryKeys.workspaceActivity(pid) — kept for legacy imports. */
-export const workspaceActivityKey = ['activity', 'workspace'] as const;
-
 /** Project-scoped workspace activity feed, ascending (replay order). Fetched lazily — pass enabled=false until History mode is on. */
-export function useWorkspaceActivity(enabled = true) {
+export function useWorkspaceActivity(enabled = true, since?: Date) {
   const pid = useProjectId();
   return useQuery({
     queryKey: queryKeys.workspaceActivity(pid),
-    queryFn: () => fetchJson<WorkspaceActivityItem[]>(apiPath(pid, 'activity')),
+    queryFn: () =>
+      fetchJson<WorkspaceActivityItem[]>(
+        apiPath(pid, 'activity') + (since ? `?since=${encodeURIComponent(since.toISOString())}` : ''),
+      ),
     enabled,
     staleTime: 30_000,
   });

@@ -37,7 +37,7 @@ function LandingSkeleton() {
 
 export function Landing() {
   const { data, isPending, isError, refetch } = useOverview();
-  const activity = useWorkspaceActivity();
+  const activity = useWorkspaceActivity(true, new Date(Date.now() - 84 * 24 * 60 * 60 * 1000));
   const events = activity.data ?? [];
 
   if (isPending) return <LandingSkeleton />;

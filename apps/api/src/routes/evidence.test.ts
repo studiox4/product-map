@@ -239,4 +239,27 @@ describe('DELETE /api/projects/:projectId/evidence/:id', () => {
     );
     expect(res.status).toBe(404);
   });
+
+  it('viewer DELETE /api/projects/A/evidence/:id → 403', async () => {
+    // Create evidence as admin
+    const created = await (
+      await app.request(
+        `/api/projects/${projectId}/features/${featureId}/evidence`,
+        post({ kind: 'quote', title: 'Evidence to delete' }),
+      )
+    ).json();
+
+    const viewer = await createTestUser({ role: 'member', email: 'viewer@test.co' });
+    await addMembership(viewer.id, projectId, 'viewer');
+    const viewerAuth = { cookie: await authCookie(viewer), origin: 'http://localhost', host: 'localhost' };
+
+    const res = await app.request(
+      `/api/projects/${projectId}/evidence/${created.id}`,
+      { method: 'DELETE', headers: viewerAuth },
+    );
+    expect(res.status).toBe(403);
+    // Evidence must still exist
+    const rows = await db.select().from(evidence).where(eq(evidence.id, created.id));
+    expect(rows).toHaveLength(1);
+  });
 });

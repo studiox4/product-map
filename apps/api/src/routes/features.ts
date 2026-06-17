@@ -23,12 +23,12 @@ const docMetaColumns = {
   updatedAt: documents.updatedAt,
 };
 
-async function docsForFeatures(featureIds: string[]) {
+async function docsForFeatures(featureIds: string[], pid: string) {
   if (featureIds.length === 0) return new Map<string, unknown[]>();
   const rows = await db
     .select(docMetaColumns)
     .from(documents)
-    .where(inArray(documents.featureId, featureIds))
+    .where(and(inArray(documents.featureId, featureIds), eq(documents.projectId, pid)))
     .orderBy(asc(documents.createdAt));
   const byFeature = new Map<string, unknown[]>();
   for (const row of rows) {
@@ -41,12 +41,14 @@ async function docsForFeatures(featureIds: string[]) {
 }
 
 /** blocker ids per blocked feature (board "blocked" badge derives from these). */
-async function blockerIdsForFeatures(featureIds: string[]) {
+async function blockerIdsForFeatures(featureIds: string[], pid: string) {
   const byBlocked = new Map<string, string[]>();
   if (featureIds.length === 0) return byBlocked;
+  // INNER JOIN features on blockerId to ensure blocker belongs to the same project.
   const rows = await db
-    .select()
+    .select({ blockerId: featureDependencies.blockerId, blockedId: featureDependencies.blockedId })
     .from(featureDependencies)
+    .innerJoin(features, and(eq(featureDependencies.blockerId, features.id), eq(features.projectId, pid)))
     .where(inArray(featureDependencies.blockedId, featureIds));
   for (const row of rows) {
     const list = byBlocked.get(row.blockedId) ?? [];
@@ -65,9 +67,9 @@ export const featuresRoutes = new Hono<MembershipEnv>()
       .where(eq(features.projectId, pid))
       .orderBy(horizonOrder, asc(features.sortOrder), asc(features.createdAt));
     const ids = rows.map((f) => f.id);
-    const docs = await docsForFeatures(ids);
+    const docs = await docsForFeatures(ids, pid);
     const voteMap = await voteSummaries(ids, requestUserId(c));
-    const blockers = await blockerIdsForFeatures(ids);
+    const blockers = await blockerIdsForFeatures(ids, pid);
     return c.json(
       rows.map((f) => ({
         ...f,
@@ -117,9 +119,9 @@ export const featuresRoutes = new Hono<MembershipEnv>()
     const id = c.req.param('id');
     const pid = c.get('currentProjectId');
     const row = await loadScoped(features, id, pid) as typeof features.$inferSelect;
-    const docs = await docsForFeatures([row.id]);
+    const docs = await docsForFeatures([row.id], pid);
     const voteSummary = await voteSummaryFor(row.id, requestUserId(c));
-    const blockers = await blockerIdsForFeatures([row.id]);
+    const blockers = await blockerIdsForFeatures([row.id], pid);
     return c.json({
       ...row,
       ...voteSummary,

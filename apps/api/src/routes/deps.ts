@@ -10,17 +10,18 @@ import { type MembershipEnv } from '../middleware/membership';
 import { loadScoped } from '../lib/scope';
 import { recordActivity } from '../lib/activity';
 
-async function featuresByIds(ids: string[]) {
+async function featuresByIds(ids: string[], pid: string) {
   if (ids.length === 0) return [];
-  return db.select().from(features).where(inArray(features.id, ids));
+  return db.select().from(features).where(and(inArray(features.id, ids), eq(features.projectId, pid)));
 }
 
 /** Blockers (features blocking :id) and blocked (features :id blocks). */
-async function dependencyGraphFor(id: string) {
+async function dependencyGraphFor(id: string, pid: string) {
   const edges = await db.select().from(featureDependencies);
   const blockerIds = edges.filter((e) => e.blockedId === id).map((e) => e.blockerId);
   const blockedIds = edges.filter((e) => e.blockerId === id).map((e) => e.blockedId);
-  const rows = await featuresByIds([...new Set([...blockerIds, ...blockedIds])]);
+  // Resolve feature rows scoped to pid — cross-project ids simply won't match.
+  const rows = await featuresByIds([...new Set([...blockerIds, ...blockedIds])], pid);
   const byId = new Map(rows.map((f) => [f.id, f]));
   return {
     blockers: blockerIds.map((bid) => byId.get(bid)).filter(Boolean),
@@ -68,7 +69,7 @@ export const depsRoutes = new Hono<MembershipEnv>()
     const id = c.req.param('id');
     const pid = c.get('currentProjectId');
     await loadScoped(features, id, pid);
-    return c.json(await dependencyGraphFor(id));
+    return c.json(await dependencyGraphFor(id, pid));
   })
   .put(
     '/:id/dependencies',
@@ -118,6 +119,6 @@ export const depsRoutes = new Hono<MembershipEnv>()
         }
       }
 
-      return c.json(await dependencyGraphFor(id));
+      return c.json(await dependencyGraphFor(id, pid));
     },
   );

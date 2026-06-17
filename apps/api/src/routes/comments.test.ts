@@ -297,6 +297,12 @@ describe('Cross-project isolation', () => {
     expect(res.status).toBe(404);
   });
 
+  it('GET ?documentId=<B doc> via A path → 404', async () => {
+    const [bDoc] = await db.insert(documents).values({ projectId: projectBId, featureId: bFeatureId, type: 'prd', title: 'B Doc' }).returning();
+    const res = await app.request(`${BASE(projectId)}?documentId=${bDoc.id}`, { headers: auth });
+    expect(res.status).toBe(404);
+  });
+
   it('POST {parentId: <B comment>} via A path → 404', async () => {
     const res = await app.request(BASE(projectId), post({ featureId, parentId: bCommentId, body: 'hijack' }));
     expect(res.status).toBe(404);
@@ -304,6 +310,25 @@ describe('Cross-project isolation', () => {
 
   it('POST {featureId: <B feature>} via A path → 404', async () => {
     const res = await app.request(BASE(projectId), post({ featureId: bFeatureId, body: 'hijack' }));
+    expect(res.status).toBe(404);
+  });
+
+  it('PATCH /A/comments/<B comment> → 404', async () => {
+    const res = await app.request(`${BASE(projectId)}/${bCommentId}`, patch({ body: 'hacked' }));
+    expect(res.status).toBe(404);
+  });
+
+  it('PATCH /A/comments/<B comment>/resolve → 404', async () => {
+    const res = await app.request(`${BASE(projectId)}/${bCommentId}/resolve`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json', ...auth },
+      body: JSON.stringify({ resolved: true }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it('DELETE /A/comments/<B comment> → 404', async () => {
+    const res = await app.request(`${BASE(projectId)}/${bCommentId}`, { method: 'DELETE', headers: auth });
     expect(res.status).toBe(404);
   });
 

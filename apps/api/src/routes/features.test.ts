@@ -630,4 +630,12 @@ describe('features cross-project isolation', () => {
     expect(res.status).toBe(403);
     expect((await res.json()).error).toBe('forbidden');
   });
+
+  it('GET /api/projects/A/features/<B feature>/activity → 404 (cross-project activity IDOR)', async () => {
+    const projectB = await createTestProject('Project B');
+    const [featureInB] = await db.insert(features).values({ projectId: projectB.id, title: 'B Feature', horizon: 'now' }).returning();
+
+    const res = await app.request(`/api/projects/${projectId}/features/${featureInB.id}/activity`, { headers: auth });
+    expect(res.status).toBe(404);
+  });
 });

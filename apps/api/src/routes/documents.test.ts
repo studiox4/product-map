@@ -505,6 +505,26 @@ describe('cross-project IDOR + role enforcement', () => {
     expect(res.status).toBe(404);
   });
 
+  it('PATCH /A/documents/<B doc> → 404 (cross-project IDOR on PATCH)', async () => {
+    const projB = await createTestProject('Project B');
+    const [featureB] = await db.insert(features).values({ projectId: projB.id, title: 'B Feature', horizon: 'now' }).returning();
+    const [docB] = await db.insert(documents).values({ projectId: projB.id, featureId: featureB.id, type: 'prd', title: 'B Doc', contentMd: '' }).returning();
+
+    const memberA = await createTestUser({ role: 'member', email: 'memberA3@test.co' });
+    await addMembership(memberA.id, projectId, 'editor');
+    const memberAAuth = { cookie: await authCookie(memberA), origin: 'http://localhost', host: 'localhost' };
+
+    const res = await app.request(`/api/projects/${projectId}/documents/${docB.id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json', ...memberAAuth },
+      body: JSON.stringify({ title: 'hacked' }),
+    });
+    expect(res.status).toBe(404);
+    // Doc title should remain unchanged
+    const [row] = await db.select().from(documents).where(eq(documents.id, docB.id));
+    expect(row.title).toBe('B Doc');
+  });
+
   it('viewer write → 403 (POST, PATCH, DELETE)', async () => {
     const viewer = await createTestUser({ role: 'member', email: 'viewer@test.co' });
     await addMembership(viewer.id, projectId, 'viewer');
