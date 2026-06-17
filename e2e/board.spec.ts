@@ -133,7 +133,7 @@ test('AC4: after scheduling, the roadmap bar is green (now horizon)', async ({
   const end = addDaysIso(start, 14);
 
   await page.goto(
-    `/board?feature=${(await getFeatureByTitle(request, FEATURE_TITLE)).id}`,
+    `/app/board?feature=${(await getFeatureByTitle(request, FEATURE_TITLE)).id}`,
   );
   await page.locator('#feature-start-date').fill(start);
   await page.locator('#feature-end-date').fill(end);
