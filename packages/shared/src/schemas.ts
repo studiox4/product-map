@@ -57,8 +57,11 @@ export const commentCreate = z.object({
   documentId: z.string().uuid().optional(),
   parentId: z.string().uuid().optional(),
   body: z.string().min(1).max(4000),
-}).refine(d => (d.featureId !== undefined) !== (d.documentId !== undefined),
-  { message: 'exactly one of featureId or documentId is required' });
+}).refine(
+  // parentId replies inherit the target from the parent; otherwise exactly one of featureId/documentId required
+  d => d.parentId !== undefined || (d.featureId !== undefined) !== (d.documentId !== undefined),
+  { message: 'exactly one of featureId or documentId is required (or supply parentId for a reply)' },
+);
 export const commentUpdate = z.object({
   body: z.string().min(1).max(4000).optional(),
 });
