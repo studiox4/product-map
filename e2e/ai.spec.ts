@@ -28,7 +28,7 @@ test('AC8: Draft with AI streams mocked SSE content into the editor', async ({
     }),
   );
 
-  await page.goto(`/docs/${doc.id}`);
+  await page.goto(`/app/docs/${doc.id}`);
 
   // Empty doc + AI enabled → the draft card is visible.
   await expect(page.getByText('Draft this document with AI')).toBeVisible();
@@ -70,7 +70,7 @@ test('AC9: without a key there are no AI affordances, editor still works', async
     route.fulfill({ json: { enabled: false } }),
   );
 
-  await page.goto(`/docs/${doc.id}`);
+  await page.goto(`/app/docs/${doc.id}`);
   const body = page.locator('[aria-label="Document body"]');
   await expect(body).toBeVisible();
 

@@ -72,7 +72,7 @@ async function scrubTo(page: Page, value: 'min' | 'max') {
 test('W2-1: Time Machine scrubs to the earliest event with ≥3 visible changes, plays, and restores', async ({
   page,
 }) => {
-  await page.goto('/roadmap');
+  await page.goto('/app/roadmap');
   await expect(page.locator('[data-testid^="gantt-bar-"]').first()).toBeVisible();
   const nowState = await ganttBarStates(page);
   expect(nowState.length).toBeGreaterThan(0);
@@ -126,7 +126,7 @@ test('W2-1: Time Machine scrubs to the earliest event with ≥3 visible changes,
 test('W2-2: landing renders sparkline, horizon arc, and heatmap from seeded activity', async ({
   page,
 }) => {
-  await page.goto('/');
+  await page.goto('/app');
 
   // Velocity sparkline: a real SVG path drawn in the action color.
   const sparkline = page.locator('[data-testid="velocity-sparkline"]');
@@ -151,7 +151,7 @@ test('W2-2: landing renders sparkline, horizon arc, and heatmap from seeded acti
 test('W2-2: AI digest streams when enabled and is hidden without a key', async ({ page }) => {
   // Without a key → no digest card at all.
   await page.route('**/api/ai/status', (route) => route.fulfill({ json: { enabled: false } }));
-  await page.goto('/');
+  await page.goto('/app');
   await expect(page.locator('[data-testid="pulse-heatmap"]')).toBeVisible();
   await expect(page.locator('[data-testid="ai-digest-card"]')).toHaveCount(0);
 
@@ -187,7 +187,7 @@ test('W2-3: callout + toggle insert via slash, hit export.md, and persist across
     fromTemplate: false,
   });
 
-  await page.goto(`/docs/${doc.id}`);
+  await page.goto(`/app/docs/${doc.id}`);
   const body = page.locator('[aria-label="Document body"]');
   await expect(body).toBeVisible();
   await body.click();
@@ -262,7 +262,7 @@ test('W2-3: ToC rail appears on the seeded PRD and highlights the active section
   // Rail is xl-only; the short viewport gives the short seeded PRD enough
   // scroll travel for the active-section tracking to engage.
   await page.setViewportSize({ width: 1440, height: 600 });
-  await page.goto(`/docs/${prd!.id}`);
+  await page.goto(`/app/docs/${prd!.id}`);
 
   const rail = page.getByRole('navigation', { name: 'Table of contents' });
   await expect(rail).toBeVisible();
@@ -289,7 +289,7 @@ test('W2-3: cover picker sets a gradient and the reader view renders it chrome-f
     fromTemplate: false,
   });
 
-  await page.goto(`/docs/${doc.id}`);
+  await page.goto(`/app/docs/${doc.id}`);
   await expect(page.locator('[aria-label="Document body"]')).toBeVisible();
 
   // ⋯ menu → pick the Dawn gradient → cover band appears in the editor.
@@ -306,7 +306,7 @@ test('W2-3: cover picker sets a gradient and the reader view renders it chrome-f
     .toBe('dawn');
 
   // Reader view: chrome-free render with the cover band and the doc title.
-  await page.goto(`/docs/${doc.id}/read`);
+  await page.goto(`/app/docs/${doc.id}/read`);
   await expect(page.locator('[data-testid="reader-cover"]')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Signature W2 reader doc' })).toBeVisible();
   await expect(page.getByRole('link', { name: /back to editor/i })).toBeVisible();

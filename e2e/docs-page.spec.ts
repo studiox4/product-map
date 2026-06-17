@@ -32,9 +32,9 @@ function row(page: Page, title: string) {
 }
 
 test('AC4: /docs lists seeded docs with spec chip colors', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/app');
   await page.getByRole('link', { name: 'Docs' }).click();
-  await expect(page).toHaveURL(/\/docs$/);
+  await expect(page).toHaveURL(/\/app\/docs$/);
 
   for (const title of [PRD_TITLE, TECH_SPEC_TITLE, BRIEF_TITLE]) {
     await expect(row(page, title)).toBeVisible();
@@ -47,7 +47,7 @@ test('AC4: /docs lists seeded docs with spec chip colors', async ({ page }) => {
 });
 
 test('AC4: type + status filters AND search compose', async ({ page }) => {
-  await page.goto('/docs');
+  await page.goto('/app/docs');
   await expect(row(page, PRD_TITLE)).toBeVisible();
 
   // Type filter: PRD only.
@@ -87,7 +87,7 @@ test('AC4: sort by updated toggles asc/desc and reorders rows', async ({ page, r
   const byUpdatedAsc = [...docs].sort((a, b) => a.updatedAt.localeCompare(b.updatedAt));
   const byUpdatedDesc = [...byUpdatedAsc].reverse();
 
-  await page.goto('/docs');
+  await page.goto('/app/docs');
   const firstTitleCell = page.locator('tbody tr').first().locator('td').first();
 
   // Default: updated desc.
@@ -106,7 +106,7 @@ test('AC4: sort by updated toggles asc/desc and reorders rows', async ({ page, r
 test('AC5: row click opens a read-only preview; Open in editor → full editor', async ({
   page,
 }) => {
-  await page.goto('/docs');
+  await page.goto('/app/docs');
   await row(page, PRD_TITLE).first().click();
 
   const sheet = page.getByRole('dialog');
@@ -119,7 +119,7 @@ test('AC5: row click opens a read-only preview; Open in editor → full editor',
   expect(await sheet.locator('[contenteditable="true"]').count()).toBe(0);
 
   await sheet.getByRole('link', { name: /Open in editor/ }).click();
-  await expect(page).toHaveURL(/\/docs\/[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(/\/app\/docs\/[0-9a-f-]{36}$/);
   await expect(page.locator('[aria-label="Document body"]')).toBeVisible();
   await expect(
     page.locator('[aria-label="Document body"]').getByRole('heading', { name: PRD_TITLE }),
@@ -136,20 +136,20 @@ test('AC6: PRD chip color identical on board, docs table, feature page and edito
 
   const seen: Record<string, string> = {};
 
-  await page.goto('/docs');
+  await page.goto('/app/docs');
   seen.docsTable = await chipBg(page, row(page, PRD_TITLE), 'PRD');
 
-  await page.goto('/board');
+  await page.goto('/app/board');
   const card = page.getByRole('button', { name: /Rich markdown editor/ });
   await expect(card).toBeVisible();
   seen.boardCard = await chipBg(page, card, 'PRD');
 
-  await page.goto(`/features/${feature.id}`);
+  await page.goto(`/app/features/${feature.id}`);
   const docsGrid = page.locator('section[aria-label="Docs"]');
   await expect(docsGrid).toBeVisible();
   seen.featurePage = await chipBg(page, docsGrid, 'PRD');
 
-  await page.goto(`/docs/${prdDoc!.id}`);
+  await page.goto(`/app/docs/${prdDoc!.id}`);
   await expect(page.locator('[aria-label="Document body"]')).toBeVisible();
   seen.editorToolbar = await chipBg(page, page.locator('body'), 'PRD');
 

@@ -17,7 +17,7 @@ test('AC5: bars for all dated features, tray chips for dateless ones', async ({
   expect(dated.length).toBeGreaterThanOrEqual(6);
   expect(dateless.length).toBeGreaterThanOrEqual(1);
 
-  await page.goto('/roadmap');
+  await page.goto('/app/roadmap');
   await expect(page.locator('[data-gantt-bar-id]').first()).toBeVisible();
   await expect(page.locator('[data-gantt-bar-id]')).toHaveCount(dated.length);
   await expect(page.locator('[data-testid^="gantt-tray-chip-"]')).toHaveCount(dateless.length);
@@ -30,7 +30,7 @@ test('AC5: dragging a bar right by ~1 month persists shifted dates', async ({
   const before = await getFeatureByTitle(request, 'Rich markdown editor');
   const shiftDays = 30; // 30 days × 4 px/day = 120 px
 
-  await page.goto('/roadmap');
+  await page.goto('/app/roadmap');
   const bar = page.getByTestId(`gantt-bar-${before.id}`);
   await expect(bar).toBeVisible();
   const box = (await bar.boundingBox())!;
@@ -54,7 +54,7 @@ test('AC5: resizing via the right edge persists a new end date', async ({ page, 
   const before = await getFeatureByTitle(request, 'Gantt roadmap');
   const extraDays = 10; // 10 days × 4 px/day = 40 px
 
-  await page.goto('/roadmap');
+  await page.goto('/app/roadmap');
   const handle = page.getByTestId(`gantt-resize-${before.id}`);
   const box = (await handle.boundingBox())!;
 
@@ -80,7 +80,7 @@ test('AC5: dragging a tray chip onto the timeline schedules the feature', async 
   const feature = await getFeatureByTitle(request, 'Realtime collaboration (Yjs)');
   expect(feature.startDate).toBeNull();
 
-  await page.goto('/roadmap');
+  await page.goto('/app/roadmap');
   const chip = page.getByTestId(`gantt-tray-chip-${feature.id}`);
   await expect(chip).toBeVisible();
   const chipBox = (await chip.boundingBox())!;

@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('AC2 landing dashboard', () => {
   test('vision header is editable inline', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/app');
     await expect(page.getByRole('heading', { level: 1, name: 'ProductMap' })).toBeVisible();
 
     const visionButton = page.getByTitle('Click to edit the vision');
@@ -25,7 +25,7 @@ test.describe('AC2 landing dashboard', () => {
   });
 
   test('gantt hero renders ≥6 seeded bars with a today line', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/app');
     const bars = page.getByTestId('gantt-hero-bar');
     await expect(bars.first()).toBeVisible();
     expect(await bars.count()).toBeGreaterThanOrEqual(6);
@@ -34,13 +34,13 @@ test.describe('AC2 landing dashboard', () => {
   });
 
   test('hero bar click navigates to the roadmap', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/app');
     await page.getByTestId('gantt-hero-bar').first().click();
-    await expect(page).toHaveURL(/\/roadmap\?feature=/);
+    await expect(page).toHaveURL(/\/app\/roadmap\?feature=/);
   });
 
   test('now/next/later panels list seeded features with +N more overflow', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/app');
     await expect(page.getByTestId('gantt-hero-bar').first()).toBeVisible();
 
     for (const label of ['Now', 'Next', 'Later']) {
@@ -59,23 +59,23 @@ test.describe('AC2 landing dashboard', () => {
     const more = later.getByRole('link', { name: /\+\d+ more/ });
     await expect(more).toBeVisible();
     await more.click();
-    await expect(page).toHaveURL(/\/board$/);
+    await expect(page).toHaveURL(/\/app\/board$/);
   });
 
   test('panel feature click opens the board detail panel', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/app');
     const now = page
       .locator('section')
       .filter({ has: page.getByRole('heading', { name: 'Now', exact: true }) });
     await now.getByRole('button').first().click();
-    await expect(page).toHaveURL(/\/board\?feature=/);
+    await expect(page).toHaveURL(/\/app\/board\?feature=/);
     await expect(page.getByLabel('Title')).toBeVisible(); // detail sheet open
   });
 
   test('attention panel lists a draft doc and a dateless feature, both navigable', async ({
     page,
   }) => {
-    await page.goto('/');
+    await page.goto('/app');
     const attention = page
       .locator('section')
       .filter({ has: page.getByRole('heading', { name: 'Needs attention' }) });
@@ -85,13 +85,13 @@ test.describe('AC2 landing dashboard', () => {
     const draftItem = attention.getByRole('button').filter({ hasText: 'Draft doc' }).first();
     await expect(draftItem).toBeVisible();
     await draftItem.click();
-    await expect(page).toHaveURL(/\/docs\//);
+    await expect(page).toHaveURL(/\/app\/docs\//);
 
     // ≥1 dateless feature → navigates to the board detail panel.
-    await page.goto('/');
+    await page.goto('/app');
     const datelessItem = attention.getByRole('button').filter({ hasText: 'No dates' }).first();
     await expect(datelessItem).toBeVisible();
     await datelessItem.click();
-    await expect(page).toHaveURL(/\/board\?feature=/);
+    await expect(page).toHaveURL(/\/app\/board\?feature=/);
   });
 });

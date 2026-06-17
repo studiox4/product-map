@@ -8,7 +8,7 @@ test.describe.configure({ mode: 'serial' });
 
 test('AC1: feature creation is attributed to the logged-in user', async ({ page }) => {
   // Start from the board and create a new feature as the seeded admin.
-  await page.goto('/board');
+  await page.goto('/app/board');
   const later = page.getByTestId('column-later');
   await later.getByRole('button', { name: 'Add feature' }).click();
   await page.getByLabel('Title').fill('Auth Attribution Feature');
@@ -20,7 +20,7 @@ test('AC1: feature creation is attributed to the logged-in user', async ({ page 
 
   // Full feature page shows activity + People section with attribution.
   await page.getByRole('button', { name: /Open feature/ }).click();
-  await expect(page).toHaveURL(/\/features\//);
+  await expect(page).toHaveURL(/\/app\/features\//);
   await expect(
     page
       .locator('section[aria-label="Activity"]')
@@ -31,7 +31,7 @@ test('AC1: feature creation is attributed to the logged-in user', async ({ page 
 
 test('AC1: landing page is accessible without a welcome dialog', async ({ page }) => {
   // Under auth there is no WelcomeDialog — the page loads directly.
-  await page.goto('/');
+  await page.goto('/app');
   await expect(page.getByRole('heading', { level: 1, name: 'ProductMap' })).toBeVisible();
   await expect(page.getByRole('dialog', { name: 'Welcome to ProductMap' })).toHaveCount(0);
 });

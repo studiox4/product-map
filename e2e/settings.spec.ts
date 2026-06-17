@@ -27,11 +27,11 @@ test.beforeAll(async ({ request }) => {
 });
 
 test('AC1: settings reachable from the nav gear and ⌘K; three tabs render', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/app');
 
   // Nav gear → /settings (templates tab is the index redirect).
   await page.getByRole('link', { name: 'Settings' }).click();
-  await expect(page).toHaveURL(/\/settings\/templates$/);
+  await expect(page).toHaveURL(/\/app\/settings\/templates$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
 
   // Pill tab rail renders all three tabs; each one shows its content card.
@@ -46,20 +46,20 @@ test('AC1: settings reachable from the nav gear and ⌘K; three tabs render', as
   await expect(page.getByLabel('Your name')).toBeVisible();
 
   // ⌘K → "Settings" nav entry.
-  await page.goto('/board');
+  await page.goto('/app/board');
   await expect(page.getByTestId('column-now')).toBeVisible();
   await page.keyboard.press('ControlOrMeta+k');
   const input = page.getByPlaceholder(/type a command or search/i);
   await input.fill('settings');
   await page.getByRole('option', { name: 'Settings', exact: true }).click();
-  await expect(page).toHaveURL(/\/settings\/templates$/);
+  await expect(page).toHaveURL(/\/app\/settings\/templates$/);
 });
 
 test('AC2+AC3: template create/edit/set-default/duplicate/archive and the new-doc dialog', async ({
   page,
   request,
 }) => {
-  await page.goto('/settings/templates');
+  await page.goto('/app/settings/templates');
   const prdSection = page.locator('section[aria-label="prd templates"]');
   await expect(prdSection.getByText('Product requirements (PRD)')).toBeVisible();
 
@@ -67,7 +67,7 @@ test('AC2+AC3: template create/edit/set-default/duplicate/archive and the new-do
   await prdSection.getByRole('button', { name: 'New template' }).click();
   await prdSection.getByLabel('New prd template name').fill('Lightweight PRD');
   await prdSection.getByRole('button', { name: 'Create' }).click();
-  await expect(page).toHaveURL(/\/settings\/templates\/[0-9a-f-]+$/);
+  await expect(page).toHaveURL(/\/app\/settings\/templates\/[0-9a-f-]+$/);
   await expect(page.getByLabel('Name')).toHaveValue('Lightweight PRD');
 
   // Description saves on blur.
@@ -88,7 +88,7 @@ test('AC2+AC3: template create/edit/set-default/duplicate/archive and the new-do
 
   // Back in the manager (the chrome bar's back link; the nav gear shares the
   // same accessible name, so navigate directly): set it as the PRD default.
-  await page.goto('/settings/templates');
+  await page.goto('/app/settings/templates');
   const lightweightRow = page
     .getByTestId('template-row')
     .filter({ hasText: 'Lightweight PRD' })
@@ -124,7 +124,7 @@ test('AC2+AC3: template create/edit/set-default/duplicate/archive and the new-do
   // AC2 — new-doc dialog lists both PRD templates, new default preselected;
   // AC3 — the archived copy is hidden.
   const feature = await getFeatureByTitle(request, FEATURE_TITLE);
-  await page.goto(`/board?feature=${feature.id}`);
+  await page.goto(`/app/board?feature=${feature.id}`);
   await page.getByRole('button', { name: 'New doc' }).click();
   const dialog = page.getByRole('dialog', { name: 'New doc' });
   await expect(dialog).toBeVisible();
@@ -138,7 +138,7 @@ test('AC2+AC3: template create/edit/set-default/duplicate/archive and the new-do
   const title = 'Lightweight settings e2e PRD';
   await dialog.getByLabel('Title').fill(title);
   await dialog.getByRole('button', { name: 'Create' }).click();
-  await expect(page).toHaveURL(/\/docs\//);
+  await expect(page).toHaveURL(/\/app\/docs\//);
   const docBody = page.locator('[aria-label="Document body"]');
   await expect(docBody.getByRole('heading', { name: title })).toBeVisible();
   await expect(docBody.getByText('Problem worth one page.')).toBeVisible();
@@ -146,18 +146,18 @@ test('AC2+AC3: template create/edit/set-default/duplicate/archive and the new-do
 });
 
 test('AC4: vision edits reflect on the landing page and export downloads', async ({ page }) => {
-  await page.goto('/settings/workspace');
+  await page.goto('/app/settings/workspace');
   const vision = page.getByLabel('Vision');
   await expect(vision).toHaveValue(SEED_VISION);
   await vision.fill('Ship roadmaps your auditors actually like.');
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByText('Workspace saved')).toBeVisible();
 
-  await page.goto('/');
+  await page.goto('/app');
   await expect(page.getByText('Ship roadmaps your auditors actually like.')).toBeVisible();
 
   // Export downloads the zip.
-  await page.goto('/settings/workspace');
+  await page.goto('/app/settings/workspace');
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('link', { name: 'Export workspace' }).click();
   const download = await downloadPromise;
@@ -169,18 +169,18 @@ test('AC5: profile rename + avatar color reflect on feature-page avatars', async
   request,
 }) => {
   // Attribute a fresh feature to "me" so the People rail shows my avatar.
-  await page.goto('/board');
+  await page.goto('/app/board');
   const later = page.getByTestId('column-later');
   await later.getByRole('button', { name: 'Add feature' }).click();
   await page.getByLabel('Title').fill('Settings avatar feature');
   await page.getByRole('button', { name: 'Create' }).click();
   await later.getByRole('button', { name: 'Settings avatar feature', exact: true }).click();
   await page.getByRole('button', { name: /Open feature/ }).click();
-  await expect(page).toHaveURL(/\/features\//);
+  await expect(page).toHaveURL(/\/app\/features\//);
   const featureUrl = page.url();
 
   // Rename + recolor in the profile tab.
-  await page.goto('/settings/profile');
+  await page.goto('/app/settings/profile');
   const nameInput = page.getByLabel('Your name');
   await nameInput.fill('Quinn Renamed');
   await page.getByRole('button', { name: 'Save name' }).click();
@@ -230,19 +230,19 @@ test('AC6 (negative): with AI status disabled no AI affordances render', async (
   await page.route('**/api/ai/status', (route) => route.fulfill({ json: { enabled: false } }));
 
   // Empty doc: no draft card, no Draft with AI button.
-  await page.goto(`/docs/${doc.id}`);
+  await page.goto(`/app/docs/${doc.id}`);
   await expect(page.locator('[aria-label="Document body"]')).toBeVisible();
   await expect(page.getByText('Draft this document with AI')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Draft with AI' })).toHaveCount(0);
 
   // Landing: AI digest card hidden.
-  await page.goto('/');
+  await page.goto('/app');
   await expect(page.getByRole('heading', { level: 1, name: 'ProductMap' })).toBeVisible();
   await expect(page.locator('[data-testid="ai-digest-card"]')).toHaveCount(0);
 });
 
 test('AC4: reset-demo is confirm-gated and restores the seed', async ({ page, request }) => {
-  await page.goto('/settings/workspace');
+  await page.goto('/app/settings/workspace');
   await page.getByRole('button', { name: 'Reset demo data' }).click();
   const confirm = page.getByRole('dialog', { name: 'Reset demo data?' });
   await expect(confirm).toBeVisible();

@@ -18,7 +18,7 @@ test('AC6: "Export .md" downloads markdown with the doc headings', async ({
     fromTemplate: true,
   });
 
-  await page.goto(`/docs/${doc.id}`);
+  await page.goto(`/app/docs/${doc.id}`);
   await expect(page.locator('[aria-label="Document body"]')).toBeVisible();
 
   const downloadPromise = page.waitForEvent('download');
