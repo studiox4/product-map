@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { decisionCreate, suggestDecisionBody } from '@productmap/shared';
 import { comments, decisions, features, users } from '@productmap/db';
 import { db } from '../db';
+import { getDefaultProjectId } from '../lib/project';
 import { type CurrentUserEnv } from '../middleware/current-user';
 import { loadUser } from '../middleware/auth';
 import { recordActivity, addCollaborator } from '../lib/activity';
@@ -79,9 +80,11 @@ export const decisionsRoutes = new Hono<CurrentUserEnv>()
         if (!comment) return c.json({ error: 'not_found' }, 404);
       }
 
+      const projectId = await getDefaultProjectId();
       const [row] = await db
         .insert(decisions)
         .values({
+          projectId,
           featureId: body.featureId ?? null,
           title: body.title,
           decisionMd: body.decisionMd,

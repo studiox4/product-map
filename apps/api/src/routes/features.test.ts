@@ -231,7 +231,7 @@ describe('PUT /api/features/:id/vote', () => {
 describe('GET /api/features/:id', () => {
   it('returns the feature with its documents', async () => {
     const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now' }).returning();
-    await db.insert(documents).values({ featureId: f.id, type: 'prd', title: 'F PRD' });
+    await db.insert(documents).values({ projectId, featureId: f.id, type: 'prd', title: 'F PRD' });
     const res = await app.request(`/api/features/${f.id}`, { headers: auth });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -333,7 +333,7 @@ describe('PATCH /api/features/:id', () => {
 describe('DELETE /api/features/:id', () => {
   it('204, then GET 404, and cascades documents', async () => {
     const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now' }).returning();
-    await db.insert(documents).values({ featureId: f.id, type: 'prd', title: 'doc' });
+    await db.insert(documents).values({ projectId, featureId: f.id, type: 'prd', title: 'doc' });
 
     const del = await app.request(`/api/features/${f.id}`, { method: 'DELETE', headers: auth });
     expect(del.status).toBe(204);
@@ -426,8 +426,8 @@ describe('PUT /api/features/:id/collaborators', () => {
 describe('PATCH /api/features/:id — dream-tier fields (size/riskMd/objectiveId/releaseId)', () => {
   it('updates size, riskMd, objectiveId and releaseId; records size_changed activity', async () => {
     const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now' }).returning();
-    const [obj] = await db.insert(objectives).values({ title: 'Roadmap of record' }).returning();
-    const [rel] = await db.insert(releases).values({ name: 'v0.2 — Team ready' }).returning();
+    const [obj] = await db.insert(objectives).values({ projectId, title: 'Roadmap of record' }).returning();
+    const [rel] = await db.insert(releases).values({ projectId, name: 'v0.2 — Team ready' }).returning();
 
     const res = await app.request(
       `/api/features/${f.id}`,

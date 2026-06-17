@@ -78,9 +78,10 @@ describe('GET /api/plans', () => {
   });
 
   it('lists plans oldest-first with status and appliedAt', async () => {
+    const p = await seedProject();
     await db.insert(plans).values([
-      { name: 'Q4 stretch', createdBy: userId, createdAt: new Date('2026-06-01T00:00:00Z') },
-      { name: 'Lean cut', createdBy: userId, createdAt: new Date('2026-06-05T00:00:00Z') },
+      { projectId: p.id, name: 'Q4 stretch', createdBy: userId, createdAt: new Date('2026-06-01T00:00:00Z') },
+      { projectId: p.id, name: 'Lean cut', createdBy: userId, createdAt: new Date('2026-06-05T00:00:00Z') },
     ]);
     const res = await app.request('/api/plans', { headers: auth });
     expect(res.status).toBe(200);

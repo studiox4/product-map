@@ -30,7 +30,7 @@ beforeEach(async () => {
   projectId = p.id;
   const [r] = await db
     .insert(releases)
-    .values({ name: 'v0.2 — Team ready', targetDate: '2026-07-01' })
+    .values({ projectId, name: 'v0.2 — Team ready', targetDate: '2026-07-01' })
     .returning();
   releaseId = r.id;
   const [a] = await db
@@ -259,6 +259,7 @@ describe('POST /api/releases/:id/generate-notes', () => {
   beforeEach(async () => {
     await db.insert(documents).values([
       {
+        projectId,
         featureId: featureA,
         type: 'prd',
         title: 'Comments PRD',
@@ -266,6 +267,7 @@ describe('POST /api/releases/:id/generate-notes', () => {
         contentMd: 'Threaded comments on features and docs.\n\nSecond paragraph that must not appear.',
       },
       {
+        projectId,
         featureId: featureA,
         type: 'brd',
         title: 'Draft note',
@@ -273,6 +275,7 @@ describe('POST /api/releases/:id/generate-notes', () => {
         contentMd: 'Draft content must be excluded.',
       },
       {
+        projectId,
         featureId: featureB,
         type: 'prd',
         title: 'Voting PRD',
@@ -326,7 +329,7 @@ describe('PUT /api/releases/:id/features (replace-set membership)', () => {
   let otherReleaseId: string;
 
   beforeEach(async () => {
-    const [r2] = await db.insert(releases).values({ name: 'v0.3' }).returning();
+    const [r2] = await db.insert(releases).values({ projectId, name: 'v0.3' }).returning();
     otherReleaseId = r2.id;
     const [cRow] = await db
       .insert(features)
@@ -393,6 +396,7 @@ describe('GET /api/releases/:id/notes.md', () => {
   it('assembles ## sections from feature titles with final-doc first paragraphs', async () => {
     await db.insert(documents).values([
       {
+        projectId,
         featureId: featureA,
         type: 'prd',
         title: 'Comments PRD',
@@ -400,6 +404,7 @@ describe('GET /api/releases/:id/notes.md', () => {
         contentMd: 'Threaded comments on features and docs.\n\nSecond paragraph that must not appear.',
       },
       {
+        projectId,
         featureId: featureA,
         type: 'brd',
         title: 'Draft note',
@@ -407,6 +412,7 @@ describe('GET /api/releases/:id/notes.md', () => {
         contentMd: 'Draft content must be excluded.',
       },
       {
+        projectId,
         featureId: featureB,
         type: 'prd',
         title: 'Voting PRD',

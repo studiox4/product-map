@@ -143,6 +143,7 @@ describe('POST /api/ai/review-doc', () => {
     const [doc] = await db
       .insert(documents)
       .values({
+        projectId: feature.projectId,
         featureId: feature.id,
         type: 'prd',
         title: 'Editor PRD',
@@ -209,6 +210,7 @@ describe('POST /api/ai/chat', () => {
     const feature = await seedFeature(product.id, { title: 'Telemetry pipeline', status: 'planned' });
     await db.insert(documents).values([
       {
+        projectId: feature.projectId,
         featureId: feature.id,
         type: 'prd',
         title: 'Telemetry PRD',
@@ -216,6 +218,7 @@ describe('POST /api/ai/chat', () => {
           'Telemetry pipeline design. The telemetry pipeline batches telemetry events; the pipeline exports telemetry nightly. Telemetry pipeline retries on failure.',
       },
       {
+        projectId: feature.projectId,
         featureId: feature.id,
         type: 'tech_spec',
         title: 'Editor spec',
@@ -223,6 +226,7 @@ describe('POST /api/ai/chat', () => {
           'The editor uses Tiptap with custom extensions. One day the telemetry pipeline may feed editor analytics, but the bulk of this spec covers toolbar layout, slash commands, tables, images and keyboard shortcuts in great detail.',
       },
       {
+        projectId: feature.projectId,
         featureId: feature.id,
         type: 'brd',
         title: 'Billing BRD',
@@ -261,6 +265,7 @@ describe('POST /api/ai/chat', () => {
     const feature = await seedFeature(product.id);
     await db.insert(documents).values(
       Array.from({ length: 10 }, (_, i) => ({
+        projectId: feature.projectId,
         featureId: feature.id,
         type: 'prd' as const,
         title: `K-doc-${String(i + 1).padStart(2, '0')}`,
@@ -312,6 +317,7 @@ describe('GET /api/copilot/nudges', () => {
       endDate: '2026-06-30',
     });
     await db.insert(documents).values({
+      projectId: largeWithDoc.projectId,
       featureId: largeWithDoc.id,
       type: 'prd',
       title: 'Covered',
@@ -328,6 +334,7 @@ describe('GET /api/copilot/nudges', () => {
     const [staleDraft] = await db
       .insert(documents)
       .values({
+        projectId: dated.projectId,
         featureId: dated.id,
         type: 'prd',
         title: 'Stale draft PRD',
@@ -336,8 +343,9 @@ describe('GET /api/copilot/nudges', () => {
       })
       .returning();
     await db.insert(documents).values([
-      { featureId: dated.id, type: 'brd', title: 'Fresh draft', status: 'draft' },
+      { projectId: dated.projectId, featureId: dated.id, type: 'brd', title: 'Fresh draft', status: 'draft' },
       {
+        projectId: dated.projectId,
         featureId: dated.id,
         type: 'tech_spec',
         title: 'Old final',

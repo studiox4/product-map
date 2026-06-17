@@ -224,10 +224,11 @@ describe('GET /api/documents', () => {
   });
 
   it('?all=true includes idea-owned docs with an idea ownerLabel', async () => {
-    const [idea] = await db.insert(ideas).values({ title: 'SSO via OIDC', bodyMd: '' }).returning();
+    const [idea] = await db.insert(ideas).values({ projectId, title: 'SSO via OIDC', bodyMd: '' }).returning();
     const [doc] = await db
       .insert(documents)
       .values({
+        projectId,
         ideaId: idea.id,
         type: 'idea_pitch',
         title: 'SSO via OIDC — Idea pitch',
@@ -246,11 +247,11 @@ describe('GET /api/documents', () => {
   it('?all=true includes release_notes docs with a release ownerLabel', async () => {
     const [doc] = await db
       .insert(documents)
-      .values({ type: 'release_notes', title: 'v0.3 — Release notes', contentMd: 'shipped things' })
+      .values({ projectId, type: 'release_notes', title: 'v0.3 — Release notes', contentMd: 'shipped things' })
       .returning();
     const [release] = await db
       .insert(releases)
-      .values({ name: 'v0.3', notesDocId: doc.id })
+      .values({ projectId, name: 'v0.3', notesDocId: doc.id })
       .returning();
     const list = await (await app.request('/api/documents?all=true', { headers: auth })).json();
     const item = list.find((d: { id: string }) => d.id === doc.id);
@@ -261,10 +262,11 @@ describe('GET /api/documents', () => {
   });
 
   it('?all=true labels a promoted pitch (feature_id + idea_id) as feature-owned', async () => {
-    const [idea] = await db.insert(ideas).values({ title: 'Promoted idea', bodyMd: '' }).returning();
+    const [idea] = await db.insert(ideas).values({ projectId, title: 'Promoted idea', bodyMd: '' }).returning();
     const [doc] = await db
       .insert(documents)
       .values({
+        projectId,
         featureId,
         ideaId: idea.id,
         type: 'idea_pitch',

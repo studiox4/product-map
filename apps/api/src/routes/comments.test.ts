@@ -38,7 +38,7 @@ beforeEach(async () => {
   featureId = f.id;
   const [df] = await db.insert(features).values({ projectId, title: 'Rich markdown editor', horizon: 'now' }).returning();
   docFeatureId = df.id;
-  const [d] = await db.insert(documents).values({ featureId: docFeatureId, type: 'prd', title: 'PRD' }).returning();
+  const [d] = await db.insert(documents).values({ projectId, featureId: docFeatureId, type: 'prd', title: 'PRD' }).returning();
   documentId = d.id;
 });
 

@@ -25,7 +25,7 @@ async function seedWorkspace() {
     .returning();
   const [release] = await db
     .insert(releases)
-    .values({ name: 'v0.2 — Team ready', targetDate: '2026-07-01' })
+    .values({ projectId: project.id, name: 'v0.2 — Team ready', targetDate: '2026-07-01' })
     .returning();
   const [featureA] = await db
     .insert(features)
@@ -43,7 +43,7 @@ async function seedWorkspace() {
     .returning();
   const [doc] = await db
     .insert(documents)
-    .values({ featureId: featureA.id, type: 'prd', title: 'Comments PRD', contentMd: '# Comments' })
+    .values({ projectId: project.id, featureId: featureA.id, type: 'prd', title: 'Comments PRD', contentMd: '# Comments' })
     .returning();
   return { project, release, featureA, featureB, doc };
 }
@@ -69,6 +69,7 @@ describe('POST /api/share/roadmap', () => {
   });
 
   it('mint with admin cookie → 201 and returns a share url', async () => {
+    await seedWorkspace();
     const admin = await createTestUser({ role: 'admin' });
     const cookie = await authCookie(admin);
     const res = await app.request('/api/share/roadmap', {
@@ -87,6 +88,7 @@ describe('POST /api/share/roadmap', () => {
   });
 
   it('each call mints a distinct token', async () => {
+    await seedWorkspace();
     const admin = await createTestUser({ role: 'admin' });
     const cookie = await authCookie(admin);
     const a = await createToken(cookie);
@@ -157,6 +159,7 @@ describe('GET /api/share/:token/data', () => {
 
 describe('DELETE /api/share/:token', () => {
   it('revoke without auth cookie → 401', async () => {
+    await seedWorkspace();
     const admin = await createTestUser({ role: 'admin' });
     const cookie = await authCookie(admin);
     const token = await createToken(cookie);
@@ -168,6 +171,7 @@ describe('DELETE /api/share/:token', () => {
   });
 
   it('revokes (sets revoked_at) and 404s on repeat or unknown', async () => {
+    await seedWorkspace();
     const admin = await createTestUser({ role: 'admin' });
     const cookie = await authCookie(admin);
     const token = await createToken(cookie);

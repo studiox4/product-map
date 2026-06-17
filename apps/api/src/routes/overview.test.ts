@@ -73,6 +73,7 @@ async function seedFixture() {
   const [draftDoc] = await db
     .insert(documents)
     .values({
+      projectId: project.id,
       featureId: editor.id,
       type: 'prd',
       title: 'Editor PRD',
@@ -85,6 +86,7 @@ async function seedFixture() {
   const [reviewDoc] = await db
     .insert(documents)
     .values({
+      projectId: project.id,
       featureId: editor.id,
       type: 'tech_spec',
       title: 'Editor tech spec',
@@ -95,6 +97,7 @@ async function seedFixture() {
     .returning();
 
   await db.insert(documents).values({
+    projectId: project.id,
     featureId: gantt.id,
     type: 'feature_brief',
     title: 'Gantt brief',

@@ -5,6 +5,7 @@ import { asc, count, eq } from 'drizzle-orm';
 import { objectiveCreate, objectiveUpdate } from '@productmap/shared';
 import { objectives, users, features } from '@productmap/db';
 import { db } from '../db';
+import { getDefaultProjectId } from '../lib/project';
 import { type CurrentUserEnv } from '../middleware/current-user';
 
 export const objectivesRoutes = new Hono<CurrentUserEnv>()
@@ -49,7 +50,8 @@ export const objectivesRoutes = new Hono<CurrentUserEnv>()
     }),
     async (c) => {
       const body = c.req.valid('json');
-      const [row] = await db.insert(objectives).values(body).returning();
+      const projectId = await getDefaultProjectId();
+      const [row] = await db.insert(objectives).values({ ...body, projectId }).returning();
       return c.json(row, 201);
     },
   )

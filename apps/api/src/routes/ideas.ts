@@ -11,6 +11,7 @@ import {
 } from '@productmap/shared';
 import { activity, documents, features, ideas, ideaVotes, projects, templates, users } from '@productmap/db';
 import { db } from '../db';
+import { getDefaultProjectId } from '../lib/project';
 import { type CurrentUserEnv } from '../middleware/current-user';
 import { recordActivity, addCollaborator } from '../lib/activity';
 import { EMPTY_VOTE_SUMMARY, requestUserId } from '../lib/votes';
@@ -119,6 +120,7 @@ async function draftAiBrief(
     const [doc] = await db
       .insert(documents)
       .values({
+        projectId: feature.projectId,
         featureId: feature.id,
         type: 'feature_brief',
         title: `${feature.title} — Feature brief`,
@@ -169,9 +171,11 @@ export const ideasRoutes = new Hono<CurrentUserEnv>()
     async (c) => {
       const body = c.req.valid('json');
       const user = c.get('currentUser');
+      const projectId = await getDefaultProjectId();
       const [row] = await db
         .insert(ideas)
         .values({
+          projectId,
           title: body.title,
           bodyMd: body.bodyMd ?? '',
           source: body.source ?? '',
@@ -266,6 +270,7 @@ export const ideasRoutes = new Hono<CurrentUserEnv>()
     const [doc] = await db
       .insert(documents)
       .values({
+        projectId: idea.projectId,
         featureId: idea.promotedFeatureId ?? null,
         ideaId: idea.id,
         type: 'idea_pitch',

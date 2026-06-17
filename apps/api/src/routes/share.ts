@@ -6,6 +6,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { db } from '../db';
 import { projects, features, documents, releases, shareTokens } from '@productmap/db';
+import { getDefaultProjectId } from '../lib/project';
 import type { DocumentMeta, FeatureWithDocs, Horizon, ShareData } from '@productmap/shared';
 import { EMPTY_VOTE_SUMMARY, voteSummaries } from '../lib/votes';
 
@@ -15,7 +16,8 @@ export const shareRoutes = new Hono()
   // POST /api/share/roadmap → mint a share link.
   .post('/roadmap', async (c) => {
     const token = nanoid();
-    await db.insert(shareTokens).values({ token, kind: 'roadmap' });
+    const projectId = await getDefaultProjectId();
+    await db.insert(shareTokens).values({ projectId, token, kind: 'roadmap' });
     return c.json({ url: `/share/${token}` }, 201);
   })
   // DELETE /api/share/:token → revoke. 404 when unknown or already revoked.
