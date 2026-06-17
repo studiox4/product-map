@@ -27,6 +27,7 @@ export const featureSizeEnum = pgEnum('feature_size', ['s', 'm', 'l']);
 export const objectiveStatusEnum = pgEnum('objective_status', ['on_track', 'at_risk', 'achieved', 'dropped']);
 export const planStatusEnum = pgEnum('plan_status', ['draft', 'applied', 'archived']);
 export const userRoleEnum = pgEnum('user_role', ['admin', 'member']);
+export const memberRoleEnum = pgEnum('member_role', ['owner', 'editor', 'viewer']);
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -46,6 +47,16 @@ export const projects = pgTable('projects', {
   aboutMd: text('about_md').notNull().default(''),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+export const memberships = pgTable(
+  'memberships',
+  {
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+    role: memberRoleEnum('role').notNull().default('editor'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.projectId] })],
+);
 export const features = pgTable('features', {
   id: uuid('id').defaultRandom().primaryKey(),
   projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),

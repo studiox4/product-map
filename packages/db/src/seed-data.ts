@@ -27,6 +27,7 @@ import {
   objectives,
   plans,
   planEntries,
+  memberships,
   type Db,
 } from './index';
 import { eq } from 'drizzle-orm';
@@ -88,6 +89,16 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
         'ProductMap is a self-hosted product planning workspace: a now-next-later board, a draggable Gantt roadmap, and a rich markdown document editor with AI drafting — all backed by your own Postgres, so nothing leaves your network.',
     })
     .returning();
+
+  // Memberships: every seeded user gets a membership in the seeded project.
+  // The admin (corban, email admin@productmap.local) is 'owner'; everyone else is 'editor'.
+  await db.insert(memberships).values(
+    [corban, priya, marcus, elena].map((u) => ({
+      userId: u.id,
+      projectId: project.id,
+      role: u.email === 'admin@productmap.local' ? ('owner' as const) : ('editor' as const),
+    })),
+  );
 
   const featureRows = await db
     .insert(features)
