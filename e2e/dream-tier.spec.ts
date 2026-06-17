@@ -279,7 +279,10 @@ test('AC6: ship v0.2 via the status select — milestone turns sage', async ({
   await expect(status).toContainText('Shipped');
 
   // Milestone diamond on the gantt is sage (shipped).
-  const releases = (await (await request.get('/api/releases')).json()) as {
+  // Releases are project-scoped now (Phase 2b-2): resolve the active project first.
+  const projects = (await (await request.get('/api/projects')).json()) as { id: string }[];
+  const projectId = projects[0]!.id;
+  const releases = (await (await request.get(`/api/projects/${projectId}/releases`)).json()) as {
     id: string;
     status: string;
   }[];
