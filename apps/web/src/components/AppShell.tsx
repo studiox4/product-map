@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { ChevronDown, Lightbulb, Map, Search, Settings, Sparkles } from 'lucide-react';
+import { ChevronDown, Lightbulb, Search, Settings, Sparkles } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Toaster } from '@/components/ui/sonner';
 import ThemeToggle from '@/components/ThemeToggle';
+import { BrandMark } from '@/components/BrandMark';
 import CommandPalette from '@/components/command/CommandPalette';
 import ShortcutsOverlay from '@/components/command/ShortcutsOverlay';
 import CopilotPanel from '@/components/copilot/CopilotPanel';
@@ -17,21 +18,22 @@ import { useGlobalShortcuts } from '@/components/command/useGlobalShortcuts';
 import { useTrackRecents } from '@/components/command/recents';
 import { useAiStatus } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { appRoutes } from '@/lib/routes';
 
 const NAV_LINKS: { to: string; label: string; end: boolean; icon?: typeof Lightbulb }[] = [
-  { to: '/', label: 'Overview', end: true },
-  { to: '/inbox', label: 'Inbox', end: false, icon: Lightbulb },
+  { to: appRoutes.dashboard, label: 'Overview', end: true },
+  { to: appRoutes.inbox, label: 'Inbox', end: false, icon: Lightbulb },
 ];
 
 /** Planning surfaces grouped under one "Plan" pill to keep the nav calm. */
 const PLAN_LINKS: { to: string; label: string }[] = [
-  { to: '/board', label: 'Board' },
-  { to: '/roadmap', label: 'Roadmap' },
-  { to: '/releases', label: 'Releases' },
-  { to: '/outcomes', label: 'Outcomes' },
+  { to: appRoutes.board, label: 'Board' },
+  { to: appRoutes.roadmap, label: 'Roadmap' },
+  { to: appRoutes.releases, label: 'Releases' },
+  { to: appRoutes.outcomes, label: 'Outcomes' },
 ];
 
-const DOCS_LINK = { to: '/docs', label: 'Docs', end: true };
+const DOCS_LINK = { to: appRoutes.docs, label: 'Docs', end: true };
 
 const isMac =
   typeof navigator !== 'undefined' && /Mac|iP(hone|ad|od)/.test(navigator.platform);
@@ -64,10 +66,10 @@ export function AppShell() {
       <header className="bg-transparent">
         <nav className="mx-auto flex h-16 max-w-screen-xl items-center gap-6 px-6">
           <Link
-            to="/"
+            to={appRoutes.dashboard}
             className="flex items-center gap-2 rounded-full font-display text-lg font-bold tracking-tight text-ink outline-none transition-opacity duration-150 ease-out hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <Map className="h-4 w-4 text-action" aria-hidden />
+            <BrandMark className="h-5 w-5" />
             ProductMap
           </Link>
           <ProjectSwitcher />
@@ -138,7 +140,7 @@ export function AppShell() {
             ) : null}
             <ThemeToggle />
             <NavLink
-              to="/settings"
+              to={appRoutes.settings}
               aria-label="Settings"
               title="Settings"
               className={({ isActive }) =>
