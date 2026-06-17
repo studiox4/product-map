@@ -89,7 +89,7 @@ const server = setupServer(
     HttpResponse.json([{ id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'owner' }]),
   ),
   http.get(`/api/projects/${TEST_PROJECT_ID}/objectives`, () => HttpResponse.json(objectives)),
-  http.get('/api/releases', () =>
+  http.get(`/api/projects/${TEST_PROJECT_ID}/releases`, () =>
     HttpResponse.json(releases.map((r) => ({ ...r, featureCount: 0 }))),
   ),
   http.patch('/api/features/f1', async ({ request }) => {

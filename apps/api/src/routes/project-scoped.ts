@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { requireMembership, type MembershipEnv } from '../middleware/membership';
 import { objectivesRoutes } from './objectives';
+import { releasesRoutes } from './releases';
 
 /**
  * Content routes scoped to /api/projects/:projectId. One method-based gate:
@@ -12,4 +13,5 @@ export const projectScopedContent = new Hono<MembershipEnv>()
     const min = c.req.method === 'GET' ? 'viewer' : 'editor';
     return requireMembership(min)(c as never, next);
   })
-  .route('/objectives', objectivesRoutes);
+  .route('/objectives', objectivesRoutes)
+  .route('/releases', releasesRoutes);
