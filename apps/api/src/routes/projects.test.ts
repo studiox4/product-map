@@ -113,3 +113,35 @@ describe('project CRUD', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('project members', () => {
+  it('owner lists, adds, changes role, and removes members', async () => {
+    const owner = await createTestUser({ role: 'member' }); const p = await createTestProject();
+    await addMembership(owner.id, p.id, 'owner');
+    const target = await createTestUser({ role: 'member', email: 't@x.co' });
+    const h = await auth(owner);
+    const add = await app.request(`/api/projects/${p.id}/members`, json('POST', { userId: target.id, role: 'editor' }, h));
+    expect(add.status).toBe(201);
+    const list = await app.request(`/api/projects/${p.id}/members`, { headers: h });
+    expect((await list.json()).length).toBe(2);
+    const patch = await app.request(`/api/projects/${p.id}/members/${target.id}`, json('PATCH', { role: 'viewer' }, h));
+    expect(patch.status).toBe(200);
+    const del = await app.request(`/api/projects/${p.id}/members/${target.id}`, { method: 'DELETE', headers: h });
+    expect(del.status).toBe(204);
+  });
+  it('cannot demote or remove the last owner', async () => {
+    const owner = await createTestUser({ role: 'member' }); const p = await createTestProject();
+    await addMembership(owner.id, p.id, 'owner');
+    const h = await auth(owner);
+    const demote = await app.request(`/api/projects/${p.id}/members/${owner.id}`, json('PATCH', { role: 'editor' }, h));
+    expect(demote.status).toBe(409);
+    const remove = await app.request(`/api/projects/${p.id}/members/${owner.id}`, { method: 'DELETE', headers: h });
+    expect(remove.status).toBe(409);
+  });
+  it('editor cannot manage members (403)', async () => {
+    const u = await createTestUser({ role: 'member' }); const p = await createTestProject();
+    await addMembership(u.id, p.id, 'editor');
+    const res = await app.request(`/api/projects/${p.id}/members`, json('POST', { email: 'z@x.co', role: 'viewer' }, await auth(u)));
+    expect(res.status).toBe(403);
+  });
+});
