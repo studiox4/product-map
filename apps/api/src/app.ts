@@ -11,7 +11,7 @@ import { templatesRoutes } from './routes/templates';
 import { adminRoutes } from './routes/admin';
 // Dream-tier route modules (mounted as stubs by the foundation agent; each
 // feature agent fills in its own file — nobody else edits app.ts).
-import { shareRoutes } from './routes/share';
+import { publicShareRoutes } from './routes/share';
 import { projectScopedContent } from './routes/project-scoped';
 
 export const app = new Hono()
@@ -48,7 +48,10 @@ export const app = new Hono()
   // --- Dream tier mounts (paths inside each module are relative to these) ---
   // decisions migrated to /api/projects/:projectId/ (project-scoped.ts)
   // copilotRoutes migrated to /api/projects/:projectId/ (project-scoped.ts)
-  .route('/api/share', shareRoutes);
+  // publicShareRoutes: GET /:token/data is public (allowlist: GET /api/share/*);
+  // DELETE /:token is NOT in the public allowlist — requireAuth runs for it via the
+  // /api/* middleware, then the handler enforces membership on tokenRow.projectId.
+  .route('/api/share', publicShareRoutes);
 
 app.notFound((c) => c.json({ error: 'not_found' }, 404));
 

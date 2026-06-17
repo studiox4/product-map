@@ -975,11 +975,13 @@ export function apiErrorMessage(err: unknown, fallback: string): string {
 
 type ShareData = import('@productmap/shared').ShareData;
 
-/** POST /api/share/roadmap → { url: "/share/:token" }. */
+/** POST /api/projects/:projectId/share/roadmap → { url: "/share/:token" }.
+ * Nested under the project — editor-gated by the method gate. */
 export function useCreateShare() {
+  const pid = useProjectId();
   return useMutation({
     mutationFn: () =>
-      fetchJson<{ url: string }>('/api/share/roadmap', { method: 'POST' }),
+      fetchJson<{ url: string }>(apiPath(pid, 'share', 'roadmap'), { method: 'POST' }),
   });
 }
 
