@@ -12,6 +12,7 @@ import {
   useUpdateDocument,
 } from '@/lib/api';
 import { useProjectId } from '@/lib/project';
+import { appRoutes } from '@/lib/routes';
 import { docBackLink } from './doc-back-link';
 import { DocTypeChip } from '@/components/DocTypeChip';
 import { Button } from '@/components/ui/button';
@@ -214,7 +215,7 @@ export default function DocPage() {
         wordCount={liveWordCount}
         cover={doc.cover ?? null}
         onCoverChange={handleCoverChange}
-        readerHref={`/docs/${doc.id}/read`}
+        readerHref={appRoutes.docRead(doc.id)}
         onAiReview={
           aiStatus.data?.enabled ? () => setReviewOpen(true) : undefined
         }

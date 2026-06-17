@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { ArrowLeft, Printer } from 'lucide-react';
 import { useDocument } from '@/lib/api';
+import { appRoutes } from '@/lib/routes';
 import { DocTypeChip } from '@/components/DocTypeChip';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -77,7 +78,7 @@ export default function ReaderView() {
 
       <header className="mx-auto flex w-full max-w-[760px] items-center justify-between px-6 pt-6 print:hidden">
         <Link
-          to={`/docs/${doc.id}`}
+          to={appRoutes.doc(doc.id)}
           className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm text-muted-ink transition-colors duration-150 ease-out hover:bg-secondary hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
