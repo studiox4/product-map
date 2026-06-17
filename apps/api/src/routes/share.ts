@@ -38,7 +38,7 @@ export const shareRoutes = new Hono()
       .where(and(eq(shareTokens.token, c.req.param('token')), isNull(shareTokens.revokedAt)));
     if (!tokenRow) return c.json({ error: 'not_found' }, 404);
 
-    const [project] = await db.select().from(projects).limit(1);
+    const [project] = await db.select().from(projects).where(eq(projects.id, tokenRow.projectId));
     if (!project) return c.json({ error: 'not_found' }, 404);
 
     const featureRows = await db

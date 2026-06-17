@@ -4,7 +4,8 @@
  *  grows multi-project support and accepts projectId in the request body.
  *
  *  REMOVE in Phase 2b: routes become /api/projects/:projectId/... and derive the
- *  project from the URL via requireMembership — no default-project resolution.
+ *  project from the URL via a membership-check middleware (introduced in Phase 2b) —
+ *  no default-project resolution.
  */
 import { asc } from 'drizzle-orm';
 import { projects } from '@productmap/db';

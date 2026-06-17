@@ -12,6 +12,7 @@ import {
   primaryKey,
   check,
   boolean,
+  index,
   uniqueIndex,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
@@ -75,7 +76,7 @@ export const features = pgTable('features', {
   updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [index('features_project_id_idx').on(t.projectId)]);
 export const documents = pgTable(
   'documents',
   {
@@ -104,6 +105,7 @@ export const documents = pgTable(
       'documents_owner_check',
       sql`CASE WHEN ${t.type}::text = 'release_notes' THEN ${t.featureId} IS NULL AND ${t.ideaId} IS NULL ELSE ${t.featureId} IS NOT NULL OR ${t.ideaId} IS NOT NULL END`,
     ),
+    index('documents_project_id_idx').on(t.projectId),
   ],
 );
 export const featureCollaborators = pgTable(
@@ -187,7 +189,7 @@ export const ideas = pgTable('ideas', {
   createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [index('ideas_project_id_idx').on(t.projectId)]);
 export const ideaVotes = pgTable(
   'idea_votes',
   {
@@ -223,7 +225,7 @@ export const decisions = pgTable('decisions', {
   decidedBy: uuid('decided_by').references(() => users.id, { onDelete: 'set null' }),
   decidedAt: timestamp('decided_at', { withTimezone: true }).notNull().defaultNow(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [index('decisions_project_id_idx').on(t.projectId)]);
 export const featureDependencies = pgTable(
   'feature_dependencies',
   {
@@ -244,7 +246,7 @@ export const releases = pgTable('releases', {
   notesDocId: uuid('notes_doc_id').references(() => documents.id, { onDelete: 'set null' }),
   shippedAt: timestamp('shipped_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [index('releases_project_id_idx').on(t.projectId)]);
 export const objectives = pgTable('objectives', {
   id: uuid('id').defaultRandom().primaryKey(),
   projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
@@ -257,7 +259,7 @@ export const objectives = pgTable('objectives', {
   ownerId: uuid('owner_id').references(() => users.id, { onDelete: 'set null' }),
   quarter: text('quarter').notNull().default(''),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [index('objectives_project_id_idx').on(t.projectId)]);
 export const plans = pgTable('plans', {
   id: uuid('id').defaultRandom().primaryKey(),
   projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
@@ -267,7 +269,7 @@ export const plans = pgTable('plans', {
   appliedAt: timestamp('applied_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [index('plans_project_id_idx').on(t.projectId)]);
 export const planEntries = pgTable(
   'plan_entries',
   {
@@ -286,7 +288,7 @@ export const shareTokens = pgTable('share_tokens', {
   kind: text('kind').notNull().default('roadmap'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
-});
+}, (t) => [index('share_tokens_project_id_idx').on(t.projectId)]);
 export const uploads = pgTable('uploads', {
   id: uuid('id').defaultRandom().primaryKey(),
   documentId: uuid('document_id').references(() => documents.id, { onDelete: 'set null' }),

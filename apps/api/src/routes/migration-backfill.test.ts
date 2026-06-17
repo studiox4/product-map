@@ -27,21 +27,40 @@ it('backfills orphan rows to the sole project and memberships to all users (admi
   expect(mem.find((m) => m.userId === member.id)?.role).toBe('editor');
 });
 
-it('row backfill SQL correctly sets project_id where null (tested via raw SQL in a temp table)', async () => {
+it('row backfill UPDATE sets project_id where null', async () => {
   const [p] = await db.insert(projects).values({ name: 'SoleProject' }).returning();
 
-  // We can't insert NULL into a NOT-NULL column directly, but we can verify that the
-  // UPDATE ... WHERE project_id IS NULL statement syntax is correct by running it on
-  // a table that genuinely has such rows inserted via a deferred-constraint transaction.
-  // For the committed test we verify that the UPDATE is a no-op when no NULLs exist:
-  // all ideas already have project_id set, so the count of updated rows is 0.
-  await db.insert(ideas).values({ title: 'Already scoped', projectId: p.id });
-  const result = await db.execute(sql`UPDATE ideas SET project_id = ${p.id} WHERE project_id IS NULL`);
-  // rowCount should be 0 since no orphans exist (all rows already have project_id)
-  expect((result as unknown as { rowCount: number }).rowCount).toBe(0);
+  // Drop NOT NULL so we can insert a genuinely NULL project_id row, simulating
+  // the pre-migration state that the backfill UPDATE must handle.
+  await db.execute(sql`ALTER TABLE ideas ALTER COLUMN project_id DROP NOT NULL`);
+  try {
+    // Insert an orphan row with project_id = NULL.
+    // db.execute returns a pg QueryResult; rows are at .rows.
+    const insertResult = await db.execute(
+      sql`INSERT INTO ideas (title, body_md, source) VALUES ('Orphan idea', '', '') RETURNING id`,
+    ) as unknown as { rows: Array<{ id: string }> };
+    const orphanId = insertResult.rows[0].id;
 
-  // Verify the same for releases
-  await db.insert(releases).values({ name: 'v1.0', projectId: p.id });
-  const rResult = await db.execute(sql`UPDATE releases SET project_id = ${p.id} WHERE project_id IS NULL`);
-  expect((rResult as unknown as { rowCount: number }).rowCount).toBe(0);
+    // Confirm it truly has a NULL project_id.
+    const beforeResult = await db.execute(
+      sql`SELECT project_id FROM ideas WHERE id = ${orphanId}`,
+    ) as unknown as { rows: Array<{ project_id: string | null }> };
+    expect(beforeResult.rows[0].project_id).toBeNull();
+
+    // Run the backfill UPDATE (mirrors the migration SQL).
+    const result = await db.execute(
+      sql`UPDATE ideas SET project_id = ${p.id} WHERE project_id IS NULL`,
+    );
+    expect((result as unknown as { rowCount: number }).rowCount).toBe(1);
+
+    // The row should now carry the project id.
+    const afterResult = await db.execute(
+      sql`SELECT project_id FROM ideas WHERE id = ${orphanId}`,
+    ) as unknown as { rows: Array<{ project_id: string }> };
+    expect(afterResult.rows[0].project_id).toBe(p.id);
+  } finally {
+    // Clean up any remaining NULL rows and restore NOT NULL to avoid poisoning the shared test DB.
+    await db.execute(sql`DELETE FROM ideas WHERE project_id IS NULL`);
+    await db.execute(sql`ALTER TABLE ideas ALTER COLUMN project_id SET NOT NULL`);
+  }
 });

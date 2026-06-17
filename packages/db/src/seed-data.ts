@@ -91,7 +91,7 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
     .returning();
 
   // Memberships: every seeded user gets a membership in the seeded project.
-  // The admin (corban, email admin@productmap.local) is 'owner'; everyone else is 'editor'.
+  // Owner is identified by email === 'admin@productmap.local' (Corban); all others get 'editor'.
   await db.insert(memberships).values(
     [corban, priya, marcus, elena].map((u) => ({
       userId: u.id,

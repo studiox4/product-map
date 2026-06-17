@@ -6,7 +6,6 @@ import { documentCreate, documentUpdate } from '@productmap/shared';
 import { documents, features, ideas, releases, templates } from '@productmap/db';
 import type { Context } from 'hono';
 import { db } from '../db';
-import { getDefaultProjectId } from '../lib/project';
 import { tiptapToMarkdown } from '../lib/markdown';
 import { type CurrentUserEnv } from '../middleware/current-user';
 import { recordActivity, addCollaborator } from '../lib/activity';

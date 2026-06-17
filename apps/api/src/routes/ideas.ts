@@ -9,7 +9,7 @@ import {
   ideaPromote,
   type VoteSummary,
 } from '@productmap/shared';
-import { activity, documents, features, ideas, ideaVotes, projects, templates, users } from '@productmap/db';
+import { activity, documents, features, ideas, ideaVotes, templates, users } from '@productmap/db';
 import { db } from '../db';
 import { getDefaultProjectId } from '../lib/project';
 import { type CurrentUserEnv } from '../middleware/current-user';
@@ -324,14 +324,12 @@ export const ideasRoutes = new Hono<CurrentUserEnv>()
       const [idea] = await db.select().from(ideas).where(eq(ideas.id, id));
       if (!idea) return c.json({ error: 'not_found' }, 404);
       if (idea.status === 'promoted') return c.json({ error: 'already_promoted' }, 400);
-      const [project] = await db.select({ id: projects.id }).from(projects).limit(1);
-      if (!project) return c.json({ error: 'not_found' }, 404);
 
       const feature = await db.transaction(async (tx) => {
         const [row] = await tx
           .insert(features)
           .values({
-            projectId: project.id,
+            projectId: idea.projectId,
             title: idea.title,
             horizon,
             descriptionMd: idea.bodyMd,

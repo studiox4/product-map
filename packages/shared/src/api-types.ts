@@ -6,7 +6,7 @@ import type {
 
 export interface Project { id: string; name: string; vision: string; aboutMd: string; }
 export type MemberRole = 'owner' | 'editor' | 'viewer';
-export interface Membership { userId: string; projectId: string; role: MemberRole; }
+export interface Membership { userId: string; projectId: string; role: MemberRole; createdAt: string; }
 export interface User { id: string; name: string; color: string; role: 'admin' | 'member'; createdAt?: string; }
 export type VoteValue = 1 | -1;
 export interface VoteSummary { score: number; boosts: number; cools: number; myVote: VoteValue | 0; }

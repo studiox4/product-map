@@ -87,11 +87,10 @@ async function ensureNotesDoc(
   }
   // release_notes docs are owned via releases.notes_doc_id: feature_id and
   // idea_id both stay NULL (documents_owner_check).
-  const projectId = await getDefaultProjectId();
   const [doc] = await db
     .insert(documents)
     .values({
-      projectId,
+      projectId: release.projectId,
       type: 'release_notes',
       title: release.name,
       contentJson,
