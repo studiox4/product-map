@@ -71,6 +71,13 @@
       "when": 1781664123126,
       "tag": "0009_polite_santa_claus",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1781664313664,
+      "tag": "0010_condemned_orphan",
+      "breakpoints": true
     }
   ]
 }
