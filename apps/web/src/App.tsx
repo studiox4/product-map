@@ -6,7 +6,7 @@ import Landing from '@/routes/Landing';
 import Login from '@/routes/Login';
 import Register from '@/routes/Register';
 import { AuthProvider, RequireAuth } from '@/lib/auth';
-import { ProjectProvider } from '@/lib/project';
+import { ActiveProjectProvider, ProjectProvider, useActiveProject } from '@/lib/project';
 import { Skeleton } from '@/components/ui/skeleton';
 
 // Lazy routes owned by parallel tasks (3B-D); stubs render "coming soon" until they land.
@@ -25,6 +25,8 @@ const TemplatesTab = lazy(() => import('@/components/settings/TemplatesTab'));
 const UsersTab = lazy(() => import('@/components/settings/UsersTab'));
 const TemplateEditorPage = lazy(() => import('@/routes/TemplateEditor'));
 const SharePage = lazy(() => import('@/routes/SharePage'));
+// First-run gate — shown by AuthedShell when the caller has no memberships.
+const FirstRunPage = lazy(() => import('@/routes/FirstRun'));
 // Releases + Outcomes (Dream tier D7/D9 — releases+outcomes agent route lines).
 const ReleasesPage = lazy(() => import('@/routes/Releases'));
 const ReleaseDetailPage = lazy(() => import('@/components/releases/ReleaseDetail'));
@@ -49,6 +51,25 @@ function RouteFallback() {
   );
 }
 
+/**
+ * Authed area shell. Reads the active-project context (provided by the route
+ * wrapper) and gates on first-run: while the project list loads, render
+ * nothing; with no projects, render the FirstRun create gate; otherwise the
+ * full AppShell.
+ */
+function AuthedShell() {
+  const { projects, isLoading } = useActiveProject();
+  if (isLoading) return null;
+  if (projects.length === 0) {
+    return (
+      <Suspense fallback={<RouteFallback />}>
+        <FirstRunPage />
+      </Suspense>
+    );
+  }
+  return <AppShell />;
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -58,7 +79,7 @@ export default function App() {
             {/* Public routes — no auth required. */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route element={<RequireAuth><ProjectProvider><AppShell /></ProjectProvider></RequireAuth>}>
+            <Route element={<RequireAuth><ActiveProjectProvider><AuthedShell /></ActiveProjectProvider></RequireAuth>}>
               <Route path="/" element={<Landing />} />
             {/* Idea Inbox (inbox agent route line). */}
             <Route

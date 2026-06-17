@@ -12,6 +12,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import CommandPalette from '@/components/command/CommandPalette';
 import ShortcutsOverlay from '@/components/command/ShortcutsOverlay';
 import CopilotPanel from '@/components/copilot/CopilotPanel';
+import ProjectSwitcher from '@/components/ProjectSwitcher';
 import { useGlobalShortcuts } from '@/components/command/useGlobalShortcuts';
 import { useTrackRecents } from '@/components/command/recents';
 import { useAiStatus } from '@/lib/api';
@@ -69,6 +70,7 @@ export function AppShell() {
             <Map className="h-4 w-4 text-action" aria-hidden />
             ProductMap
           </Link>
+          <ProjectSwitcher />
           <div className="flex items-center gap-1.5">
             {NAV_LINKS.map((link) => (
               <NavLink
