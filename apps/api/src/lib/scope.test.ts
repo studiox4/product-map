@@ -98,4 +98,11 @@ describe('loadScopedComment', () => {
     // comment belongs to project B — scoping to project A must reject
     await expect(loadScopedComment(comment.id, a.id)).rejects.toMatchObject({ status: 404 });
   });
+
+  // The `else throw new ScopeError()` branch in loadScopedComment (orphan comment:
+  // featureId AND documentId both null) is unreachable at runtime because the DB
+  // enforces `comments_target_check`: (featureId IS NULL) <> (documentId IS NULL),
+  // i.e. XOR — exactly one must be non-null. Inserting a comment with both null
+  // violates the check constraint, so the branch can never execute via normal SQL.
+  // No test is written for it; the comment above documents why it is safe to skip.
 });

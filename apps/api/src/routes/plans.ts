@@ -244,7 +244,7 @@ export const plansRoutes = new Hono<MembershipEnv>()
       await tx
         .update(plans)
         .set({ status: 'archived', updatedAt: sql`now()` })
-        .where(and(eq(plans.status, 'applied'), ne(plans.id, id)));
+        .where(and(eq(plans.status, 'applied'), ne(plans.id, id), eq(plans.projectId, pid)));
       const [applied] = await tx
         .update(plans)
         .set({ status: 'applied', appliedAt: sql`now()`, updatedAt: sql`now()` })

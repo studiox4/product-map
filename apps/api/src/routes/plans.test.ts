@@ -527,4 +527,73 @@ describe('plans cross-project isolation', () => {
     });
     expect(res.status).toBe(404);
   });
+
+  it('viewer → 403 on POST /:id/apply', async () => {
+    await seedFeatures(projectId);
+    const plan = await (await createPlan()).json();
+
+    const viewer = await createTestUser({ role: 'member' });
+    await addMembership(viewer.id, projectId, 'viewer');
+    const viewerAuth = { cookie: await authCookie(viewer), origin: 'http://localhost', host: 'localhost' };
+
+    const res = await app.request(`/api/projects/${projectId}/plans/${plan.id}/apply`, {
+      method: 'POST',
+      headers: viewerAuth,
+    });
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe('forbidden');
+  });
+
+  it('viewer → 403 on PUT /:id/entries/:featureId', async () => {
+    const { alpha } = await seedFeatures(projectId);
+    const plan = await (await createPlan()).json();
+
+    const viewer = await createTestUser({ role: 'member' });
+    await addMembership(viewer.id, projectId, 'viewer');
+    const viewerAuth = { cookie: await authCookie(viewer), origin: 'http://localhost', host: 'localhost' };
+
+    const res = await app.request(`/api/projects/${projectId}/plans/${plan.id}/entries/${alpha.id}`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json', ...viewerAuth },
+      body: JSON.stringify({ horizon: 'now' }),
+    });
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe('forbidden');
+  });
+
+  it('non-member GET /api/projects/:projectId/plans → 404', async () => {
+    const nonMember = await createTestUser({ role: 'member' });
+    const nonMemberAuth = { cookie: await authCookie(nonMember), origin: 'http://localhost', host: 'localhost' };
+    const res = await app.request(`/api/projects/${projectId}/plans`, { headers: nonMemberAuth });
+    expect(res.status).toBe(404);
+  });
+
+  it('applying plan in A does NOT archive applied plan in B (cross-project archive isolation)', async () => {
+    // Project B with its own feature and applied plan
+    const projectB = await createTestProject('Project B');
+    const [bFeature] = await db
+      .insert(features)
+      .values({ projectId: projectB.id, title: 'B Feature', horizon: 'now' })
+      .returning();
+    const [bPlan] = await db
+      .insert(plans)
+      .values({ projectId: projectB.id, name: 'B Plan', status: 'applied' })
+      .returning();
+    await db.insert(planEntries).values({ planId: bPlan.id, featureId: bFeature.id, horizon: 'now' });
+
+    // Project A: seed, create a plan, and apply it
+    await seedFeatures(projectId);
+    const aRes = await createPlan('A Plan');
+    const aPlan = await aRes.json();
+
+    const applyRes = await app.request(`/api/projects/${projectId}/plans/${aPlan.id}/apply`, {
+      method: 'POST',
+      headers: auth,
+    });
+    expect(applyRes.status).toBe(200);
+
+    // B's plan must still be 'applied' — the archive query must be project-scoped
+    const [bPlanRow] = await db.select().from(plans).where(eq(plans.id, bPlan.id));
+    expect(bPlanRow.status).toBe('applied');
+  });
 });

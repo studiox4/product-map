@@ -631,4 +631,38 @@ describe('releases cross-project isolation', () => {
     const members = await db.select().from(features).where(eq(features.releaseId, releaseId));
     expect(members).toHaveLength(2);
   });
+
+  it('viewer → 403 on PUT /:id/features', async () => {
+    const viewer = await createTestUser({ role: 'member' });
+    await addMembership(viewer.id, projectId, 'viewer');
+    const viewerAuth = { cookie: await authCookie(viewer), origin: 'http://localhost', host: 'localhost' };
+
+    const res = await app.request(`/api/projects/${projectId}/releases/${releaseId}/features`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json', ...viewerAuth },
+      body: JSON.stringify({ featureIds: [] }),
+    });
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe('forbidden');
+  });
+
+  it('viewer → 403 on POST /:id/ship', async () => {
+    const viewer = await createTestUser({ role: 'member' });
+    await addMembership(viewer.id, projectId, 'viewer');
+    const viewerAuth = { cookie: await authCookie(viewer), origin: 'http://localhost', host: 'localhost' };
+
+    const res = await app.request(`/api/projects/${projectId}/releases/${releaseId}/ship`, {
+      method: 'POST',
+      headers: viewerAuth,
+    });
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe('forbidden');
+  });
+
+  it('non-member GET /api/projects/:projectId/releases → 404', async () => {
+    const nonMember = await createTestUser({ role: 'member' });
+    const nonMemberAuth = { cookie: await authCookie(nonMember), origin: 'http://localhost', host: 'localhost' };
+    const res = await app.request(`/api/projects/${projectId}/releases`, { headers: nonMemberAuth });
+    expect(res.status).toBe(404);
+  });
 });

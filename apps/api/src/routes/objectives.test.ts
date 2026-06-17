@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
+import { eq } from 'drizzle-orm';
 import { setupTestDb, truncateAll, closeTestDb, createTestUser, createTestProject, addMembership, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
@@ -234,5 +235,43 @@ describe('objectives cross-project isolation', () => {
     );
     expect(res.status).toBe(403);
     expect((await res.json()).error).toBe('forbidden');
+  });
+
+  it('member-of-A PATCH /api/projects/A/objectives/:objInB → 404 (path-id IDOR on PATCH)', async () => {
+    const projectB = await createTestProject('Project B');
+    const [objInB] = await db.insert(objectives).values({ projectId: projectB.id, title: 'B Objective' }).returning();
+
+    const memberA = await createTestUser({ role: 'member' });
+    await addMembership(memberA.id, projectId, 'editor');
+    const memberAAuth = { cookie: await authCookie(memberA), origin: 'http://localhost', host: 'localhost' };
+
+    const res = await app.request(`/api/projects/${projectId}/objectives/${objInB.id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json', ...memberAAuth },
+      body: JSON.stringify({ title: 'Mutated' }),
+    });
+    expect(res.status).toBe(404);
+    // The original row must be untouched
+    const [row] = await db.select().from(objectives).where(eq(objectives.id, objInB.id));
+    expect(row.title).toBe('B Objective');
+  });
+
+  it('member-of-A DELETE /api/projects/A/objectives/:objInB → 404 (path-id IDOR on DELETE)', async () => {
+    const projectB = await createTestProject('Project B');
+    const [objInB] = await db.insert(objectives).values({ projectId: projectB.id, title: 'B Objective' }).returning();
+
+    const memberA = await createTestUser({ role: 'member' });
+    await addMembership(memberA.id, projectId, 'editor');
+    const memberAAuth = { cookie: await authCookie(memberA), origin: 'http://localhost', host: 'localhost' };
+
+    const res = await app.request(`/api/projects/${projectId}/objectives/${objInB.id}`, {
+      method: 'DELETE',
+      headers: memberAAuth,
+    });
+    expect(res.status).toBe(404);
+    // The original row must still exist
+    const [row] = await db.select().from(objectives).where(eq(objectives.id, objInB.id));
+    expect(row).toBeDefined();
+    expect(row.title).toBe('B Objective');
   });
 });

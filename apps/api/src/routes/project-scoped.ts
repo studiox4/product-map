@@ -11,7 +11,7 @@ import { plansRoutes } from './plans';
  */
 export const projectScopedContent = new Hono<MembershipEnv>()
   .use('*', async (c, next) => {
-    const min = c.req.method === 'GET' ? 'viewer' : 'editor';
+    const min = ['GET', 'HEAD'].includes(c.req.method) ? 'viewer' : 'editor';
     return requireMembership(min)(c as never, next);
   })
   .route('/objectives', objectivesRoutes)

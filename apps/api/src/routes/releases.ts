@@ -14,11 +14,15 @@ const EMPTY_DOC = { type: 'doc', content: [] };
 
 type ReleaseRow = typeof releases.$inferSelect;
 
-async function releaseFeatures(releaseId: string) {
+async function releaseFeatures(releaseId: string, projectId?: string) {
   return db
     .select()
     .from(features)
-    .where(eq(features.releaseId, releaseId))
+    .where(
+      projectId
+        ? and(eq(features.releaseId, releaseId), eq(features.projectId, projectId))
+        : eq(features.releaseId, releaseId),
+    )
     .orderBy(asc(features.sortOrder), asc(features.createdAt));
 }
 
@@ -47,7 +51,7 @@ async function updateRelease(
   if (Object.keys(set).length === 0) return prev;
   const [row] = await db.update(releases).set(set).where(eq(releases.id, id)).returning();
   if (statusChanged) {
-    for (const feature of await releaseFeatures(id)) {
+    for (const feature of await releaseFeatures(id, prev.projectId)) {
       await recordActivity(feature.id, userId, 'release_status_changed', {
         releaseId: row.id,
         releaseName: row.name,
@@ -156,7 +160,7 @@ export const releasesRoutes = new Hono<MembershipEnv>()
     const id = c.req.param('id');
     const pid = c.get('currentProjectId');
     const row = await loadScoped(releases, id, pid);
-    return c.json({ ...row, features: await releaseFeatures(id) });
+    return c.json({ ...row, features: await releaseFeatures(id, pid) });
   })
   .patch(
     '/:id',
@@ -212,7 +216,7 @@ export const releasesRoutes = new Hono<MembershipEnv>()
     const { doc } = await ensureNotesDoc(release, user?.id);
 
     const sections: string[] = [];
-    for (const feature of await releaseFeatures(id)) {
+    for (const feature of await releaseFeatures(id, pid)) {
       const lines: string[] = [`## ${feature.title}`];
       const finals = await db
         .select({ contentMd: documents.contentMd })
@@ -267,20 +271,20 @@ export const releasesRoutes = new Hono<MembershipEnv>()
         .set({ releaseId: null })
         .where(
           ids.length > 0
-            ? and(eq(features.releaseId, id), notInArray(features.id, ids))
-            : eq(features.releaseId, id),
+            ? and(eq(features.releaseId, id), notInArray(features.id, ids), eq(features.projectId, pid))
+            : and(eq(features.releaseId, id), eq(features.projectId, pid)),
         );
       if (ids.length > 0) {
         await db.update(features).set({ releaseId: id }).where(inArray(features.id, ids));
       }
-      return c.json({ ...release, features: await releaseFeatures(id) });
+      return c.json({ ...release, features: await releaseFeatures(id, pid) });
     },
   )
   .get('/:id/notes.md', async (c) => {
     const id = c.req.param('id');
     const pid = c.get('currentProjectId');
-    const release = await loadScoped(releases, id, pid);
-    const rows = await releaseFeatures(id);
+    const release = (await loadScoped(releases, id, pid)) as ReleaseRow;
+    const rows = await releaseFeatures(id, pid);
     const sections: string[] = [`# ${release.name}`];
     for (const feature of rows) {
       const lines: string[] = [`## ${feature.title}`];

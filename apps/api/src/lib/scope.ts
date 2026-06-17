@@ -7,7 +7,12 @@ import { db } from '../db';
 /** Thrown when a resource is missing OR belongs to another project. Carries 404 — never leak existence. */
 export class ScopeError extends HTTPException {
   constructor() {
-    super(404, { message: 'not_found' });
+    super(404, {
+      res: new Response(JSON.stringify({ error: 'not_found' }), {
+        status: 404,
+        headers: { 'content-type': 'application/json' },
+      }),
+    });
   }
 }
 
