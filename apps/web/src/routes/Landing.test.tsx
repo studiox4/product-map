@@ -94,8 +94,8 @@ const server = setupServer(
   http.get('/api/projects', () =>
     HttpResponse.json([{ id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'owner' }]),
   ),
-  http.get('/api/overview', () => HttpResponse.json(fixture)),
-  http.get('/api/activity', () => HttpResponse.json(activityFixture)),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/overview`, () => HttpResponse.json(fixture)),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/activity`, () => HttpResponse.json(activityFixture)),
   http.get('/api/ai/status', () => HttpResponse.json({ enabled: false })),
 );
 
@@ -207,7 +207,7 @@ describe('Landing', () => {
   });
 
   it('shows an error card with retry when overview fails', async () => {
-    server.use(http.get('/api/overview', () => HttpResponse.json({ error: 'internal' }, { status: 500 })));
+    server.use(http.get(`/api/projects/${TEST_PROJECT_ID}/overview`, () => HttpResponse.json({ error: 'internal' }, { status: 500 })));
     renderLanding();
     expect(await screen.findByText(/Couldn't load the overview/)).toBeTruthy();
     server.resetHandlers();

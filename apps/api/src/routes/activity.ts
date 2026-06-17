@@ -1,11 +1,13 @@
 import { Hono } from 'hono';
-import { asc, eq, gte } from 'drizzle-orm';
+import { and, asc, eq, gte } from 'drizzle-orm';
 import { activity, features, users } from '@productmap/db';
 import { db } from '../db';
+import type { MembershipEnv } from '../middleware/membership';
 
-// GET /api/activity?since=ISO → WorkspaceActivityItem[] — workspace-wide,
-// ascending (replay order), actor + feature joined, capped at 1000.
-export const activityRoutes = new Hono().get('/', async (c) => {
+// GET /api/projects/:projectId/activity?since=ISO → WorkspaceActivityItem[] —
+// project-scoped ascending (replay order), actor + feature joined, capped at 1000.
+export const activityRoutes = new Hono<MembershipEnv>().get('/', async (c) => {
+  const pid = c.get('currentProjectId');
   const since = c.req.query('since');
   let sinceDate: Date | undefined;
   if (since !== undefined) {
@@ -29,7 +31,7 @@ export const activityRoutes = new Hono().get('/', async (c) => {
     .from(activity)
     .innerJoin(users, eq(activity.actorId, users.id))
     .innerJoin(features, eq(activity.featureId, features.id))
-    .where(sinceDate ? gte(activity.createdAt, sinceDate) : undefined)
+    .where(and(eq(features.projectId, pid), sinceDate ? gte(activity.createdAt, sinceDate) : undefined))
     .orderBy(asc(activity.createdAt), asc(activity.id))
     .limit(1000);
   return c.json(rows);

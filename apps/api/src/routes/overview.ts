@@ -3,6 +3,7 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '../db';
 import { projects, features, documents, comments } from '@productmap/db';
 import { EMPTY_VOTE_SUMMARY, requestUserId, voteSummaries } from '../lib/votes';
+import type { MembershipEnv } from '../middleware/membership';
 import type {
   AttentionItem,
   DocumentMeta,
@@ -13,14 +14,15 @@ import type {
 
 const HORIZON_ORDER: Record<Horizon, number> = { now: 0, next: 1, later: 2 };
 
-export const overviewRoutes = new Hono().get('/', async (c) => {
-  const [project] = await db.select().from(projects).limit(1);
+export const overviewRoutes = new Hono<MembershipEnv>().get('/', async (c) => {
+  const pid = c.get('currentProjectId');
+  const [project] = await db.select().from(projects).where(eq(projects.id, pid));
   if (!project) return c.json({ error: 'not_found' }, 404);
 
   const featureRows = await db
     .select()
     .from(features)
-    .where(eq(features.projectId, project.id));
+    .where(eq(features.projectId, pid));
 
   featureRows.sort(
     (a, b) =>
@@ -44,7 +46,7 @@ export const overviewRoutes = new Hono().get('/', async (c) => {
     })
     .from(documents)
     .innerJoin(features, eq(documents.featureId, features.id))
-    .where(eq(features.projectId, project.id));
+    .where(eq(features.projectId, pid));
 
   const docsByFeature = new Map<string, DocumentMeta[]>();
   for (const d of docRows) {
@@ -102,12 +104,17 @@ export const overviewRoutes = new Hono().get('/', async (c) => {
   const attention: AttentionItem[] = [];
 
   // Unresolved root comments per feature, across the feature and its docs.
+  // Scoped to this project: feature comments directly, doc comments via document join.
   const featureIdOfComment = sql<string>`coalesce(${comments.featureId}, ${documents.featureId})`;
   const openCommentRows = await db
     .select({ featureId: featureIdOfComment, count: sql<number>`count(*)::int` })
     .from(comments)
     .leftJoin(documents, eq(comments.documentId, documents.id))
-    .where(and(isNull(comments.parentId), isNull(comments.resolvedAt)))
+    .where(and(
+      isNull(comments.parentId),
+      isNull(comments.resolvedAt),
+      sql`(${comments.featureId} = any(select id from features where project_id = ${pid}) or ${documents.featureId} = any(select id from features where project_id = ${pid}))`,
+    ))
     .groupBy(featureIdOfComment);
   const openByFeature = new Map(openCommentRows.map((r) => [r.featureId, r.count]));
   for (const f of featuresWithDocs) {

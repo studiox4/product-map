@@ -243,7 +243,7 @@ describe('Idea Inbox', () => {
         );
       }),
       http.get(`/api/projects/${TEST_PROJECT_ID}/features`, () => HttpResponse.json([])),
-      http.get('/api/overview', () => HttpResponse.json({})),
+      http.get(`/api/projects/${TEST_PROJECT_ID}/overview`, () => HttpResponse.json({})),
     );
     renderInbox();
     await screen.findAllByText('Bulk export to CSV');

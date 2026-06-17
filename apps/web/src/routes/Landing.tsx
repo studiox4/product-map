@@ -1,6 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { HORIZONS, type WorkspaceActivityItem } from '@productmap/shared';
-import { fetchJson, useOverview } from '@/lib/api';
+import { HORIZONS } from '@productmap/shared';
+import { useOverview, useWorkspaceActivity } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import VisionHeader from '@/components/landing/VisionHeader';
@@ -11,21 +10,6 @@ import VelocitySparkline from '@/components/landing/VelocitySparkline';
 import HorizonArc from '@/components/landing/HorizonArc';
 import PulseHeatmap from '@/components/landing/PulseHeatmap';
 import AiDigestCard from '@/components/landing/AiDigestCard';
-
-const ACTIVITY_WINDOW_DAYS = 12 * 7; // covers the heatmap (12 weeks) and sparkline (8 weeks)
-
-/** Workspace-wide activity for the landing viz layer (sparkline + pulse heatmap). */
-function useWorkspaceActivity() {
-  return useQuery({
-    queryKey: ['activity', 'workspace'] as const,
-    queryFn: () => {
-      const since = new Date(Date.now() - ACTIVITY_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-      return fetchJson<WorkspaceActivityItem[]>(
-        `/api/activity?since=${encodeURIComponent(since.toISOString())}`,
-      );
-    },
-  });
-}
 
 function LandingSkeleton() {
   return (

@@ -3,11 +3,8 @@ import { HTTPException } from 'hono/http-exception';
 import { authRoutes } from './routes/auth';
 import { requireAuth, requireAdmin } from './middleware/auth';
 import { isSameOrigin } from './lib/rate-limit';
-import { activityRoutes } from './routes/activity';
 import { projectsRoutes } from './routes/projects';
-import { documentsRoutes, exportRoutes } from './routes/documents';
 import { uploadsRoutes } from './routes/uploads';
-import { overviewRoutes } from './routes/overview';
 import { aiRoutes } from './routes/ai';
 import { usersRoutes } from './routes/users';
 import { templatesRoutes } from './routes/templates';
@@ -42,14 +39,12 @@ export const app = new Hono()
   })
   .use('/api/admin/*', requireAdmin)
   .route('/api/users', usersRoutes)
-  .route('/api/activity', activityRoutes)
   .route('/api/projects', projectsRoutes)
   // Content sub-app: registered AFTER mgmt so projectsRoutes /:projectId* get
   // first crack. A non-match falls through to this mount (Hono chain semantics).
   .route('/api/projects/:projectId', projectScopedContent)
   // documentsRoutes + exportRoutes → moved to /api/projects/:projectId/* in project-scoped.ts
   .route('/api/uploads', uploadsRoutes)
-  .route('/api/overview', overviewRoutes)
   .route('/api/ai', aiRoutes)
   .route('/api/templates', templatesRoutes)
   .route('/api/admin', adminRoutes)

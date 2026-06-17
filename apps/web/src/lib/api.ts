@@ -122,8 +122,7 @@ export async function fetchJson<T>(input: string, init?: RequestInit): Promise<T
 // ---- query keys ----
 
 export const queryKeys = {
-  /** pid-keyed. useOverview fetches the flat /api/overview route (not yet nested)
-   * but its cache key is pid-keyed so patchFeatureInCaches / applyVoteInCaches stay aligned. */
+  /** pid-keyed, nested path. */
   overview: (pid: string) => ['p', pid, 'overview'] as const,
   features: (pid: string) => ['p', pid, 'features'] as const,
   feature: (pid: string, id: string) => ['p', pid, 'features', id] as const,
@@ -131,6 +130,7 @@ export const queryKeys = {
   allDocuments: (pid: string) => ['p', pid, 'documents', 'all'] as const,
   users: ['users'] as const,
   activity: (pid: string, featureId: string) => ['p', pid, 'features', featureId, 'activity'] as const,
+  workspaceActivity: (pid: string) => ['p', pid, 'activity', 'workspace'] as const,
   aiStatus: ['ai', 'status'] as const,
 };
 
@@ -140,7 +140,7 @@ export function useOverview() {
   const pid = useProjectId();
   return useQuery({
     queryKey: queryKeys.overview(pid),
-    queryFn: () => fetchJson<OverviewResponse>('/api/overview'),
+    queryFn: () => fetchJson<OverviewResponse>(apiPath(pid, 'overview')),
   });
 }
 
@@ -673,13 +673,15 @@ export function useDeleteComment() {
 
 import type { WorkspaceActivityItem } from '@productmap/shared';
 
+/** @deprecated Use queryKeys.workspaceActivity(pid) — kept for legacy imports. */
 export const workspaceActivityKey = ['activity', 'workspace'] as const;
 
-/** Workspace-wide activity feed, ascending (replay order). Fetched lazily — pass enabled=false until History mode is on. */
+/** Project-scoped workspace activity feed, ascending (replay order). Fetched lazily — pass enabled=false until History mode is on. */
 export function useWorkspaceActivity(enabled = true) {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: workspaceActivityKey,
-    queryFn: () => fetchJson<WorkspaceActivityItem[]>('/api/activity'),
+    queryKey: queryKeys.workspaceActivity(pid),
+    queryFn: () => fetchJson<WorkspaceActivityItem[]>(apiPath(pid, 'activity')),
     enabled,
     staleTime: 30_000,
   });

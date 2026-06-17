@@ -45,7 +45,7 @@ const server = setupServer(
   http.get('/api/projects', () =>
     HttpResponse.json([{ id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'owner' }]),
   ),
-  http.get('/api/overview', () =>
+  http.get(`/api/projects/${TEST_PROJECT_ID}/overview`, () =>
     HttpResponse.json({ project: product, features: [], recentActivity: [] }),
   ),
   http.patch('/api/projects/:id', async ({ request, params }) => {
