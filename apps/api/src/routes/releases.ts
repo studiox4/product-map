@@ -275,7 +275,9 @@ export const releasesRoutes = new Hono<MembershipEnv>()
             : and(eq(features.releaseId, id), eq(features.projectId, pid)),
         );
       if (ids.length > 0) {
-        await db.update(features).set({ releaseId: id }).where(inArray(features.id, ids));
+        // ids are pre-validated to belong to pid above; the projectId predicate
+        // is belt-and-suspenders so the assignment can never cross projects.
+        await db.update(features).set({ releaseId: id }).where(and(inArray(features.id, ids), eq(features.projectId, pid)));
       }
       return c.json({ ...release, features: await releaseFeatures(id, pid) });
     },
