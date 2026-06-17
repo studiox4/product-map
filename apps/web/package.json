@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -p tsconfig.json && vite build",
-    "test": "vitest run"
+    "build": "tsc -p tsconfig.json && vite build && vite build --ssr src/entry-marketing.tsx --outDir dist/ssr --ssrManifest=false && node scripts/prerender.mjs",
+    "prerender": "node scripts/prerender.mjs",
+    "test": "vitest run --exclude 'scripts/**'"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
