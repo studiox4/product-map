@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { MIN_PASSWORD_LENGTH } from '@productmap/shared';
 import { useRegister, apiErrorMessage, ApiError } from '@/lib/api';
+import { safeNext } from '@/routes/Login';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +12,8 @@ export default function Register() {
   const register = useRegister();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const [params] = useSearchParams();
+  const next = safeNext(params.get('next'));
   const [form, setForm] = useState({ email: '', name: '', password: '' });
   const [error, setError] = useState('');
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [k]: e.target.value });
@@ -19,7 +22,7 @@ export default function Register() {
     e.preventDefault();
     setError('');
     register.mutate(form, {
-      onSuccess: async (user) => { qc.setQueryData(['me'], user); await qc.invalidateQueries(); navigate('/'); },
+      onSuccess: async (user) => { qc.setQueryData(['me'], user); await qc.invalidateQueries(); navigate(next); },
       onError: (err) => setError(
         err instanceof ApiError && err.status === 403
           ? 'Registration is disabled — ask an admin for an invite.'

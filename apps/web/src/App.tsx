@@ -2,11 +2,12 @@ import { Suspense, lazy } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AppShell from '@/components/AppShell';
+import { NewProjectDialog } from '@/components/NewProjectDialog';
 import Landing from '@/routes/Landing';
 import Login from '@/routes/Login';
 import Register from '@/routes/Register';
 import { AuthProvider, RequireAuth } from '@/lib/auth';
-import { ProjectProvider } from '@/lib/project';
+import { ActiveProjectProvider, ProjectProvider, useActiveProject } from '@/lib/project';
 import { Skeleton } from '@/components/ui/skeleton';
 
 // Lazy routes owned by parallel tasks (3B-D); stubs render "coming soon" until they land.
@@ -23,8 +24,13 @@ const WorkspaceTab = lazy(() => import('@/components/settings/WorkspaceTab'));
 const ProfileTab = lazy(() => import('@/components/settings/ProfileTab'));
 const TemplatesTab = lazy(() => import('@/components/settings/TemplatesTab'));
 const UsersTab = lazy(() => import('@/components/settings/UsersTab'));
+const ProjectTab = lazy(() => import('@/components/settings/ProjectTab'));
 const TemplateEditorPage = lazy(() => import('@/routes/TemplateEditor'));
 const SharePage = lazy(() => import('@/routes/SharePage'));
+// Accept-invite page — sibling of /share/:token; does its own auth check + redirect.
+const AcceptInvitePage = lazy(() => import('@/routes/AcceptInvite'));
+// First-run gate — shown by AuthedShell when the caller has no memberships.
+const FirstRunPage = lazy(() => import('@/routes/FirstRun'));
 // Releases + Outcomes (Dream tier D7/D9 — releases+outcomes agent route lines).
 const ReleasesPage = lazy(() => import('@/routes/Releases'));
 const ReleaseDetailPage = lazy(() => import('@/components/releases/ReleaseDetail'));
@@ -49,6 +55,32 @@ function RouteFallback() {
   );
 }
 
+/**
+ * Authed area shell. Reads the active-project context (provided by the route
+ * wrapper) and gates on first-run: while the project list loads, render
+ * nothing; with no projects, render the FirstRun create gate; otherwise the
+ * full AppShell.
+ */
+function AuthedShell() {
+  const { projects, isLoading } = useActiveProject();
+  if (isLoading) return null;
+  if (projects.length === 0) {
+    return (
+      <Suspense fallback={<RouteFallback />}>
+        <FirstRunPage />
+      </Suspense>
+    );
+  }
+  return (
+    <>
+      <AppShell />
+      {/* "New project…" (switcher) → ?new=1 opens this dialog for callers who
+          already have projects; zero-project users get FirstRun above. */}
+      <NewProjectDialog />
+    </>
+  );
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -58,7 +90,7 @@ export default function App() {
             {/* Public routes — no auth required. */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route element={<RequireAuth><ProjectProvider><AppShell /></ProjectProvider></RequireAuth>}>
+            <Route element={<RequireAuth><ActiveProjectProvider><AuthedShell /></ActiveProjectProvider></RequireAuth>}>
               <Route path="/" element={<Landing />} />
             {/* Idea Inbox (inbox agent route line). */}
             <Route
@@ -147,6 +179,7 @@ export default function App() {
               <Route path="templates" element={<TemplatesTab />} />
               <Route path="workspace" element={<WorkspaceTab />} />
               <Route path="profile" element={<ProfileTab />} />
+              <Route path="project" element={<ProjectTab />} />
               <Route path="users" element={<UsersTab />} />
               {/* Unknown tabs fall back to Templates. */}
               <Route path="*" element={<Navigate to="/settings/templates" replace />} />
@@ -167,6 +200,16 @@ export default function App() {
             element={
               <Suspense fallback={<RouteFallback />}>
                 <SharePage />
+              </Suspense>
+            }
+          />
+          {/* Accept-invite — sibling of /share/:token, outside the active-project
+              gate; the page handles its own auth check + login redirect. */}
+          <Route
+            path="/invite/:token"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <AcceptInvitePage />
               </Suspense>
             }
           />

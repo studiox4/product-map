@@ -313,4 +313,60 @@ describe('Board', () => {
     await waitFor(() => expect(posted).not.toBeNull());
     expect(posted).toMatchObject({ title: 'Demo Feature X', horizon: 'later' });
   });
+
+  it('role-aware: editor sees "Add feature" in every column', async () => {
+    server.use(
+      http.get('/api/projects', () =>
+        HttpResponse.json([
+          { id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'editor' },
+        ]),
+      ),
+    );
+    renderBoard();
+    await screen.findByText('Rich markdown editor');
+    expect(screen.getAllByRole('button', { name: /add feature/i }).length).toBe(3);
+  });
+
+  it('role-aware: viewer sees no "Add feature" control', async () => {
+    server.use(
+      http.get('/api/projects', () =>
+        HttpResponse.json([
+          { id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'viewer' },
+        ]),
+      ),
+    );
+    renderBoard();
+    await screen.findByText('Rich markdown editor');
+    expect(screen.queryByRole('button', { name: /add feature/i })).toBeNull();
+  });
+
+  it('role-aware: viewer cards are not draggable (sortable disabled)', async () => {
+    server.use(
+      http.get('/api/projects', () =>
+        HttpResponse.json([
+          { id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'viewer' },
+        ]),
+      ),
+    );
+    renderBoard();
+    const card = (await screen.findByText('Rich markdown editor')).closest(
+      '[role="button"]',
+    ) as HTMLElement;
+    expect(card.getAttribute('aria-disabled')).toBe('true');
+  });
+
+  it('role-aware: editor cards are draggable (sortable enabled)', async () => {
+    server.use(
+      http.get('/api/projects', () =>
+        HttpResponse.json([
+          { id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'editor' },
+        ]),
+      ),
+    );
+    renderBoard();
+    const card = (await screen.findByText('Rich markdown editor')).closest(
+      '[role="button"]',
+    ) as HTMLElement;
+    expect(card.getAttribute('aria-disabled')).toBe('false');
+  });
 });

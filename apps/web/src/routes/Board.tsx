@@ -11,6 +11,7 @@ import {
 import { HORIZONS, type Horizon } from '@productmap/shared';
 import { toast } from 'sonner';
 import { useFeatures, useUpdateFeature } from '@/lib/api';
+import { useCanEdit } from '@/lib/project';
 import { BoardColumn } from '@/components/board/BoardColumn';
 import { FeatureDetailPanel } from '@/components/board/FeatureDetailPanel';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -32,6 +33,7 @@ function getStoredSort(): BoardSort {
 
 export default function Board() {
   const { data: features, isLoading, isError, refetch } = useFeatures();
+  const canEdit = useCanEdit();
   const updateFeature = useUpdateFeature();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedId = searchParams.get('feature');
@@ -135,6 +137,9 @@ export default function Board() {
 
   const handleDragEnd = (event: DragEndEvent) => {
     setDragOverHorizon(null);
+    // Viewers can't move cards — cards are already non-draggable (useSortable
+    // disabled), but guard the handler too so no stray drag mutates features.
+    if (!canEdit) return;
     const { active, over } = event;
     if (!over || !features) return;
     const feature = features.find((f) => f.id === active.id);

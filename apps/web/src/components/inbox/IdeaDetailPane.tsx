@@ -4,6 +4,7 @@ import { ArrowUpRight, Archive, PenLine, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import type { IdeaStatus, IdeaWithVotes } from '@productmap/shared';
 import { useCreatePitch, useDocument, useUpdateIdea } from '@/lib/api';
+import { useCanEdit } from '@/lib/project';
 import { countWords } from '@/components/editor/word-count';
 import { DocTypeChip } from '@/components/DocTypeChip';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -109,6 +110,7 @@ interface IdeaDetailPaneProps {
 /** Right-hand detail pane: editable title/source/status, byline, pitch block, quick summary. */
 export function IdeaDetailPane({ idea, onPromote }: IdeaDetailPaneProps) {
   const updateIdea = useUpdateIdea();
+  const canEdit = useCanEdit();
   const [draftTitle, setDraftTitle] = useState(idea.title);
   const [draftSource, setDraftSource] = useState(idea.source);
   const [draftBody, setDraftBody] = useState(idea.bodyMd);
@@ -138,6 +140,7 @@ export function IdeaDetailPane({ idea, onPromote }: IdeaDetailPaneProps) {
       <div className="flex items-start justify-between gap-4">
         <input
           aria-label="Idea title"
+          readOnly={!canEdit}
           className="min-w-0 flex-1 rounded-xl border-0 bg-transparent px-2 py-1 -mx-2 font-display text-lg font-semibold text-ink outline-none transition-colors duration-150 ease-out hover:bg-surface/60 focus-visible:ring-2 focus-visible:ring-ring"
           value={draftTitle}
           onChange={(e) => setDraftTitle(e.target.value)}
@@ -158,6 +161,7 @@ export function IdeaDetailPane({ idea, onPromote }: IdeaDetailPaneProps) {
         ) : (
           <Select
             value={idea.status}
+            disabled={!canEdit}
             onValueChange={(v) => setStatus(v as IdeaStatus, 'update')}
           >
             <SelectTrigger
@@ -189,6 +193,7 @@ export function IdeaDetailPane({ idea, onPromote }: IdeaDetailPaneProps) {
         <Label htmlFor="idea-source">Source</Label>
         <Input
           id="idea-source"
+          readOnly={!canEdit}
           value={draftSource}
           placeholder="sales call, support ticket, hallway chat…"
           onChange={(e) => setDraftSource(e.target.value)}
@@ -208,6 +213,7 @@ export function IdeaDetailPane({ idea, onPromote }: IdeaDetailPaneProps) {
         <Label htmlFor="idea-summary">Quick summary</Label>
         <Textarea
           id="idea-summary"
+          readOnly={!canEdit}
           value={draftBody}
           placeholder="One or two lines on what this is — the pitch doc carries the full story."
           className="min-h-24 rounded-xl text-sm leading-6"
@@ -227,7 +233,7 @@ export function IdeaDetailPane({ idea, onPromote }: IdeaDetailPaneProps) {
             </Link>
           </Button>
         ) : null}
-        {idea.status === 'inbox' || idea.status === 'triaged' ? (
+        {canEdit && (idea.status === 'inbox' || idea.status === 'triaged') ? (
           <>
             <Button className="rounded-full" onClick={onPromote}>
               <ArrowUpRight className="h-4 w-4" aria-hidden />
@@ -252,7 +258,7 @@ export function IdeaDetailPane({ idea, onPromote }: IdeaDetailPaneProps) {
             </Button>
           </>
         ) : null}
-        {idea.status === 'archived' ? (
+        {canEdit && idea.status === 'archived' ? (
           <Button
             variant="outline"
             className="rounded-full"

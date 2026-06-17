@@ -5,21 +5,25 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ReleaseCard } from '@/components/releases/ReleaseCard';
 import { NewReleaseDialog } from '@/components/releases/NewReleaseDialog';
+import { useCanEdit } from '@/lib/project';
 
 /** /releases — planned & shipped bundles (Dream tier D7). */
 export default function Releases() {
   const releasesQuery = useReleases();
   const [creating, setCreating] = useState(false);
+  const canEdit = useCanEdit();
   const releases = releasesQuery.data;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Releases</h1>
-        <Button size="sm" className="ml-auto rounded-full" onClick={() => setCreating(true)}>
-          <Plus className="h-3.5 w-3.5" aria-hidden />
-          New release
-        </Button>
+        {canEdit ? (
+          <Button size="sm" className="ml-auto rounded-full" onClick={() => setCreating(true)}>
+            <Plus className="h-3.5 w-3.5" aria-hidden />
+            New release
+          </Button>
+        ) : null}
       </div>
 
       {releasesQuery.isLoading && (
@@ -48,10 +52,12 @@ export default function Releases() {
           <p className="text-sm text-muted-ink">
             No releases yet — bundle features into your first one.
           </p>
-          <Button className="mt-4 rounded-full" onClick={() => setCreating(true)}>
-            <Plus className="h-3.5 w-3.5" aria-hidden />
-            New release
-          </Button>
+          {canEdit ? (
+            <Button className="mt-4 rounded-full" onClick={() => setCreating(true)}>
+              <Plus className="h-3.5 w-3.5" aria-hidden />
+              New release
+            </Button>
+          ) : null}
         </div>
       )}
 

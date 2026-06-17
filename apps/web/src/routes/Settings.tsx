@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutTemplate, Settings as SettingsIcon, UserRound, Users, Wrench } from 'lucide-react';
+import { FolderKanban, LayoutTemplate, Settings as SettingsIcon, UserRound, Users, Wrench } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth';
 const BASE_TABS = [
   { to: '/settings/templates', label: 'Templates', icon: LayoutTemplate },
   { to: '/settings/workspace', label: 'Workspace', icon: Wrench },
+  { to: '/settings/project', label: 'Project', icon: FolderKanban },
   { to: '/settings/profile', label: 'Profile', icon: UserRound },
 ];
 

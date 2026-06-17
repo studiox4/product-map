@@ -9,6 +9,7 @@ import {
   useFeatures,
   useSetDependencies,
 } from '@/lib/api';
+import { useCanEdit } from '@/lib/project';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -38,6 +39,7 @@ function StatusDot({ status }: { status: Feature['status'] }) {
  */
 export function DependenciesRail({ feature }: { feature: FeatureWithDocs }) {
   const dependenciesQuery = useDependencies(feature.id);
+  const canEdit = useCanEdit();
   const { data: allFeatures } = useFeatures();
   const setDependencies = useSetDependencies();
 
@@ -78,6 +80,7 @@ export function DependenciesRail({ feature }: { feature: FeatureWithDocs }) {
     <section className="rounded-2xl bg-surface p-4 shadow-card" aria-label="Dependencies">
       <div className="flex items-center justify-between">
         <h2 className="font-display text-sm font-semibold text-ink">Dependencies</h2>
+        {canEdit ? (
         <Popover open={editOpen} onOpenChange={openEditor}>
           <PopoverTrigger asChild>
             <Button variant="ghost" size="sm" className="rounded-full">
@@ -116,6 +119,7 @@ export function DependenciesRail({ feature }: { feature: FeatureWithDocs }) {
             </div>
           </PopoverContent>
         </Popover>
+        ) : null}
       </div>
 
       {unshippedBlockers > 0 ? (

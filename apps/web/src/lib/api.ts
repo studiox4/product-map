@@ -1757,3 +1757,176 @@ export function useAdminUpdateUser() {
     onSettled: () => qc.invalidateQueries({ queryKey: ['admin', 'users'] }),
   });
 }
+
+// ============================================================================
+// APPEND BLOCK — projects / members / invites (phase-2c-b: active-project seam).
+// useProjects stays in project.tsx (the single ['projects'] source); list-
+// mutating ops invalidate ['projects']. Imports hoisted by ESM.
+// ============================================================================
+
+import type { Invite, InvitePreview, MemberRole } from '@productmap/shared';
+import type { ProjectListItem } from './project';
+
+export const projectsListKey = ['projects'] as const;
+
+export interface ProjectCreateInput {
+  name: string;
+  vision?: string;
+}
+
+/** POST /api/projects — owner-bootstrapping create; refreshes the project list. */
+export function useCreateProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ProjectCreateInput) =>
+      fetchJson<ProjectListItem>('/api/projects', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    onSettled: () => qc.invalidateQueries({ queryKey: projectsListKey }),
+  });
+}
+
+/** DELETE /api/projects/:projectId (owner-gated, 204). Refreshes the project list. */
+export function useDeleteProject(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => fetchJson<void>(`/api/projects/${projectId}`, { method: 'DELETE' }),
+    onSettled: () => qc.invalidateQueries({ queryKey: projectsListKey }),
+  });
+}
+
+export interface ProjectMember {
+  userId: string;
+  role: MemberRole;
+  name: string;
+  color: string;
+}
+
+export const projectMembersKey = (pid: string) => ['project-members', pid] as const;
+
+/** GET /api/projects/:projectId/members — joined name + color for avatars. */
+export function useProjectMembers(projectId: string | null) {
+  return useQuery({
+    queryKey: projectMembersKey(projectId ?? ''),
+    queryFn: () => fetchJson<ProjectMember[]>(`/api/projects/${projectId}/members`),
+    enabled: !!projectId,
+  });
+}
+
+export interface AddMemberVars {
+  email?: string;
+  userId?: string;
+  role: MemberRole;
+}
+
+/** POST /api/projects/:projectId/members — add by email or userId (owner-gated). */
+export function useAddMember(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: AddMemberVars) =>
+      fetchJson<{ userId: string; projectId: string; role: MemberRole }>(
+        `/api/projects/${projectId}/members`,
+        { method: 'POST', body: JSON.stringify(input) },
+      ),
+    onSettled: () => qc.invalidateQueries({ queryKey: projectMembersKey(projectId) }),
+  });
+}
+
+export interface UpdateMemberVars {
+  userId: string;
+  role: MemberRole;
+}
+
+/** PATCH /api/projects/:projectId/members/:userId — change a member's role. */
+export function useUpdateMember(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, role }: UpdateMemberVars) =>
+      fetchJson<{ userId: string; projectId: string; role: MemberRole }>(
+        `/api/projects/${projectId}/members/${userId}`,
+        { method: 'PATCH', body: JSON.stringify({ role }) },
+      ),
+    onSettled: () => qc.invalidateQueries({ queryKey: projectMembersKey(projectId) }),
+  });
+}
+
+/** DELETE /api/projects/:projectId/members/:userId (owner-gated, 204). */
+export function useRemoveMember(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) =>
+      fetchJson<void>(`/api/projects/${projectId}/members/${userId}`, { method: 'DELETE' }),
+    onSettled: () => qc.invalidateQueries({ queryKey: projectMembersKey(projectId) }),
+  });
+}
+
+export const projectInvitesKey = (pid: string) => ['project-invites', pid] as const;
+
+/** GET /api/projects/:projectId/invites — active (non-revoked) invites, newest first. */
+export function useProjectInvites(projectId: string | null) {
+  return useQuery({
+    queryKey: projectInvitesKey(projectId ?? ''),
+    queryFn: () => fetchJson<Invite[]>(`/api/projects/${projectId}/invites`),
+    enabled: !!projectId,
+  });
+}
+
+export interface CreateInviteVars {
+  role: MemberRole;
+  email?: string;
+}
+
+/** POST /api/projects/:projectId/invites — mint an invite token (emails when SMTP on). */
+export function useCreateInvite(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateInviteVars) =>
+      fetchJson<{
+        token: string;
+        projectId: string;
+        role: MemberRole;
+        email: string | null;
+        expiresAt: string;
+        emailSent: boolean;
+      }>(`/api/projects/${projectId}/invites`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    onSettled: () => qc.invalidateQueries({ queryKey: projectInvitesKey(projectId) }),
+  });
+}
+
+/** DELETE /api/projects/:projectId/invites/:token — revoke (404 when unknown/revoked). */
+export function useRevokeInvite(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (token: string) =>
+      fetchJson<void>(`/api/projects/${projectId}/invites/${token}`, { method: 'DELETE' }),
+    onSettled: () => qc.invalidateQueries({ queryKey: projectInvitesKey(projectId) }),
+  });
+}
+
+/** GET /api/invites/:token — public-safe preview. 404 is meaningful (no retry). */
+export function useInvitePreview(token: string) {
+  return useQuery({
+    queryKey: ['invite-preview', token],
+    queryFn: () => fetchJson<InvitePreview>(`/api/invites/${token}`),
+    retry: false,
+    enabled: token.length > 0,
+  });
+}
+
+/** POST /api/invites/:token/accept — join with the embedded role (idempotent). */
+export function useAcceptInvite() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (token: string) =>
+      fetchJson<{ projectId: string; role: MemberRole }>(`/api/invites/${token}/accept`, {
+        method: 'POST',
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: projectsListKey }),
+  });
+}
+
+// =============== END APPEND BLOCK (projects / members / invites) ============

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ObjectiveCard, FeatureMiniRow } from '@/components/outcomes/ObjectiveCard';
 import { ObjectiveDialog } from '@/components/outcomes/ObjectiveDialog';
+import { useCanEdit } from '@/lib/project';
 
 /**
  * /outcomes (Dream tier D9 + tier 2 §3): objectives as cards with their
@@ -18,6 +19,7 @@ export default function Outcomes() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Objective | null>(null);
+  const canEdit = useCanEdit();
 
   const objectives = objectivesQuery.data;
   const features = featuresQuery.data;
@@ -44,10 +46,12 @@ export default function Outcomes() {
             Objectives and the features driving them. Assign features from their page rail.
           </p>
         </div>
-        <Button size="sm" className="ml-auto rounded-full" onClick={openCreate}>
-          <Plus className="h-3.5 w-3.5" aria-hidden />
-          New objective
-        </Button>
+        {canEdit ? (
+          <Button size="sm" className="ml-auto rounded-full" onClick={openCreate}>
+            <Plus className="h-3.5 w-3.5" aria-hidden />
+            New objective
+          </Button>
+        ) : null}
       </div>
 
       {isLoading && (
@@ -79,10 +83,12 @@ export default function Outcomes() {
           {objectives.length === 0 ? (
             <div className="rounded-2xl border border-transparent bg-surface p-10 text-center shadow-card">
               <p className="text-sm text-muted-ink">No objectives yet.</p>
-              <Button className="mt-4 rounded-full" onClick={openCreate}>
-                <Plus className="h-3.5 w-3.5" aria-hidden />
-                New objective
-              </Button>
+              {canEdit ? (
+                <Button className="mt-4 rounded-full" onClick={openCreate}>
+                  <Plus className="h-3.5 w-3.5" aria-hidden />
+                  New objective
+                </Button>
+              ) : null}
             </div>
           ) : (
             <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
