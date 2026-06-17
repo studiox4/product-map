@@ -13,6 +13,7 @@ import { adminRoutes } from './routes/admin';
 // feature agent fills in its own file — nobody else edits app.ts).
 import { publicShareRoutes } from './routes/share';
 import { projectScopedContent } from './routes/project-scoped';
+import { invitesRoutes } from './routes/invites';
 
 export const app = new Hono()
   .get('/api/healthz', (c) => c.json({ ok: true }))
@@ -37,6 +38,7 @@ export const app = new Hono()
   .use('/api/admin/*', requireAdmin)
   .route('/api/users', usersRoutes)
   .route('/api/projects', projectsRoutes)
+  .route('/api/invites', invitesRoutes)
   // Content sub-app: registered AFTER mgmt so projectsRoutes /:projectId* get
   // first crack. A non-match falls through to this mount (Hono chain semantics).
   .route('/api/projects/:projectId', projectScopedContent)
