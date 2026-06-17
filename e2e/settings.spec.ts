@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createDocument, getFeatureByTitle } from './helpers';
+import { createDocument, getFeatureByTitle, getProjectId } from './helpers';
 
 // Settings, templates & Bedrock spec — ACs 1-6 (UI side):
 // AC1 — settings reachable from the nav gear and ⌘K; three tabs render.
@@ -258,7 +258,9 @@ test('AC4: reset-demo is confirm-gated and restores the seed', async ({ page, re
   await confirm.getByRole('button', { name: 'Yes, reset everything' }).click();
   await expect(page.getByText('Demo data reset — workspace restored to the seed')).toBeVisible();
 
-  const overview = (await (await request.get('/api/overview')).json()) as {
+  // Resolve pid AFTER reset-demo, which mints a new project row.
+  const pid = await getProjectId(request);
+  const overview = (await (await request.get(`/api/projects/${pid}/overview`)).json()) as {
     project: { vision: string };
   };
   expect(overview.project.vision).toBe(SEED_VISION);

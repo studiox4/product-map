@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { createDocument, getFeatureByTitle, resetDb } from './helpers';
+import { createDocument, getFeatureByTitle, getProjectId, resetDb } from './helpers';
 
 // Signature set Wave 2 (docs/superpowers/specs/2026-06-10-signature-set-design.md)
 // W2-1 — Roadmap Time Machine: History toggle, scrub to earliest shows ≥3
@@ -217,19 +217,20 @@ test('W2-3: callout + toggle insert via slash, hit export.md, and persist across
   // export.md carries both serialized forms (emoji blockquote + details HTML).
   // Poll: the "Saved" pill from the callout save may still be on screen while
   // the toggle autosave debounce is in flight.
+  const pid = await getProjectId(request);
   await expect
-    .poll(async () => (await request.get(`/api/documents/${doc.id}/export.md`)).text(), {
+    .poll(async () => (await request.get(`/api/projects/${pid}/documents/${doc.id}/export.md`)).text(), {
       timeout: 10_000,
     })
     .toContain('<summary>Rollout plan</summary>');
-  const exported = await (await request.get(`/api/documents/${doc.id}/export.md`)).text();
+  const exported = await (await request.get(`/api/projects/${pid}/documents/${doc.id}/export.md`)).text();
   expect(exported).toContain('> 💡 Ship the demo on Friday');
   expect(exported).toContain('<details');
 
   // Round-trip: the stored Tiptap JSON keeps first-class callout/toggle nodes
   // (md → Tiptap reimport of these forms is unit-tested in markdown.test.ts),
   // and a fresh load renders both blocks.
-  const full = (await (await request.get(`/api/documents/${doc.id}`)).json()) as {
+  const full = (await (await request.get(`/api/projects/${pid}/documents/${doc.id}`)).json()) as {
     contentJson: unknown;
   };
   const types: string[] = [];
@@ -247,7 +248,7 @@ test('W2-3: callout + toggle insert via slash, hit export.md, and persist across
   await expect(body.locator('[data-type="toggle"] summary')).toHaveText('Rollout plan');
 
   // Keep the seeded workspace pristine for later specs.
-  expect((await request.delete(`/api/documents/${doc.id}`)).ok()).toBe(true);
+  expect((await request.delete(`/api/projects/${pid}/documents/${doc.id}`)).ok()).toBe(true);
 });
 
 test('W2-3: ToC rail appears on the seeded PRD and highlights the active section', async ({
@@ -299,8 +300,9 @@ test('W2-3: cover picker sets a gradient and the reader view renders it chrome-f
   expect(await cover.evaluate((el) => el.style.background)).toContain('linear-gradient');
 
   // Persisted server-side.
+  const pid = await getProjectId(request);
   await expect
-    .poll(async () => ((await (await request.get(`/api/documents/${doc.id}`)).json()) as { cover: string | null }).cover)
+    .poll(async () => ((await (await request.get(`/api/projects/${pid}/documents/${doc.id}`)).json()) as { cover: string | null }).cover)
     .toBe('dawn');
 
   // Reader view: chrome-free render with the cover band and the doc title.
@@ -312,5 +314,5 @@ test('W2-3: cover picker sets a gradient and the reader view renders it chrome-f
   // App chrome (sidebar nav) is absent.
   await expect(page.getByRole('link', { name: 'Roadmap' })).toHaveCount(0);
 
-  expect((await request.delete(`/api/documents/${doc.id}`)).ok()).toBe(true);
+  expect((await request.delete(`/api/projects/${pid}/documents/${doc.id}`)).ok()).toBe(true);
 });

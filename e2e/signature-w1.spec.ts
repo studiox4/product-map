@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { getFeatureByTitle, getFeatures } from './helpers';
+import { getFeatureByTitle, getFeatures, getProjectId } from './helpers';
 
 // Signature set Wave 1 (docs/superpowers/specs/2026-06-10-signature-set-design.md)
 // W1-1 — theme toggle cycles light/dark/system, persists, dark actually applied.
@@ -109,7 +109,8 @@ test('W1-2: create-feature-in-Later via palette works end-to-end', async ({
   expect(created.horizon).toBe('later');
 
   // Clean up so the seeded board stays pristine for later specs.
-  const res = await request.delete(`/api/features/${created.id}`);
+  const pid = await getProjectId(request);
+  const res = await request.delete(`/api/projects/${pid}/features/${created.id}`);
   expect(res.ok()).toBe(true);
 });
 
@@ -246,8 +247,9 @@ test('W1-4: hovering a board card prefetches the feature detail before click', a
 
   // No clicks anywhere — the detail GET must come from hover alone
   // (150ms debounce in makeHoverPrefetch).
+  const pid = await getProjectId(request);
   const prefetch = page.waitForRequest(
-    (req) => req.method() === 'GET' && new URL(req.url()).pathname === `/api/features/${feature.id}`,
+    (req) => req.method() === 'GET' && new URL(req.url()).pathname === `/api/projects/${pid}/features/${feature.id}`,
     { timeout: 5_000 },
   );
   await card.hover();

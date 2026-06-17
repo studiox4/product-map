@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { createDocument, getFeatureByTitle, getFeatures } from './helpers';
+import { createDocument, getFeatureByTitle, getFeatures, getProjectId } from './helpers';
 
 // AC-UX1 — every route shows skeletons while loading (throttled network).
 // AC-UX2 — board drag: grab cursor, drop highlight, optimistic move.
@@ -82,9 +82,10 @@ test('AC-UX3: an empty column shows an empty state with an Add feature action', 
   request,
 }) => {
   // Empty the Now column via the API.
+  const pid = await getProjectId(request);
   const nowFeatures = (await getFeatures(request)).filter((f) => f.horizon === 'now');
   for (const f of nowFeatures) {
-    const res = await request.delete(`/api/features/${f.id}`);
+    const res = await request.delete(`/api/projects/${pid}/features/${f.id}`);
     expect(res.status()).toBe(204);
   }
 

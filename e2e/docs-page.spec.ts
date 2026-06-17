@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { getFeatureByTitle } from './helpers';
+import { getFeatureByTitle, getProjectId } from './helpers';
 
 // Feature hub AC4 — /docs lists every doc with correct type/status colors;
 // type + status filters AND search compose; sort by updated works.
@@ -80,7 +80,8 @@ test('AC4: type + status filters AND search compose', async ({ page }) => {
 });
 
 test('AC4: sort by updated toggles asc/desc and reorders rows', async ({ page, request }) => {
-  const res = await request.get('/api/documents?all=true');
+  const pid = await getProjectId(request);
+  const res = await request.get(`/api/projects/${pid}/documents?all=true`);
   expect(res.ok()).toBeTruthy();
   const docs = (await res.json()) as { title: string; updatedAt: string }[];
   const byUpdatedAsc = [...docs].sort((a, b) => a.updatedAt.localeCompare(b.updatedAt));

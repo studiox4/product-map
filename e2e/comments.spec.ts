@@ -1,4 +1,5 @@
 import { test, expect, request as playwrightRequest } from '@playwright/test';
+import { getProjectId } from './helpers';
 
 // Comments & voting addendum — comments ACs:
 // AC1 — comment on a doc from the editor sheet and on a feature from its page;
@@ -18,13 +19,15 @@ let docId = '';
 
 
 test.beforeAll(async ({ request }) => {
-  const featureRes = await request.post('/api/features', {
+  const pid = await getProjectId(request);
+
+  const featureRes = await request.post(`/api/projects/${pid}/features`, {
     data: { title: FEATURE_TITLE, horizon: 'later' },
   });
   expect(featureRes.status()).toBe(201);
   featureId = ((await featureRes.json()) as { id: string }).id;
 
-  const docRes = await request.post('/api/documents', {
+  const docRes = await request.post(`/api/projects/${pid}/documents`, {
     data: { featureId, type: 'prd', title: 'Comments Verification PRD', fromTemplate: true },
   });
   expect(docRes.status()).toBe(201);
@@ -58,13 +61,14 @@ test('AC1: comment + one-level reply on the feature page; reply-to-reply is API-
   // and the API rejects reply-to-reply with 400.
   await expect(thread.getByRole('button', { name: 'Reply', exact: true })).toHaveCount(1);
 
-  const listRes = await request.get(`/api/comments?featureId=${featureId}`);
+  const pid = await getProjectId(request);
+  const listRes = await request.get(`/api/projects/${pid}/comments?featureId=${featureId}`);
   expect(listRes.ok()).toBeTruthy();
   const threads = (await listRes.json()) as { id: string; replies: { id: string }[] }[];
   const replyId = threads[0]?.replies[0]?.id;
   expect(replyId).toBeTruthy();
 
-  const replyToReply = await request.post('/api/comments', {
+  const replyToReply = await request.post(`/api/projects/${pid}/comments`, {
     data: { featureId, parentId: replyId, body: 'too deep' },
   });
   expect(replyToReply.status()).toBe(400);
@@ -204,7 +208,8 @@ test('AC6: author identity renders and edit/delete is gated to own comments', as
   await expect(thread.getByText('Gated actions thread (edited)')).toBeVisible();
 
   // API enforces the gate: an unauthenticated DELETE returns 401.
-  const listRes = await request.get(`/api/comments?featureId=${featureId}`);
+  const pid = await getProjectId(request);
+  const listRes = await request.get(`/api/projects/${pid}/comments?featureId=${featureId}`);
   const allThreads = (await listRes.json()) as { id: string; body: string }[];
   const target = allThreads.find((t) => t.body.includes('Gated actions'));
   expect(target).toBeTruthy();
@@ -215,7 +220,7 @@ test('AC6: author identity renders and edit/delete is gated to own comments', as
     // Explicitly empty storage state — no auth cookies.
     storageState: { cookies: [], origins: [] },
   });
-  const unauthenticated = await anonCtx.delete(`/api/comments/${target!.id}`);
+  const unauthenticated = await anonCtx.delete(`/api/projects/${pid}/comments/${target!.id}`);
   expect(unauthenticated.status()).toBe(401);
   await anonCtx.dispose();
 });
