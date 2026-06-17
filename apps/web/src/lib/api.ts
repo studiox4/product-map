@@ -556,7 +556,8 @@ export function useAddComment() {
     mutationFn: ({ target, body, parentId }: AddCommentVars) =>
       fetchJson<Comment>(apiPath(pid, 'comments'), {
         method: 'POST',
-        body: JSON.stringify({ ...target, body, ...(parentId ? { parentId } : {}) }),
+        // Replies carry only parentId + body; roots carry the target surface (featureId or documentId).
+        body: JSON.stringify(parentId ? { parentId, body } : { ...target, body }),
       }),
     onSettled: (_data, _err, { target }) => invalidateComments(qc, pid, target),
   });

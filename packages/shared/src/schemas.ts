@@ -58,9 +58,12 @@ export const commentCreate = z.object({
   parentId: z.string().uuid().optional(),
   body: z.string().min(1).max(4000),
 }).refine(
-  // parentId replies inherit the target from the parent; otherwise exactly one of featureId/documentId required
-  d => d.parentId !== undefined || (d.featureId !== undefined) !== (d.documentId !== undefined),
-  { message: 'exactly one of featureId or documentId is required (or supply parentId for a reply)' },
+  // reply (parentId present): must NOT carry featureId/documentId
+  // root (parentId absent): exactly one of featureId/documentId required
+  (d) => d.parentId !== undefined
+    ? (d.featureId === undefined && d.documentId === undefined)
+    : ((d.featureId !== undefined) !== (d.documentId !== undefined)),
+  { message: 'reply uses parentId only; root needs exactly one of featureId/documentId' },
 );
 export const commentUpdate = z.object({
   body: z.string().min(1).max(4000).optional(),

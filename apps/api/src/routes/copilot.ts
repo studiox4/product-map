@@ -57,7 +57,7 @@ export const copilotRoutes = new Hono<MembershipEnv>()
         featureTitle: features.title,
       })
       .from(documents)
-      .innerJoin(features, eq(documents.featureId, features.id))
+      .leftJoin(features, eq(documents.featureId, features.id))
       .where(eq(documents.id, documentId));
     if (!doc) return c.json({ error: 'not_found' }, 404);
 
@@ -65,8 +65,9 @@ export const copilotRoutes = new Hono<MembershipEnv>()
       .split('\n')
       .map((line, i) => `${i + 1}: ${line}`)
       .join('\n');
+    const featureContext = doc.featureTitle ? ` for feature "${doc.featureTitle}"` : '';
     const prompt = [
-      `Document under review: "${doc.title}" (${doc.type}) for feature "${doc.featureTitle}".`,
+      `Document under review: "${doc.title}" (${doc.type})${featureContext}.`,
       '',
       'Document content (line-numbered):',
       '',

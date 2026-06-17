@@ -229,11 +229,12 @@ beforeEach(async () => {
 describe('(a) role × action matrix', () => {
   // ── features ──
   describe('features', () => {
-    it('editor-of-A: can GET list (200)', async () => {
+    it('editor-of-A: can GET list (200) and does not contain B features', async () => {
       const res = await get(`/api/projects/${projectA}/features`, authEditorA);
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(Array.isArray(body)).toBe(true);
+      expect(body.map((r: { id: string }) => r.id)).not.toContain(featureIdB);
     });
 
     it('editor-of-A: can GET single (200)', async () => {
@@ -289,9 +290,12 @@ describe('(a) role × action matrix', () => {
 
   // ── ideas ──
   describe('ideas', () => {
-    it('editor-of-A: can GET list (200)', async () => {
+    it('editor-of-A: can GET list (200) and does not contain B ideas', async () => {
       const res = await get(`/api/projects/${projectA}/ideas`, authEditorA);
       expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(Array.isArray(body)).toBe(true);
+      expect(body.map((r: { id: string }) => r.id)).not.toContain(ideaIdB);
     });
 
     it('editor-of-A: can CREATE (201)', async () => {
@@ -322,9 +326,12 @@ describe('(a) role × action matrix', () => {
 
   // ── releases ──
   describe('releases', () => {
-    it('editor-of-A: can GET list (200)', async () => {
+    it('editor-of-A: can GET list (200) and does not contain B releases', async () => {
       const res = await get(`/api/projects/${projectA}/releases`, authEditorA);
       expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(Array.isArray(body)).toBe(true);
+      expect(body.map((r: { id: string }) => r.id)).not.toContain(releaseIdB);
     });
 
     it('editor-of-A: can CREATE (201)', async () => {
@@ -350,9 +357,12 @@ describe('(a) role × action matrix', () => {
 
   // ── objectives ──
   describe('objectives', () => {
-    it('editor-of-A: can GET list (200)', async () => {
+    it('editor-of-A: can GET list (200) and does not contain B objectives', async () => {
       const res = await get(`/api/projects/${projectA}/objectives`, authEditorA);
       expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(Array.isArray(body)).toBe(true);
+      expect(body.map((r: { id: string }) => r.id)).not.toContain(objectiveIdB);
     });
 
     it('editor-of-A: can CREATE (201)', async () => {
@@ -378,9 +388,12 @@ describe('(a) role × action matrix', () => {
 
   // ── plans ──
   describe('plans', () => {
-    it('editor-of-A: can GET list (200)', async () => {
+    it('editor-of-A: can GET list (200) and does not contain B plans', async () => {
       const res = await get(`/api/projects/${projectA}/plans`, authEditorA);
       expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(Array.isArray(body)).toBe(true);
+      expect(body.map((r: { id: string }) => r.id)).not.toContain(planIdB);
     });
 
     it('editor-of-A: can CREATE (201)', async () => {
@@ -406,9 +419,12 @@ describe('(a) role × action matrix', () => {
 
   // ── documents ──
   describe('documents', () => {
-    it('editor-of-A: can GET list (200)', async () => {
+    it('editor-of-A: can GET list (200) and does not contain B documents', async () => {
       const res = await get(`/api/projects/${projectA}/documents`, authEditorA);
       expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(Array.isArray(body)).toBe(true);
+      expect(body.map((r: { id: string }) => r.id)).not.toContain(documentIdB);
     });
 
     it('viewer-of-A: can read (200)', async () => {
@@ -429,9 +445,12 @@ describe('(a) role × action matrix', () => {
 
   // ── decisions ──
   describe('decisions', () => {
-    it('editor-of-A: can GET list (200)', async () => {
+    it('editor-of-A: can GET list (200) and does not contain B decisions', async () => {
       const res = await get(`/api/projects/${projectA}/decisions`, authEditorA);
       expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(Array.isArray(body)).toBe(true);
+      expect(body.map((r: { id: string }) => r.id)).not.toContain(decisionIdB);
     });
 
     it('editor-of-A: can CREATE (201)', async () => {

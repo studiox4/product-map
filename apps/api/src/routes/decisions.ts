@@ -5,6 +5,7 @@ import { zValidator } from '@hono/zod-validator';
 import { and, asc, desc, eq, or } from 'drizzle-orm';
 import { generateObject } from 'ai';
 import { z } from 'zod';
+const uuidSchema = z.string().uuid();
 import { decisionCreate, suggestDecisionBody } from '@productmap/shared';
 import { comments, decisions, features, users } from '@productmap/db';
 import { db } from '../db';
@@ -45,6 +46,9 @@ export const decisionsRoutes = new Hono<MembershipEnv>()
   .get('/decisions', async (c) => {
     const pid = c.get('currentProjectId');
     const featureId = c.req.query('featureId');
+    if (featureId !== undefined && !uuidSchema.safeParse(featureId).success) {
+      return c.json({ error: 'validation', field: 'featureId' }, 400);
+    }
     const projectFilter = eq(decisions.projectId, pid);
     const where = featureId ? and(projectFilter, eq(decisions.featureId, featureId)) : projectFilter;
     const rows = await db

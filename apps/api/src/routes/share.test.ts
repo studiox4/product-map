@@ -318,4 +318,26 @@ describe('DELETE /api/share/:token (revoke + membership check)', () => {
     const [row] = await db.select().from(shareTokens).where(eq(shareTokens.token, token));
     expect(row.revokedAt).not.toBeNull();
   });
+
+  it('viewer-role member of the token project can revoke → 200', async () => {
+    const project = await createTestProject();
+    const viewer = await createTestUser();
+    await addMembership(viewer.id, project.id, 'viewer');
+    const viewerCookie = await authCookie(viewer);
+
+    // Mint via admin.
+    const admin = await createTestUser({ role: 'admin' });
+    const adminCookie = await authCookie(admin);
+    const token = await createToken(project.id, adminCookie);
+
+    // Viewer on the same project can revoke (policy: any membership suffices).
+    const res = await app.request(`/api/share/${token}`, {
+      method: 'DELETE',
+      headers: { cookie: viewerCookie, origin: 'http://localhost', host: 'localhost' },
+    });
+    expect(res.status).toBe(200);
+
+    const [row] = await db.select().from(shareTokens).where(eq(shareTokens.token, token));
+    expect(row.revokedAt).not.toBeNull();
+  });
 });

@@ -95,7 +95,10 @@ describe('commentCreate', () => {
     expect(commentCreate.safeParse({ featureId: UUID, body: '' }).success).toBe(false);
     expect(commentCreate.safeParse({ featureId: UUID, body: 'a'.repeat(4000) }).success).toBe(true);
     expect(commentCreate.safeParse({ featureId: UUID, body: 'a'.repeat(4001) }).success).toBe(false);
-    expect(commentCreate.safeParse({ featureId: UUID, parentId: UUID, body: 'hi' }).success).toBe(true);
+    // reply: parentId only (no featureId/documentId) — valid
+    expect(commentCreate.safeParse({ parentId: UUID, body: 'hi' }).success).toBe(true);
+    // reply with featureId is now rejected (ambiguous ghost-field)
+    expect(commentCreate.safeParse({ featureId: UUID, parentId: UUID, body: 'hi' }).success).toBe(false);
     expect(commentCreate.safeParse({ featureId: UUID, parentId: 'nope', body: 'hi' }).success).toBe(false);
   });
 });

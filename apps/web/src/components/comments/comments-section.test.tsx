@@ -266,7 +266,7 @@ describe('CommentsSection', () => {
     const form = box.closest('form')!;
     await user().click(within(form).getByRole('button', { name: 'Reply' }));
     await waitFor(() => expect(posted).not.toBeNull());
-    expect(posted).toMatchObject({ featureId: 'f1', parentId: 'c3', body: 'Agreed' });
+    expect(posted).toMatchObject({ parentId: 'c3', body: 'Agreed' });
   });
 
   it('shows "Log decision" only on resolved roots when AI is enabled', async () => {

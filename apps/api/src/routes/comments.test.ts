@@ -113,7 +113,7 @@ describe('POST /api/projects/:pid/comments', () => {
     const root = await (await app.request(BASE(projectId), post({ featureId, body: 'root' }))).json();
     const replyRes = await app.request(
       BASE(projectId),
-      post({ featureId, parentId: root.id, body: 'reply' }),
+      post({ parentId: root.id, body: 'reply' }),
     );
     expect(replyRes.status).toBe(201);
     const reply = await replyRes.json();
@@ -121,7 +121,7 @@ describe('POST /api/projects/:pid/comments', () => {
 
     const nested = await app.request(
       BASE(projectId),
-      post({ featureId, parentId: reply.id, body: 'reply to reply' }),
+      post({ parentId: reply.id, body: 'reply to reply' }),
     );
     expect(nested.status).toBe(400);
   });
@@ -139,7 +139,7 @@ describe('POST /api/projects/:pid/comments', () => {
     expect((await app.request(BASE(projectId), post({ featureId: missing, body: 'x' }))).status).toBe(404);
     expect((await app.request(BASE(projectId), post({ documentId: missing, body: 'x' }))).status).toBe(404);
     expect(
-      (await app.request(BASE(projectId), post({ featureId, parentId: missing, body: 'x' }))).status,
+      (await app.request(BASE(projectId), post({ parentId: missing, body: 'x' }))).status,
     ).toBe(404);
   });
 });
@@ -147,8 +147,8 @@ describe('POST /api/projects/:pid/comments', () => {
 describe('GET /api/projects/:pid/comments', () => {
   it('returns threads with nested replies, unresolved first, newest roots first', async () => {
     const oldRoot = await (await app.request(BASE(projectId), post({ featureId, body: 'old root' }))).json();
-    await app.request(BASE(projectId), post({ featureId, parentId: oldRoot.id, body: 'first reply' }, otherAuth));
-    await app.request(BASE(projectId), post({ featureId, parentId: oldRoot.id, body: 'second reply' }));
+    await app.request(BASE(projectId), post({ parentId: oldRoot.id, body: 'first reply' }, otherAuth));
+    await app.request(BASE(projectId), post({ parentId: oldRoot.id, body: 'second reply' }));
     const newRoot = await (await app.request(BASE(projectId), post({ featureId, body: 'new root' }))).json();
     const resolvedRoot = await (
       await app.request(BASE(projectId), post({ featureId, body: 'resolved root' }))
@@ -230,7 +230,7 @@ describe('PATCH /api/projects/:pid/comments/:id/resolve', () => {
   it('400 when resolving a reply, 404 on unknown id', async () => {
     const root = await (await app.request(BASE(projectId), post({ featureId, body: 'root' }))).json();
     const reply = await (
-      await app.request(BASE(projectId), post({ featureId, parentId: root.id, body: 'reply' }))
+      await app.request(BASE(projectId), post({ parentId: root.id, body: 'reply' }))
     ).json();
     const res = await app.request(`${BASE(projectId)}/${reply.id}/resolve`, patch({ resolved: true }));
     expect(res.status).toBe(400);
@@ -245,7 +245,7 @@ describe('PATCH /api/projects/:pid/comments/:id/resolve', () => {
 describe('DELETE /api/projects/:pid/comments/:id', () => {
   it('author deletes a root → 204 and replies cascade', async () => {
     const root = await (await app.request(BASE(projectId), post({ featureId, body: 'root' }))).json();
-    await app.request(BASE(projectId), post({ featureId, parentId: root.id, body: 'reply' }, otherAuth));
+    await app.request(BASE(projectId), post({ parentId: root.id, body: 'reply' }, otherAuth));
 
     const res = await app.request(`${BASE(projectId)}/${root.id}`, { method: 'DELETE', headers: auth });
     expect(res.status).toBe(204);
@@ -304,7 +304,8 @@ describe('Cross-project isolation', () => {
   });
 
   it('POST {parentId: <B comment>} via A path → 404', async () => {
-    const res = await app.request(BASE(projectId), post({ featureId, parentId: bCommentId, body: 'hijack' }));
+    // send parentId only (valid per refine: reply carries no featureId/documentId)
+    const res = await app.request(BASE(projectId), post({ parentId: bCommentId, body: 'hijack' }));
     expect(res.status).toBe(404);
   });
 
