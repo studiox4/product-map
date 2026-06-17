@@ -100,7 +100,7 @@ const server = setupServer(
     HttpResponse.json([{ id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'owner' }]),
   ),
   http.get(`/api/projects/${TEST_PROJECT_ID}/objectives`, () => HttpResponse.json(objectives)),
-  http.get('/api/features', () => HttpResponse.json(features)),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/features`, () => HttpResponse.json(features)),
   http.get('/api/users', () => HttpResponse.json(users)),
   http.post(`/api/projects/${TEST_PROJECT_ID}/objectives`, async ({ request }) => {
     postBody = (await request.json()) as Record<string, unknown>;

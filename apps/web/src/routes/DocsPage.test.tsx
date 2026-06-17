@@ -7,6 +7,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import type { DocumentListItem } from '@productmap/shared';
 import DocsPage from '@/routes/DocsPage';
+import { ProjectProvider } from '@/lib/project';
+
+const TEST_PROJECT_ID = 'p1';
 
 // jsdom polyfills for Radix
 beforeAll(() => {
@@ -69,6 +72,9 @@ const fixture: DocumentListItem[] = [
 ];
 
 const server = setupServer(
+  http.get('/api/projects', () =>
+    HttpResponse.json([{ id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'owner' }]),
+  ),
   http.get('/api/documents', ({ request }) => {
     const url = new URL(request.url);
     if (url.searchParams.get('all') !== 'true') {
@@ -83,7 +89,7 @@ const server = setupServer(
       contentMd: '# Goals\n\nShip a **great** editor.',
     }),
   ),
-  http.get('/api/features', () => HttpResponse.json([])),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/features`, () => HttpResponse.json([])),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -102,13 +108,15 @@ function renderDocs() {
   });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={['/docs']}>
-        <Routes>
-          <Route path="/docs" element={<DocsPage />} />
-          <Route path="/docs/:id" element={<div>editor route</div>} />
-          <Route path="/features/:id" element={<div>feature route</div>} />
-        </Routes>
-      </MemoryRouter>
+      <ProjectProvider>
+        <MemoryRouter initialEntries={['/docs']}>
+          <Routes>
+            <Route path="/docs" element={<DocsPage />} />
+            <Route path="/docs/:id" element={<div>editor route</div>} />
+            <Route path="/features/:id" element={<div>feature route</div>} />
+          </Routes>
+        </MemoryRouter>
+      </ProjectProvider>
     </QueryClientProvider>,
   );
 }

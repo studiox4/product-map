@@ -122,36 +122,41 @@ export async function fetchJson<T>(input: string, init?: RequestInit): Promise<T
 // ---- query keys ----
 
 export const queryKeys = {
-  overview: ['overview'] as const,
-  features: ['features'] as const,
-  feature: (id: string) => ['features', id] as const,
+  /** pid-keyed. useOverview fetches the flat /api/overview route (not yet nested)
+   * but its cache key is pid-keyed so patchFeatureInCaches / applyVoteInCaches stay aligned. */
+  overview: (pid: string) => ['p', pid, 'overview'] as const,
+  features: (pid: string) => ['p', pid, 'features'] as const,
+  feature: (pid: string, id: string) => ['p', pid, 'features', id] as const,
   document: (id: string) => ['documents', id] as const,
   allDocuments: ['documents', 'all'] as const,
   users: ['users'] as const,
-  activity: (featureId: string) => ['features', featureId, 'activity'] as const,
+  activity: (pid: string, featureId: string) => ['p', pid, 'features', featureId, 'activity'] as const,
   aiStatus: ['ai', 'status'] as const,
 };
 
 // ---- queries ----
 
 export function useOverview() {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: queryKeys.overview,
+    queryKey: queryKeys.overview(pid),
     queryFn: () => fetchJson<OverviewResponse>('/api/overview'),
   });
 }
 
 export function useFeatures() {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: queryKeys.features,
-    queryFn: () => fetchJson<FeatureWithDocs[]>('/api/features'),
+    queryKey: queryKeys.features(pid),
+    queryFn: () => fetchJson<FeatureWithDocs[]>(apiPath(pid, 'features')),
   });
 }
 
 export function useFeature(id: string) {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: queryKeys.feature(id),
-    queryFn: () => fetchJson<FeatureWithDocs>(`/api/features/${id}`),
+    queryKey: queryKeys.feature(pid, id),
+    queryFn: () => fetchJson<FeatureWithDocs>(apiPath(pid, 'features', id)),
     enabled: !!id,
   });
 }
@@ -187,9 +192,10 @@ export function useMe() {
 }
 
 export function useActivity(featureId: string) {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: queryKeys.activity(featureId),
-    queryFn: () => fetchJson<ActivityItem[]>(`/api/features/${featureId}/activity`),
+    queryKey: queryKeys.activity(pid, featureId),
+    queryFn: () => fetchJson<ActivityItem[]>(apiPath(pid, 'features', featureId, 'activity')),
     enabled: !!featureId,
   });
 }
@@ -213,16 +219,17 @@ export function useAiStatus() {
 
 function patchFeatureInCaches(
   qc: QueryClient,
+  pid: string,
   id: string,
   patch: FeatureUpdateInput,
 ) {
-  qc.setQueryData<FeatureWithDocs[]>(queryKeys.features, (old) =>
+  qc.setQueryData<FeatureWithDocs[]>(queryKeys.features(pid), (old) =>
     old?.map((f) => (f.id === id ? { ...f, ...patch } : f)),
   );
-  qc.setQueryData<FeatureWithDocs>(queryKeys.feature(id), (old) =>
+  qc.setQueryData<FeatureWithDocs>(queryKeys.feature(pid, id), (old) =>
     old ? { ...old, ...patch } : old,
   );
-  qc.setQueryData<OverviewResponse>(queryKeys.overview, (old) =>
+  qc.setQueryData<OverviewResponse>(queryKeys.overview(pid), (old) =>
     old
       ? {
           ...old,
@@ -238,63 +245,66 @@ export interface UpdateFeatureVars extends FeatureUpdateInput {
 
 /** Optimistic feature PATCH: cancels in-flight queries, snapshots caches, rolls back on error, invalidates on settle. */
 export function useUpdateFeature() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, ...patch }: UpdateFeatureVars) =>
-      fetchJson<Feature>(`/api/features/${id}`, {
+      fetchJson<Feature>(apiPath(pid, 'features', id), {
         method: 'PATCH',
         body: JSON.stringify(patch),
       }),
     onMutate: async ({ id, ...patch }) => {
       await Promise.all([
-        qc.cancelQueries({ queryKey: queryKeys.features }),
-        qc.cancelQueries({ queryKey: queryKeys.overview }),
+        qc.cancelQueries({ queryKey: queryKeys.features(pid) }),
+        qc.cancelQueries({ queryKey: queryKeys.overview(pid) }),
       ]);
       const snapshot = {
-        features: qc.getQueryData<FeatureWithDocs[]>(queryKeys.features),
-        feature: qc.getQueryData<FeatureWithDocs>(queryKeys.feature(id)),
-        overview: qc.getQueryData<OverviewResponse>(queryKeys.overview),
+        features: qc.getQueryData<FeatureWithDocs[]>(queryKeys.features(pid)),
+        feature: qc.getQueryData<FeatureWithDocs>(queryKeys.feature(pid, id)),
+        overview: qc.getQueryData<OverviewResponse>(queryKeys.overview(pid)),
       };
-      patchFeatureInCaches(qc, id, patch);
+      patchFeatureInCaches(qc, pid, id, patch);
       return snapshot;
     },
     onError: (_err, { id }, snapshot) => {
       if (!snapshot) return;
-      qc.setQueryData(queryKeys.features, snapshot.features);
-      qc.setQueryData(queryKeys.feature(id), snapshot.feature);
-      qc.setQueryData(queryKeys.overview, snapshot.overview);
+      qc.setQueryData(queryKeys.features(pid), snapshot.features);
+      qc.setQueryData(queryKeys.feature(pid, id), snapshot.feature);
+      qc.setQueryData(queryKeys.overview(pid), snapshot.overview);
     },
     onSettled: (_data, _err, { id }) => {
-      qc.invalidateQueries({ queryKey: queryKeys.features });
-      qc.invalidateQueries({ queryKey: queryKeys.feature(id) });
-      qc.invalidateQueries({ queryKey: queryKeys.overview });
+      qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
+      qc.invalidateQueries({ queryKey: queryKeys.feature(pid, id) });
+      qc.invalidateQueries({ queryKey: queryKeys.overview(pid) });
     },
   });
 }
 
 export function useCreateFeature() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: FeatureCreateInput) =>
-      fetchJson<Feature>('/api/features', {
+      fetchJson<Feature>(apiPath(pid, 'features'), {
         method: 'POST',
         body: JSON.stringify(input),
       }),
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.features });
-      qc.invalidateQueries({ queryKey: queryKeys.overview });
+      qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
+      qc.invalidateQueries({ queryKey: queryKeys.overview(pid) });
     },
   });
 }
 
 export function useDeleteFeature() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) =>
-      fetchJson<void>(`/api/features/${id}`, { method: 'DELETE' }),
+      fetchJson<void>(apiPath(pid, 'features', id), { method: 'DELETE' }),
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.features });
-      qc.invalidateQueries({ queryKey: queryKeys.overview });
+      qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
+      qc.invalidateQueries({ queryKey: queryKeys.overview(pid) });
     },
   });
 }
@@ -304,6 +314,7 @@ export interface UpdateDocumentVars extends DocumentUpdateInput {
 }
 
 export function useUpdateDocument() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, ...patch }: UpdateDocumentVars) =>
@@ -319,13 +330,14 @@ export function useUpdateDocument() {
           ? { ...old, ...meta, ...(contentJson !== undefined ? { contentJson } : {}) }
           : old,
       );
-      qc.invalidateQueries({ queryKey: queryKeys.features });
-      qc.invalidateQueries({ queryKey: queryKeys.overview });
+      qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
+      qc.invalidateQueries({ queryKey: queryKeys.overview(pid) });
     },
   });
 }
 
 export function useCreateDocument() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: DocumentCreateInput) =>
@@ -335,20 +347,21 @@ export function useCreateDocument() {
       }),
     onSuccess: (doc) => {
       qc.setQueryData(queryKeys.document(doc.id), doc);
-      qc.invalidateQueries({ queryKey: queryKeys.features });
-      qc.invalidateQueries({ queryKey: queryKeys.overview });
+      qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
+      qc.invalidateQueries({ queryKey: queryKeys.overview(pid) });
     },
   });
 }
 
 export function useDeleteDocument() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) =>
       fetchJson<void>(`/api/documents/${id}`, { method: 'DELETE' }),
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.features });
-      qc.invalidateQueries({ queryKey: queryKeys.overview });
+      qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
+      qc.invalidateQueries({ queryKey: queryKeys.overview(pid) });
     },
   });
 }
@@ -374,16 +387,17 @@ export interface UpdateCollaboratorsVars {
 
 /** Replaces a feature's collaborator set (PUT, returns 204). */
 export function useCollaborators() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ featureId, userIds }: UpdateCollaboratorsVars) =>
-      fetchJson<void>(`/api/features/${featureId}/collaborators`, {
+      fetchJson<void>(apiPath(pid, 'features', featureId, 'collaborators'), {
         method: 'PUT',
         body: JSON.stringify({ userIds }),
       }),
     onSettled: (_data, _err, { featureId }) => {
-      qc.invalidateQueries({ queryKey: queryKeys.feature(featureId) });
-      qc.invalidateQueries({ queryKey: queryKeys.activity(featureId) });
+      qc.invalidateQueries({ queryKey: queryKeys.feature(pid, featureId) });
+      qc.invalidateQueries({ queryKey: queryKeys.activity(pid, featureId) });
     },
   });
 }
@@ -393,6 +407,7 @@ export interface UpdateProjectVars extends ProjectUpdateInput {
 }
 
 export function useUpdateProject() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, ...patch }: UpdateProjectVars) =>
@@ -401,12 +416,12 @@ export function useUpdateProject() {
         body: JSON.stringify(patch),
       }),
     onSuccess: (project) => {
-      qc.setQueryData<OverviewResponse>(queryKeys.overview, (old) =>
+      qc.setQueryData<OverviewResponse>(queryKeys.overview(pid), (old) =>
         old ? { ...old, project } : old,
       );
     },
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.overview });
+      qc.invalidateQueries({ queryKey: queryKeys.overview(pid) });
     },
   });
 }
@@ -429,14 +444,14 @@ function applyVote<T extends VoteCounts>(f: T, value: VoteInput): T {
   return { ...f, boosts, cools, score: boosts - cools, myVote: value };
 }
 
-function applyVoteInCaches(qc: QueryClient, featureId: string, value: VoteInput) {
-  qc.setQueryData<FeatureWithDocs[]>(queryKeys.features, (old) =>
+function applyVoteInCaches(qc: QueryClient, pid: string, featureId: string, value: VoteInput) {
+  qc.setQueryData<FeatureWithDocs[]>(queryKeys.features(pid), (old) =>
     old?.map((f) => (f.id === featureId ? applyVote(f, value) : f)),
   );
-  qc.setQueryData<FeatureWithDocs>(queryKeys.feature(featureId), (old) =>
+  qc.setQueryData<FeatureWithDocs>(queryKeys.feature(pid, featureId), (old) =>
     old ? applyVote(old, value) : old,
   );
-  qc.setQueryData<OverviewResponse>(queryKeys.overview, (old) =>
+  qc.setQueryData<OverviewResponse>(queryKeys.overview(pid), (old) =>
     old
       ? {
           ...old,
@@ -452,37 +467,38 @@ function applyVoteInCaches(qc: QueryClient, featureId: string, value: VoteInput)
  * rolls back on error, reconciles with the server summary on settle.
  */
 export function useVote(featureId: string) {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (value: VoteInput) =>
-      fetchJson<VoteCounts>(`/api/features/${featureId}/vote`, {
+      fetchJson<VoteCounts>(apiPath(pid, 'features', featureId, 'vote'), {
         method: 'PUT',
         body: JSON.stringify({ value }),
       }),
     onMutate: async (value) => {
       await Promise.all([
-        qc.cancelQueries({ queryKey: queryKeys.features }),
-        qc.cancelQueries({ queryKey: queryKeys.overview }),
-        qc.cancelQueries({ queryKey: queryKeys.feature(featureId) }),
+        qc.cancelQueries({ queryKey: queryKeys.features(pid) }),
+        qc.cancelQueries({ queryKey: queryKeys.overview(pid) }),
+        qc.cancelQueries({ queryKey: queryKeys.feature(pid, featureId) }),
       ]);
       const snapshot = {
-        features: qc.getQueryData<FeatureWithDocs[]>(queryKeys.features),
-        feature: qc.getQueryData<FeatureWithDocs>(queryKeys.feature(featureId)),
-        overview: qc.getQueryData<OverviewResponse>(queryKeys.overview),
+        features: qc.getQueryData<FeatureWithDocs[]>(queryKeys.features(pid)),
+        feature: qc.getQueryData<FeatureWithDocs>(queryKeys.feature(pid, featureId)),
+        overview: qc.getQueryData<OverviewResponse>(queryKeys.overview(pid)),
       };
-      applyVoteInCaches(qc, featureId, value);
+      applyVoteInCaches(qc, pid, featureId, value);
       return snapshot;
     },
     onError: (_err, _value, snapshot) => {
       if (!snapshot) return;
-      qc.setQueryData(queryKeys.features, snapshot.features);
-      qc.setQueryData(queryKeys.feature(featureId), snapshot.feature);
-      qc.setQueryData(queryKeys.overview, snapshot.overview);
+      qc.setQueryData(queryKeys.features(pid), snapshot.features);
+      qc.setQueryData(queryKeys.feature(pid, featureId), snapshot.feature);
+      qc.setQueryData(queryKeys.overview(pid), snapshot.overview);
     },
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.features });
-      qc.invalidateQueries({ queryKey: queryKeys.feature(featureId) });
-      qc.invalidateQueries({ queryKey: queryKeys.overview });
+      qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
+      qc.invalidateQueries({ queryKey: queryKeys.feature(pid, featureId) });
+      qc.invalidateQueries({ queryKey: queryKeys.overview(pid) });
     },
   });
 }
@@ -515,11 +531,11 @@ export function useComments(target: CommentTarget) {
 }
 
 /** Invalidate everything a comment write can change: the thread list, attention counts, and the feature activity feed. */
-function invalidateComments(qc: QueryClient, target: CommentTarget) {
+function invalidateComments(qc: QueryClient, pid: string, target: CommentTarget) {
   qc.invalidateQueries({ queryKey: commentsKey(target) });
-  qc.invalidateQueries({ queryKey: queryKeys.overview });
+  qc.invalidateQueries({ queryKey: queryKeys.overview(pid) });
   if (target.featureId) {
-    qc.invalidateQueries({ queryKey: queryKeys.activity(target.featureId) });
+    qc.invalidateQueries({ queryKey: queryKeys.activity(pid, target.featureId) });
   }
 }
 
@@ -531,6 +547,7 @@ export interface AddCommentVars {
 }
 
 export function useAddComment() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ target, body, parentId }: AddCommentVars) =>
@@ -538,7 +555,7 @@ export function useAddComment() {
         method: 'POST',
         body: JSON.stringify({ ...target, body, ...(parentId ? { parentId } : {}) }),
       }),
-    onSettled: (_data, _err, { target }) => invalidateComments(qc, target),
+    onSettled: (_data, _err, { target }) => invalidateComments(qc, pid, target),
   });
 }
 
@@ -560,6 +577,7 @@ export interface EditCommentVars {
 
 /** Optimistic body edit (root or reply). */
 export function useEditComment() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, body }: EditCommentVars) =>
@@ -581,7 +599,7 @@ export function useEditComment() {
     onError: (_err, { target }, snapshot) => {
       qc.setQueryData(commentsKey(target), snapshot);
     },
-    onSettled: (_data, _err, { target }) => invalidateComments(qc, target),
+    onSettled: (_data, _err, { target }) => invalidateComments(qc, pid, target),
   });
 }
 
@@ -593,6 +611,7 @@ export interface ResolveCommentVars {
 
 /** Optimistic resolve / reopen on a thread root; refreshes attention counts on settle. */
 export function useResolveComment() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, resolved }: ResolveCommentVars) =>
@@ -613,7 +632,7 @@ export function useResolveComment() {
     onError: (_err, { target }, snapshot) => {
       qc.setQueryData(commentsKey(target), snapshot);
     },
-    onSettled: (_data, _err, { target }) => invalidateComments(qc, target),
+    onSettled: (_data, _err, { target }) => invalidateComments(qc, pid, target),
   });
 }
 
@@ -624,6 +643,7 @@ export interface DeleteCommentVars {
 
 /** Optimistic delete (removes the whole thread for roots, the single reply otherwise). */
 export function useDeleteComment() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id }: DeleteCommentVars) =>
@@ -640,7 +660,7 @@ export function useDeleteComment() {
     onError: (_err, { target }, snapshot) => {
       qc.setQueryData(commentsKey(target), snapshot);
     },
-    onSettled: (_data, _err, { target }) => invalidateComments(qc, target),
+    onSettled: (_data, _err, { target }) => invalidateComments(qc, pid, target),
   });
 }
 
@@ -904,8 +924,8 @@ export function useUpdateRelease() {
       invalidateReleases(qc, pid, id);
       if (status !== undefined) {
         // Status flips ride on features too (gantt milestone, share changelog).
-        qc.invalidateQueries({ queryKey: queryKeys.features });
-        qc.invalidateQueries({ queryKey: queryKeys.overview });
+        qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
+        qc.invalidateQueries({ queryKey: queryKeys.overview(pid) });
       }
     },
   });
@@ -1039,6 +1059,7 @@ export interface DecisionCreateInput {
 
 /** POST /api/decisions — log a decision (optionally sourced from a resolved thread). */
 export function useCreateDecision() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: DecisionCreateInput) =>
@@ -1049,7 +1070,7 @@ export function useCreateDecision() {
     onSettled: (_data, _err, { featureId }) => {
       qc.invalidateQueries({ queryKey: decisionsRootKey });
       if (featureId) {
-        qc.invalidateQueries({ queryKey: queryKeys.activity(featureId) });
+        qc.invalidateQueries({ queryKey: queryKeys.activity(pid, featureId) });
       }
     },
   });
@@ -1082,12 +1103,13 @@ export interface EvidenceItem extends Evidence {
   createdByColor?: string | null;
 }
 
-export const evidenceKey = (featureId: string) =>
-  [...queryKeys.feature(featureId), 'evidence'] as const;
+export const evidenceKey = (pid: string, featureId: string) =>
+  [...queryKeys.feature(pid, featureId), 'evidence'] as const;
 
 export function useEvidence(featureId: string) {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: evidenceKey(featureId),
+    queryKey: evidenceKey(pid, featureId),
     queryFn: () => fetchJson<EvidenceItem[]>(`/api/features/${featureId}/evidence`),
     enabled: !!featureId,
   });
@@ -1103,6 +1125,7 @@ export interface AddEvidenceVars {
 }
 
 export function useAddEvidence() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ featureId, ...body }: AddEvidenceVars) =>
@@ -1111,7 +1134,7 @@ export function useAddEvidence() {
         body: JSON.stringify(body),
       }),
     onSettled: (_data, _err, { featureId }) => {
-      qc.invalidateQueries({ queryKey: evidenceKey(featureId) });
+      qc.invalidateQueries({ queryKey: evidenceKey(pid, featureId) });
     },
   });
 }
@@ -1122,12 +1145,13 @@ export interface DeleteEvidenceVars {
 }
 
 export function useDeleteEvidence() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id }: DeleteEvidenceVars) =>
       fetchJson<void>(`/api/evidence/${id}`, { method: 'DELETE' }),
     onSettled: (_data, _err, { featureId }) => {
-      qc.invalidateQueries({ queryKey: evidenceKey(featureId) });
+      qc.invalidateQueries({ queryKey: evidenceKey(pid, featureId) });
     },
   });
 }
@@ -1143,13 +1167,14 @@ export function useDecisions(featureId: string) {
   });
 }
 
-export const dependenciesKey = (featureId: string) =>
-  [...queryKeys.feature(featureId), 'dependencies'] as const;
+export const dependenciesKey = (pid: string, featureId: string) =>
+  [...queryKeys.feature(pid, featureId), 'dependencies'] as const;
 
 /** Blockers (features blocking this one) and blocked (features this one blocks). */
 export function useDependencies(featureId: string) {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: dependenciesKey(featureId),
+    queryKey: dependenciesKey(pid, featureId),
     queryFn: () => fetchJson<FeatureDependencies>(`/api/features/${featureId}/dependencies`),
     enabled: !!featureId,
   });
@@ -1167,6 +1192,7 @@ export interface SetDependenciesVars {
  * (board blocked badge), so feature caches refresh too.
  */
 export function useSetDependencies() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ featureId, blockerIds }: SetDependenciesVars) =>
@@ -1175,12 +1201,12 @@ export function useSetDependencies() {
         body: JSON.stringify({ blockerIds }),
       }),
     onSuccess: (graph, { featureId }) => {
-      qc.setQueryData(dependenciesKey(featureId), graph);
+      qc.setQueryData(dependenciesKey(pid, featureId), graph);
     },
     onSettled: (_data, _err, { featureId }) => {
-      qc.invalidateQueries({ queryKey: queryKeys.feature(featureId) });
-      qc.invalidateQueries({ queryKey: queryKeys.features });
-      qc.invalidateQueries({ queryKey: queryKeys.activity(featureId) });
+      qc.invalidateQueries({ queryKey: queryKeys.feature(pid, featureId) });
+      qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
+      qc.invalidateQueries({ queryKey: queryKeys.activity(pid, featureId) });
     },
   });
 }
@@ -1302,6 +1328,7 @@ export interface PromoteIdeaVars {
 
 /** POST /api/ideas/:id/promote — idea → feature (optionally drafting an AI brief). Returns the new feature. */
 export function usePromoteIdea() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, ...body }: PromoteIdeaVars) =>
@@ -1311,8 +1338,8 @@ export function usePromoteIdea() {
       }),
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ideasRootKey });
-      qc.invalidateQueries({ queryKey: queryKeys.features });
-      qc.invalidateQueries({ queryKey: queryKeys.overview });
+      qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
+      qc.invalidateQueries({ queryKey: queryKeys.overview(pid) });
     },
   });
 }
@@ -1514,8 +1541,8 @@ export function useSetReleaseFeatures() {
     onSettled: (_data, _err, { releaseId }) => {
       qc.invalidateQueries({ queryKey: releasesKey(pid) });
       qc.invalidateQueries({ queryKey: releaseKey(pid, releaseId) });
-      qc.invalidateQueries({ queryKey: queryKeys.features });
-      qc.invalidateQueries({ queryKey: queryKeys.overview });
+      qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
+      qc.invalidateQueries({ queryKey: queryKeys.overview(pid) });
     },
   });
 }
@@ -1650,8 +1677,8 @@ export function useApplyPlan() {
       fetchJson<PlanApplyResult>(apiPath(pid, 'plans', planId, 'apply'), { method: 'POST' }),
     onSettled: () => {
       qc.invalidateQueries({ queryKey: plansKey(pid) });
-      qc.invalidateQueries({ queryKey: queryKeys.features });
-      qc.invalidateQueries({ queryKey: queryKeys.overview });
+      qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
+      qc.invalidateQueries({ queryKey: queryKeys.overview(pid) });
     },
   });
 }

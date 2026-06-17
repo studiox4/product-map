@@ -5,6 +5,9 @@ import { setupServer } from 'msw/node';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { FeatureWithDocs } from '@productmap/shared';
 import { FeatureCard } from '@/components/board/FeatureCard';
+import { ProjectProvider } from '@/lib/project';
+
+const TEST_PROJECT_ID = 'p1';
 
 beforeAll(() => {
   if (!('ResizeObserver' in window)) {
@@ -53,7 +56,10 @@ const blockerShipped = makeFeature({ id: 'f3', title: 'Design tokens', status: '
 let featuresFixture: FeatureWithDocs[] = [];
 
 const server = setupServer(
-  http.get('/api/features', () => HttpResponse.json(featuresFixture)),
+  http.get('/api/projects', () =>
+    HttpResponse.json([{ id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'owner' }]),
+  ),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/features`, () => HttpResponse.json(featuresFixture)),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -69,7 +75,9 @@ function renderCard(feature: FeatureWithDocs) {
   });
   return render(
     <QueryClientProvider client={qc}>
-      <FeatureCard feature={feature} onOpen={vi.fn()} />
+      <ProjectProvider>
+        <FeatureCard feature={feature} onOpen={vi.fn()} />
+      </ProjectProvider>
     </QueryClientProvider>,
   );
 }

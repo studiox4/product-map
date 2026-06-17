@@ -12,6 +12,9 @@ import { EvidenceSection } from '@/components/feature/EvidenceSection';
 import { DecisionsSection } from '@/components/feature/DecisionsSection';
 import { DependenciesRail } from '@/components/feature/DependenciesRail';
 import { SizeRiskRail } from '@/components/feature/SizeRiskRail';
+import { ProjectProvider } from '@/lib/project';
+
+const TEST_PROJECT_ID = 'p1';
 
 vi.mock('sonner', () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -109,7 +112,11 @@ const decisionRows: Decision[] = [
 ];
 
 const server = setupServer(
-  http.get('/api/features', () => HttpResponse.json([makeFeature(), blockerFeature])),
+  http.get('/api/projects', () =>
+    HttpResponse.json([{ id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'owner' }]),
+  ),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/features`, () => HttpResponse.json([makeFeature(), blockerFeature])),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/features/f1`, () => HttpResponse.json(makeFeature())),
   http.get('/api/features/f1/evidence', () => HttpResponse.json(evidenceRows)),
   http.get('/api/decisions', ({ request }) => {
     const url = new URL(request.url);
@@ -136,7 +143,9 @@ function renderWithProviders(ui: React.ReactElement) {
   });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter>{ui}</MemoryRouter>
+      <ProjectProvider>
+        <MemoryRouter>{ui}</MemoryRouter>
+      </ProjectProvider>
     </QueryClientProvider>,
   );
 }
@@ -280,23 +289,22 @@ describe('SizeRiskRail', () => {
   it('size pills PATCH the chosen size and clicking the active pill clears it', async () => {
     const patches: Record<string, unknown>[] = [];
     server.use(
-      http.patch('/api/features/f1', async ({ request }) => {
+      http.patch(`/api/projects/${TEST_PROJECT_ID}/features/f1`, async ({ request }) => {
         const body = (await request.json()) as Record<string, unknown>;
         patches.push(body);
         return HttpResponse.json({ ...makeFeature(), ...body });
       }),
     );
     renderWithProviders(<SizeRiskRail feature={makeFeature({ size: null })} />);
-    await user().click(screen.getByRole('button', { name: 'Size M' }));
+    await user().click(await screen.findByRole('button', { name: 'Size M' }));
     await waitFor(() => expect(patches).toHaveLength(1));
     expect(patches[0]).toEqual({ size: 'm' });
 
     cleanup();
     renderWithProviders(<SizeRiskRail feature={makeFeature({ size: 'm' })} />);
-    expect(screen.getByRole('button', { name: 'Size M' }).getAttribute('aria-pressed')).toBe(
-      'true',
-    );
-    await user().click(screen.getByRole('button', { name: 'Size M' }));
+    const sizeM = await screen.findByRole('button', { name: 'Size M' });
+    expect(sizeM.getAttribute('aria-pressed')).toBe('true');
+    await user().click(sizeM);
     await waitFor(() => expect(patches).toHaveLength(2));
     expect(patches[1]).toEqual({ size: null });
   });
@@ -304,15 +312,16 @@ describe('SizeRiskRail', () => {
   it('risk notes expand and PATCH riskMd on blur', async () => {
     let patched: Record<string, unknown> | null = null;
     server.use(
-      http.patch('/api/features/f1', async ({ request }) => {
+      http.patch(`/api/projects/${TEST_PROJECT_ID}/features/f1`, async ({ request }) => {
         patched = (await request.json()) as Record<string, unknown>;
         return HttpResponse.json({ ...makeFeature(), ...patched });
       }),
     );
     renderWithProviders(<SizeRiskRail feature={makeFeature()} />);
-    // collapsed by default when riskMd is empty
+    // collapsed by default when riskMd is empty — wait for ProjectProvider to resolve first
+    const riskBtn = await screen.findByRole('button', { name: /risk notes/i });
     expect(screen.queryByLabelText('Risk notes')).toBeNull();
-    await user().click(screen.getByRole('button', { name: /risk notes/i }));
+    await user().click(riskBtn);
     const textarea = screen.getByLabelText('Risk notes');
     await user().type(textarea, 'Migration could corrupt docs');
     await user().tab(); // blur saves

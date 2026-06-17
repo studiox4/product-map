@@ -2,12 +2,15 @@ import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest
 import { render, screen, within, waitFor, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PointerEventsCheckLevel } from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { http, HttpResponse, delay } from 'msw';
 import { setupServer } from 'msw/node';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import type { IdeaWithVotes } from '@productmap/shared';
 import Inbox from '@/routes/Inbox';
+import { ProjectProvider } from '@/lib/project';
+
+const TEST_PROJECT_ID = 'p1';
 
 // Node's experimental webstorage shadows jsdom's localStorage in this env
 // (methods are undefined) — install a working in-memory Storage.
@@ -92,9 +95,13 @@ const fixture: IdeaWithVotes[] = [
 ];
 
 const server = setupServer(
+  http.get('/api/projects', () =>
+    HttpResponse.json([{ id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'owner' }]),
+  ),
   http.get('/api/users', () => HttpResponse.json([])),
   http.get('/api/ai/status', () => HttpResponse.json({ enabled: true })),
-  http.get('/api/ideas', ({ request }) => {
+  http.get('/api/ideas', async ({ request }) => {
+    await delay(20);
     const status = new URL(request.url).searchParams.get('status');
     return HttpResponse.json(status ? fixture.filter((i) => i.status === status) : fixture);
   }),
@@ -117,13 +124,15 @@ function renderInbox(entries: string[] = ['/inbox']) {
   });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={entries}>
-        <Routes>
-          <Route path="/inbox" element={<Inbox />} />
-          <Route path="/features/:id" element={<div>feature page</div>} />
-          <Route path="/docs/:id" element={<div>editor route</div>} />
-        </Routes>
-      </MemoryRouter>
+      <ProjectProvider>
+        <MemoryRouter initialEntries={entries}>
+          <Routes>
+            <Route path="/inbox" element={<Inbox />} />
+            <Route path="/features/:id" element={<div>feature page</div>} />
+            <Route path="/docs/:id" element={<div>editor route</div>} />
+          </Routes>
+        </MemoryRouter>
+      </ProjectProvider>
     </QueryClientProvider>,
   );
 }
@@ -131,7 +140,9 @@ function renderInbox(entries: string[] = ['/inbox']) {
 describe('Idea Inbox', () => {
   it('shows loading skeleton, then list with vote pills and detail pane', async () => {
     renderInbox();
-    expect(screen.getByTestId('inbox-skeleton')).toBeTruthy();
+    // ProjectProvider resolves first (no delay), then Inbox renders its own
+    // loading skeleton while ideas fetch (delayed 20 ms) is in-flight.
+    expect(await screen.findByTestId('inbox-skeleton')).toBeTruthy();
     await screen.findAllByText('Realtime cursors');
     const list = screen.getByRole('list', { name: /ideas/i });
     expect(within(list).getByText('Bulk export to CSV')).toBeTruthy();
@@ -231,7 +242,7 @@ describe('Idea Inbox', () => {
           { status: 201 },
         );
       }),
-      http.get('/api/features', () => HttpResponse.json([])),
+      http.get(`/api/projects/${TEST_PROJECT_ID}/features`, () => HttpResponse.json([])),
       http.get('/api/overview', () => HttpResponse.json({})),
     );
     renderInbox();

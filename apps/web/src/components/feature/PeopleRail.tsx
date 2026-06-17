@@ -4,25 +4,27 @@ import { format, parseISO } from 'date-fns';
 import { Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { FeatureWithDocs, User } from '@productmap/shared';
-import { fetchJson, queryKeys, useCollaborators, useUsers } from '@/lib/api';
+import { apiPath, fetchJson, queryKeys, useCollaborators, useUsers } from '@/lib/api';
+import { useProjectId } from '@/lib/project';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserAvatar } from '@/components/UserAvatar';
 
-function useFeatureCollaborators(featureId: string) {
+function useFeatureCollaborators(pid: string, featureId: string) {
   return useQuery({
-    // Prefixed by queryKeys.feature(featureId) so feature invalidations refresh this too.
-    queryKey: [...queryKeys.feature(featureId), 'collaborators'],
-    queryFn: () => fetchJson<User[]>(`/api/features/${featureId}/collaborators`),
+    // Prefixed by queryKeys.feature(pid, featureId) so feature invalidations refresh this too.
+    queryKey: [...queryKeys.feature(pid, featureId), 'collaborators'],
+    queryFn: () => fetchJson<User[]>(apiPath(pid, 'features', featureId, 'collaborators')),
     enabled: !!featureId,
   });
 }
 
 /** Right-rail people card: creator, collaborators, add/remove popover. */
 export function PeopleRail({ feature }: { feature: FeatureWithDocs }) {
+  const pid = useProjectId();
   const { data: users } = useUsers();
-  const collaboratorsQuery = useFeatureCollaborators(feature.id);
+  const collaboratorsQuery = useFeatureCollaborators(pid, feature.id);
   const setCollaborators = useCollaborators();
   const [addOpen, setAddOpen] = useState(false);
 

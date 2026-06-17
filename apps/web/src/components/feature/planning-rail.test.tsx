@@ -92,7 +92,7 @@ const server = setupServer(
   http.get(`/api/projects/${TEST_PROJECT_ID}/releases`, () =>
     HttpResponse.json(releases.map((r) => ({ ...r, featureCount: 0 }))),
   ),
-  http.patch('/api/features/f1', async ({ request }) => {
+  http.patch(`/api/projects/${TEST_PROJECT_ID}/features/f1`, async ({ request }) => {
     patched = (await request.json()) as Record<string, unknown>;
     return HttpResponse.json({ ...feature, ...patched });
   }),

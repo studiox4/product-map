@@ -8,6 +8,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { CommentThread, User } from '@productmap/shared';
 import { CommentsSection } from './CommentsSection';
+import { ProjectProvider } from '@/lib/project';
+
+const TEST_PROJECT_ID = 'p1';
 
 // Node's experimental webstorage shadows jsdom's localStorage in this env
 // (methods are undefined) — install a working in-memory Storage.
@@ -112,6 +115,9 @@ let threads: CommentThread[] = [];
 let meUser: User = corban;
 
 const server = setupServer(
+  http.get('/api/projects', () =>
+    HttpResponse.json([{ id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'owner' }]),
+  ),
   http.get('/api/auth/me', () => HttpResponse.json(meUser)),
   http.get('/api/users', () => HttpResponse.json([corban, ada])),
   http.get('/api/comments', () => HttpResponse.json(threads)),
@@ -136,9 +142,11 @@ function renderSection() {
   });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter>
-        <CommentsSection target={{ featureId: 'f1' }} />
-      </MemoryRouter>
+      <ProjectProvider>
+        <MemoryRouter>
+          <CommentsSection target={{ featureId: 'f1' }} />
+        </MemoryRouter>
+      </ProjectProvider>
     </QueryClientProvider>,
   );
 }

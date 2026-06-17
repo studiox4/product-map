@@ -41,7 +41,7 @@ export function FeatureCard({ feature, onOpen }: FeatureCardProps) {
     () =>
       makeHoverPrefetch(() => {
         void queryClient.prefetchQuery({
-          queryKey: queryKeys.feature(feature.id),
+          queryKey: queryKeys.feature(feature.projectId, feature.id),
           queryFn: () => fetchJson<FeatureWithDocs>(`/api/features/${feature.id}`),
         });
       }),

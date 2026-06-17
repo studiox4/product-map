@@ -3,6 +3,7 @@ import { matchPath, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { hashKey } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/api';
+import { useProjectId } from '@/lib/project';
 
 export type RecentKind = 'feature' | 'doc';
 
@@ -56,6 +57,7 @@ export function recordRecent(entry: RecentEntry): void {
  * page, so this never triggers a fetch of its own).
  */
 export function useTrackRecents(): void {
+  const pid = useProjectId();
   const location = useLocation();
   const qc = useQueryClient();
 
@@ -63,7 +65,7 @@ export function useTrackRecents(): void {
     const featureMatch = matchPath('/features/:id', location.pathname);
     const docMatch = matchPath('/docs/:id', location.pathname);
     const target = featureMatch?.params.id
-      ? { kind: 'feature' as const, id: featureMatch.params.id, key: queryKeys.feature(featureMatch.params.id) }
+      ? { kind: 'feature' as const, id: featureMatch.params.id, key: queryKeys.feature(pid, featureMatch.params.id) }
       : docMatch?.params.id
         ? { kind: 'doc' as const, id: docMatch.params.id, key: queryKeys.document(docMatch.params.id) }
         : null;
@@ -85,5 +87,5 @@ export function useTrackRecents(): void {
       if (tryRecord()) unsubscribe();
     });
     return unsubscribe;
-  }, [location.pathname, qc]);
+  }, [location.pathname, pid, qc]);
 }

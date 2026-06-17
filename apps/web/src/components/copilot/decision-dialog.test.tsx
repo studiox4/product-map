@@ -1,7 +1,18 @@
-import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest';
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
+import { setupServer } from 'msw/node';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { DecisionDialog } from './DecisionDialog';
+import { ProjectProvider } from '@/lib/project';
+
+const TEST_PROJECT_ID = 'p1';
+
+const server = setupServer(
+  http.get('/api/projects', () =>
+    HttpResponse.json([{ id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'owner' }]),
+  ),
+);
 
 class MemoryStorage {
   private store = new Map<string, string>();
@@ -27,12 +38,15 @@ beforeAll(() => {
   window.HTMLElement.prototype.scrollIntoView = vi.fn();
   window.HTMLElement.prototype.hasPointerCapture = vi.fn();
   window.HTMLElement.prototype.releasePointerCapture = vi.fn();
+  server.listen({ onUnhandledRequest: 'warn' });
 });
 
 afterEach(() => {
   cleanup();
+  server.resetHandlers();
   vi.restoreAllMocks();
 });
+afterAll(() => server.close());
 
 const initial = {
   title: 'Adopt SSE for streaming',
@@ -46,21 +60,23 @@ function renderDialog(onOpenChange = vi.fn()) {
   });
   return render(
     <QueryClientProvider client={qc}>
-      <DecisionDialog
-        open
-        onOpenChange={onOpenChange}
-        initial={initial}
-        featureId="f1"
-        sourceCommentId="c4"
-      />
+      <ProjectProvider>
+        <DecisionDialog
+          open
+          onOpenChange={onOpenChange}
+          initial={initial}
+          featureId="f1"
+          sourceCommentId="c4"
+        />
+      </ProjectProvider>
     </QueryClientProvider>,
   );
 }
 
 describe('DecisionDialog', () => {
-  it('prefills the suggested decision fields (still editable)', () => {
+  it('prefills the suggested decision fields (still editable)', async () => {
     renderDialog();
-    expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe(initial.title);
+    expect(((await screen.findByLabelText('Title')) as HTMLInputElement).value).toBe(initial.title);
     expect((screen.getByLabelText('Decision') as HTMLTextAreaElement).value).toBe(
       initial.decisionMd,
     );
@@ -70,14 +86,19 @@ describe('DecisionDialog', () => {
   });
 
   it('POSTs the decision with feature and source-comment links, then closes', async () => {
+    const onOpenChange = vi.fn();
+    // Render first so ProjectProvider resolves via MSW, then spy only catches the mutation.
+    renderDialog(onOpenChange);
+
+    // Wait for the dialog to be interactive (ProjectProvider loaded).
+    await screen.findByLabelText('Title');
+
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ id: 'dec1' }), {
         status: 201,
         headers: { 'content-type': 'application/json' },
       }),
     );
-    const onOpenChange = vi.fn();
-    renderDialog(onOpenChange);
 
     fireEvent.change(screen.getByLabelText('Title'), {
       target: { value: 'Adopt SSE everywhere' },
@@ -97,16 +118,18 @@ describe('DecisionDialog', () => {
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
   });
 
-  it('disables save until title and decision are filled', () => {
+  it('disables save until title and decision are filled', async () => {
     const qc = new QueryClient({
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     });
     render(
       <QueryClientProvider client={qc}>
-        <DecisionDialog open onOpenChange={vi.fn()} />
+        <ProjectProvider>
+          <DecisionDialog open onOpenChange={vi.fn()} />
+        </ProjectProvider>
       </QueryClientProvider>,
     );
-    const save = screen.getByRole('button', { name: 'Save decision' }) as HTMLButtonElement;
+    const save = (await screen.findByRole('button', { name: 'Save decision' })) as HTMLButtonElement;
     expect(save.disabled).toBe(true);
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'T' } });
     expect(save.disabled).toBe(true);

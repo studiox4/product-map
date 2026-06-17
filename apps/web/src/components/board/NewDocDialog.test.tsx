@@ -7,6 +7,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { FeatureWithDocs, Template } from '@productmap/shared';
 import { NewDocDialog } from '@/components/board/NewDocDialog';
+import { ProjectProvider } from '@/lib/project';
+
+const TEST_PROJECT_ID = 'p1';
 
 // jsdom polyfills for Radix
 beforeAll(() => {
@@ -68,6 +71,9 @@ const feature = {
 let createBodies: unknown[] = [];
 
 const server = setupServer(
+  http.get('/api/projects', () =>
+    HttpResponse.json([{ id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'owner' }]),
+  ),
   http.get('/api/templates', () => HttpResponse.json(templates)),
   http.post('/api/documents', async ({ request }) => {
     const body = await request.json();
@@ -99,9 +105,11 @@ function renderDialog() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter>
-        <NewDocDialog feature={feature} open onOpenChange={() => {}} />
-      </MemoryRouter>
+      <ProjectProvider>
+        <MemoryRouter>
+          <NewDocDialog feature={feature} open onOpenChange={() => {}} />
+        </MemoryRouter>
+      </ProjectProvider>
     </QueryClientProvider>,
   );
 }
