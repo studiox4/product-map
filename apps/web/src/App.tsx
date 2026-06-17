@@ -36,6 +36,7 @@ const FirstRunPage = lazy(() => import('@/routes/FirstRun'));
 const ReleasesPage = lazy(() => import('@/routes/Releases'));
 const ReleaseDetailPage = lazy(() => import('@/components/releases/ReleaseDetail'));
 const OutcomesPage = lazy(() => import('@/routes/Outcomes'));
+const Marketing = lazy(() => import('@/routes/Marketing'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -91,8 +92,15 @@ export default function App() {
             {/* Public routes — no auth required. */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            {/* PR A: `/` redirects to the app (Phase 3B replaces this with Marketing). */}
-            <Route path="/" element={<Navigate to={appRoutes.dashboard} replace />} />
+            {/* Marketing landing — presentational, no providers; prerendered for `/`. */}
+            <Route
+              path="/"
+              element={
+                <Suspense fallback={null}>
+                  <Marketing />
+                </Suspense>
+              }
+            />
             {/* Authed application — everything under /app/*. */}
             <Route
               path="/app"
