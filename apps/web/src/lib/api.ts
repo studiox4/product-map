@@ -1039,7 +1039,7 @@ export function useCopilotNudges(enabled = true) {
   const pid = useProjectId();
   return useQuery({
     queryKey: copilotNudgesKey(pid),
-    queryFn: () => fetchJson<CopilotNudge[]>('/api/copilot/nudges'),
+    queryFn: () => fetchJson<CopilotNudge[]>(apiPath(pid, 'copilot', 'nudges')),
     enabled,
     staleTime: 30_000,
   });

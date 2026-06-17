@@ -1,6 +1,8 @@
 // Copilot: AI doc review (rubric SSE), workspace-grounded chat (Postgres
 // full-text retrieval — no embeddings) and derived hygiene nudges. Mounted at
-// /api, so paths here are /ai/review-doc, /ai/chat and /copilot/nudges.
+// /api/projects/:projectId, so paths here are /ai/review-doc, /ai/chat and
+// /copilot/nudges. NOTE: aiRoutes (/api/ai/status) is GLOBAL config — stays
+// top-level and is NOT in this file.
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { zValidator } from '@hono/zod-validator';
@@ -11,6 +13,8 @@ import type { CopilotNudge } from '@productmap/shared';
 import { db } from '../db';
 import { comments, documents, features } from '@productmap/db';
 import { createAiModel } from '../lib/ai';
+import { loadScoped } from '../lib/scope';
+import type { MembershipEnv } from '../middleware/membership';
 
 const REVIEW_SYSTEM_PROMPT =
   'You are a rigorous, kind product-document reviewer. Review the document against this rubric, ' +
@@ -32,13 +36,18 @@ const DOC_CONTEXT_CHARS = 4000;
 const STALE_DRAFT_DAYS = 14;
 const STALE_THREAD_DAYS = 7;
 
-export const copilotRoutes = new Hono()
-  // POST /api/ai/review-doc {documentId} → SSE markdown rubric review.
+export const copilotRoutes = new Hono<MembershipEnv>()
+  // POST /api/projects/:projectId/ai/review-doc {documentId} → SSE markdown rubric review.
   .post('/ai/review-doc', zValidator('json', reviewDocBody), async (c) => {
     const model = createAiModel();
     if (!model) return c.json({ error: 'ai_disabled' }, 503);
 
+    const pid = c.get('currentProjectId');
     const { documentId } = c.req.valid('json');
+
+    // loadScoped guards cross-project access (throws ScopeError 404 if doc not in pid)
+    await loadScoped(documents, documentId, pid);
+
     const [doc] = await db
       .select({
         id: documents.id,
@@ -80,12 +89,14 @@ export const copilotRoutes = new Hono()
       }
     });
   })
-  // POST /api/ai/chat {question} → SSE answer grounded in the top-8 docs by
-  // Postgres full-text rank over content_md plus a feature summary.
+  // POST /api/projects/:projectId/ai/chat {question} → SSE answer grounded in
+  // the top-8 docs by Postgres full-text rank over content_md plus a feature
+  // summary. Retrieval is scoped to the current project.
   .post('/ai/chat', zValidator('json', copilotChatBody), async (c) => {
     const model = createAiModel();
     if (!model) return c.json({ error: 'ai_disabled' }, 503);
 
+    const pid = c.get('currentProjectId');
     const { question } = c.req.valid('json');
 
     const tsQuery = sql`plainto_tsquery('english', ${question})`;
@@ -97,13 +108,14 @@ export const copilotRoutes = new Hono()
         rank: sql<number>`ts_rank(${tsVector}, ${tsQuery})`,
       })
       .from(documents)
-      .where(sql`${tsVector} @@ ${tsQuery}`)
+      .where(and(sql`${tsVector} @@ ${tsQuery}`, eq(documents.projectId, pid)))
       .orderBy(sql`ts_rank(${tsVector}, ${tsQuery}) desc`)
       .limit(8);
 
     const featureRows = await db
       .select({ title: features.title, horizon: features.horizon, status: features.status })
       .from(features)
+      .where(eq(features.projectId, pid))
       .orderBy(asc(features.createdAt));
 
     const docBlocks =
@@ -144,13 +156,15 @@ export const copilotRoutes = new Hono()
       }
     });
   })
-  // GET /api/copilot/nudges → derived hygiene prompts (no table behind them,
-  // no AI involved — available even when AI is disabled).
+  // GET /api/projects/:projectId/copilot/nudges → derived hygiene prompts
+  // (no table behind them, no AI involved — available even when AI is disabled).
+  // Viewers may GET nudges (read-only); the method gate allows GET → viewer.
   .get('/copilot/nudges', async (c) => {
+    const pid = c.get('currentProjectId');
     const staleDraftCutoff = new Date(Date.now() - STALE_DRAFT_DAYS * 24 * 60 * 60 * 1000);
     const staleThreadCutoff = new Date(Date.now() - STALE_THREAD_DAYS * 24 * 60 * 60 * 1000);
 
-    // 1) Drafts untouched for >14 days.
+    // 1) Drafts untouched for >14 days — scoped to this project.
     const staleDrafts = await db
       .select({
         documentId: documents.id,
@@ -160,27 +174,38 @@ export const copilotRoutes = new Hono()
         updatedAt: documents.updatedAt,
       })
       .from(documents)
-      .where(and(eq(documents.status, 'draft'), lt(documents.updatedAt, staleDraftCutoff), isNotNull(documents.featureId)))
+      .where(
+        and(
+          eq(documents.projectId, pid),
+          eq(documents.status, 'draft'),
+          lt(documents.updatedAt, staleDraftCutoff),
+          isNotNull(documents.featureId),
+        ),
+      )
       .orderBy(asc(documents.updatedAt));
 
-    // 2) Now-horizon features missing a start or end date.
+    // 2) Now-horizon features missing a start or end date — scoped to this project.
     const datelessNow = await db
       .select({ featureId: features.id, title: features.title })
       .from(features)
       .where(
         and(
+          eq(features.projectId, pid),
           eq(features.horizon, 'now'),
           or(isNull(features.startDate), isNull(features.endDate)),
         ),
       )
       .orderBy(asc(features.sortOrder), asc(features.createdAt));
 
-    // 3) Oversized: L-size features in Now with no docs at all.
+    // 3) Oversized: L-size features in Now with no docs at all — scoped to this project.
+    // The notExists subquery is implicitly scoped via eq(documents.featureId, features.id)
+    // since features is already scoped to pid.
     const oversized = await db
       .select({ featureId: features.id, title: features.title })
       .from(features)
       .where(
         and(
+          eq(features.projectId, pid),
           eq(features.size, 'l'),
           eq(features.horizon, 'now'),
           notExists(
@@ -190,7 +215,9 @@ export const copilotRoutes = new Hono()
       )
       .orderBy(asc(features.sortOrder), asc(features.createdAt));
 
-    // 4) Unresolved root comment threads older than 7 days.
+    // 4) Unresolved root comment threads older than 7 days — scoped via the
+    // joined feature/document project. Includes only threads whose parent
+    // (feature or doc) belongs to this project.
     const staleThreads = await db
       .select({
         commentId: comments.id,
@@ -207,6 +234,8 @@ export const copilotRoutes = new Hono()
           isNull(comments.parentId),
           isNull(comments.resolvedAt),
           lt(comments.createdAt, staleThreadCutoff),
+          // scope: only comments on features or docs owned by this project
+          or(eq(features.projectId, pid), eq(documents.projectId, pid)),
         ),
       )
       .orderBy(asc(comments.createdAt));

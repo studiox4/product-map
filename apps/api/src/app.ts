@@ -12,7 +12,6 @@ import { adminRoutes } from './routes/admin';
 // Dream-tier route modules (mounted as stubs by the foundation agent; each
 // feature agent fills in its own file — nobody else edits app.ts).
 import { shareRoutes } from './routes/share';
-import { copilotRoutes } from './routes/copilot';
 import { projectScopedContent } from './routes/project-scoped';
 
 export const app = new Hono()
@@ -48,9 +47,8 @@ export const app = new Hono()
   .route('/api/admin', adminRoutes)
   // --- Dream tier mounts (paths inside each module are relative to these) ---
   // decisions migrated to /api/projects/:projectId/ (project-scoped.ts)
-  .route('/api/share', shareRoutes)
-  // copilot defines /ai/review-doc, /ai/chat, /copilot/nudges
-  .route('/api', copilotRoutes);
+  // copilotRoutes migrated to /api/projects/:projectId/ (project-scoped.ts)
+  .route('/api/share', shareRoutes);
 
 app.notFound((c) => c.json({ error: 'not_found' }, 404));
 
