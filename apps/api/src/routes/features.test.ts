@@ -2,10 +2,10 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { products, features, documents, users, activity, featureCollaborators, votes, objectives, releases, featureDependencies } from '@productmap/db';
+import { projects, features, documents, users, activity, featureCollaborators, votes, objectives, releases, featureDependencies } from '@productmap/db';
 import { asc, eq } from 'drizzle-orm';
 
-let productId: string;
+let projectId: string;
 let userId: string;
 let auth: Record<string, string> = {};
 
@@ -24,10 +24,10 @@ beforeEach(async () => {
   userId = actor.id;
   auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
   const [p] = await db
-    .insert(products)
+    .insert(projects)
     .values({ name: 'ProductMap', vision: 'v', aboutMd: '' })
     .returning();
-  productId = p.id;
+  projectId = p.id;
 });
 
 async function activityRows(featureId: string) {
@@ -61,7 +61,7 @@ describe('POST /api/features', () => {
     expect(body.sortOrder).toBe(0);
     expect(body.startDate).toBeNull();
     expect(body.endDate).toBeNull();
-    expect(body.productId).toBe(productId);
+    expect(body.projectId).toBe(projectId);
     expect(body.id).toMatch(/^[0-9a-f-]{36}$/);
   });
 
@@ -130,7 +130,7 @@ describe('GET /api/features', () => {
 
   it('orders by horizon (now,next,later) then sortOrder then createdAt', async () => {
     const insert = (title: string, horizon: 'now' | 'next' | 'later', sortOrder: number) =>
-      db.insert(features).values({ productId, title, horizon, sortOrder }).returning();
+      db.insert(features).values({ projectId, title, horizon, sortOrder }).returning();
     await insert('later-0', 'later', 0);
     await insert('now-1', 'now', 1);
     await insert('next-0', 'next', 0);
@@ -158,7 +158,7 @@ describe('PUT /api/features/:id/vote', () => {
   });
 
   it('votes, flips, and clears with persisted summaries', async () => {
-    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now' }).returning();
 
     const boost = await app.request(`/api/features/${f.id}/vote`, put(1));
     expect(boost.status).toBe(200);
@@ -175,7 +175,7 @@ describe('PUT /api/features/:id/vote', () => {
   });
 
   it('enforces one vote per user and aggregates across users', async () => {
-    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now' }).returning();
     const ada = await createTestUser({ role: 'member', name: 'Ada', email: 'ada@test.co', color: '#3c6b46' });
     const adaAuth = { cookie: await authCookie(ada), origin: 'http://localhost', host: 'localhost' };
 
@@ -191,13 +191,13 @@ describe('PUT /api/features/:id/vote', () => {
   it('404 on unknown feature and 400 on invalid value', async () => {
     const missing = await app.request('/api/features/00000000-0000-4000-8000-000000000000/vote', put(1, auth));
     expect(missing.status).toBe(404);
-    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now' }).returning();
     const bad = await app.request(`/api/features/${f.id}/vote`, put(2));
     expect(bad.status).toBe(400);
   });
 
   it('GET /api/features and /api/features/:id include vote fields with per-user myVote', async () => {
-    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now' }).returning();
     const ada = await createTestUser({ role: 'member', name: 'Ada', email: 'ada@test.co', color: '#3c6b46' });
     const adaAuth = { cookie: await authCookie(ada), origin: 'http://localhost', host: 'localhost' };
     await app.request(`/api/features/${f.id}/vote`, put(1)); // Corban votes +1
@@ -211,13 +211,13 @@ describe('PUT /api/features/:id/vote', () => {
     const single = await (await app.request(`/api/features/${f.id}`, { headers: auth })).json();
     expect(single).toMatchObject({ score: 0, boosts: 1, cools: 1, myVote: 1 }); // Corban voted +1
 
-    const [unvoted] = await db.insert(features).values({ productId, title: 'G', horizon: 'later' }).returning();
+    const [unvoted] = await db.insert(features).values({ projectId, title: 'G', horizon: 'later' }).returning();
     const fresh = await (await app.request(`/api/features/${unvoted.id}`, { headers: auth })).json();
     expect(fresh).toMatchObject({ score: 0, boosts: 0, cools: 0, myVote: 0 });
   });
 
   it('reads return personalized myVote for the authenticated cookie user', async () => {
-    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now' }).returning();
     // Corban votes +1 via auth cookie
     await app.request(`/api/features/${f.id}/vote`, put(1));
     // Read as Corban via the same auth cookie → myVote = +1
@@ -230,7 +230,7 @@ describe('PUT /api/features/:id/vote', () => {
 
 describe('GET /api/features/:id', () => {
   it('returns the feature with its documents', async () => {
-    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now' }).returning();
     await db.insert(documents).values({ featureId: f.id, type: 'prd', title: 'F PRD' });
     const res = await app.request(`/api/features/${f.id}`, { headers: auth });
     expect(res.status).toBe(200);
@@ -252,7 +252,7 @@ describe('GET /api/features/:id', () => {
 
 describe('PATCH /api/features/:id', () => {
   it('updates horizon, status and dates', async () => {
-    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now' }).returning();
     const res = await app.request(
       `/api/features/${f.id}`,
       patch({ horizon: 'later', status: 'planned', startDate: '2026-06-01', endDate: '2026-06-15' }),
@@ -267,7 +267,7 @@ describe('PATCH /api/features/:id', () => {
   });
 
   it('records one activity entry per changed field group, with {from,to} payloads', async () => {
-    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now' }).returning();
     await app.request(
       `/api/features/${f.id}`,
       patch({ horizon: 'later', status: 'planned', startDate: '2026-06-01', endDate: '2026-06-15' }),
@@ -285,7 +285,7 @@ describe('PATCH /api/features/:id', () => {
   });
 
   it('records description_edited and sets updatedBy when descriptionMd changes', async () => {
-    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now' }).returning();
     const res = await app.request(`/api/features/${f.id}`, patch({ descriptionMd: '## Why' }));
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -296,13 +296,13 @@ describe('PATCH /api/features/:id', () => {
   });
 
   it('records no activity when values do not change', async () => {
-    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now' }).returning();
     await app.request(`/api/features/${f.id}`, patch({ horizon: 'now', sortOrder: 3 }));
     expect(await activityRows(f.id)).toHaveLength(0);
   });
 
   it('auto-adds the editor as collaborator on PATCH', async () => {
-    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now' }).returning();
     await app.request(`/api/features/${f.id}`, patch({ status: 'planned' }));
     const collabs = await db
       .select()
@@ -312,7 +312,7 @@ describe('PATCH /api/features/:id', () => {
   });
 
   it('400 on inverted dates', async () => {
-    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now' }).returning();
     const res = await app.request(
       `/api/features/${f.id}`,
       patch({ startDate: '2026-06-15', endDate: '2026-06-01' }),
@@ -332,7 +332,7 @@ describe('PATCH /api/features/:id', () => {
 
 describe('DELETE /api/features/:id', () => {
   it('204, then GET 404, and cascades documents', async () => {
-    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now' }).returning();
     await db.insert(documents).values({ featureId: f.id, type: 'prd', title: 'doc' });
 
     const del = await app.request(`/api/features/${f.id}`, { method: 'DELETE', headers: auth });
@@ -356,7 +356,7 @@ describe('DELETE /api/features/:id', () => {
 
 describe('GET /api/features/:id/activity', () => {
   it('returns ActivityItems joined with actor name/color, newest first, capped at 50', async () => {
-    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now' }).returning();
     for (let i = 0; i < 55; i++) {
       await db.insert(activity).values({
         featureId: f.id,
@@ -384,7 +384,7 @@ describe('GET /api/features/:id/activity', () => {
 
 describe('PUT /api/features/:id/collaborators', () => {
   it('replaces the collaborator set and returns 204', async () => {
-    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now' }).returning();
     const [other] = await db.insert(users).values({ name: 'Ada', color: '#3c6b46' }).returning();
     await db.insert(featureCollaborators).values({ featureId: f.id, userId });
 
@@ -403,7 +403,7 @@ describe('PUT /api/features/:id/collaborators', () => {
   });
 
   it('400 on non-uuid ids and 404 on unknown feature', async () => {
-    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now' }).returning();
     const bad = await app.request(`/api/features/${f.id}/collaborators`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json', ...auth },
@@ -425,7 +425,7 @@ describe('PUT /api/features/:id/collaborators', () => {
 
 describe('PATCH /api/features/:id — dream-tier fields (size/riskMd/objectiveId/releaseId)', () => {
   it('updates size, riskMd, objectiveId and releaseId; records size_changed activity', async () => {
-    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now' }).returning();
     const [obj] = await db.insert(objectives).values({ title: 'Roadmap of record' }).returning();
     const [rel] = await db.insert(releases).values({ name: 'v0.2 — Team ready' }).returning();
 
@@ -444,7 +444,7 @@ describe('PATCH /api/features/:id — dream-tier fields (size/riskMd/objectiveId
   });
 
   it('size can be cleared back to null, recording size_changed; no activity when unchanged', async () => {
-    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now', size: 'm' }).returning();
+    const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now', size: 'm' }).returning();
     const same = await app.request(`/api/features/${f.id}`, patch({ size: 'm' }));
     expect(same.status).toBe(200);
     expect((await activityRows(f.id)).filter((a) => a.kind === 'size_changed')).toHaveLength(0);
@@ -457,7 +457,7 @@ describe('PATCH /api/features/:id — dream-tier fields (size/riskMd/objectiveId
   });
 
   it('400 on invalid size', async () => {
-    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now' }).returning();
     const res = await app.request(`/api/features/${f.id}`, patch({ size: 'xl' }));
     expect(res.status).toBe(400);
   });
@@ -465,8 +465,8 @@ describe('PATCH /api/features/:id — dream-tier fields (size/riskMd/objectiveId
 
 describe('GET /api/features — blockerIds', () => {
   it('list and detail include blockerIds from feature_dependencies', async () => {
-    const [blocker] = await db.insert(features).values({ productId, title: 'Auth', horizon: 'now' }).returning();
-    const [blocked] = await db.insert(features).values({ productId, title: 'Realtime', horizon: 'later' }).returning();
+    const [blocker] = await db.insert(features).values({ projectId, title: 'Auth', horizon: 'now' }).returning();
+    const [blocked] = await db.insert(features).values({ projectId, title: 'Realtime', horizon: 'later' }).returning();
     await db.insert(featureDependencies).values({ blockerId: blocker.id, blockedId: blocked.id });
 
     const list = await (await app.request('/api/features', { headers: auth })).json();
@@ -482,7 +482,7 @@ describe('GET /api/features — blockerIds', () => {
 
 describe('GET /api/features/:id/collaborators', () => {
   it('returns the collaborator users for a feature', async () => {
-    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now' }).returning();
     const [other] = await db.insert(users).values({ name: 'Ada', color: '#3c6b46' }).returning();
     await db.insert(featureCollaborators).values([
       { featureId: f.id, userId },
@@ -498,7 +498,7 @@ describe('GET /api/features/:id/collaborators', () => {
   });
 
   it('returns [] when there are none and 404 on unknown feature', async () => {
-    const [f] = await db.insert(features).values({ productId, title: 'F', horizon: 'now' }).returning();
+    const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now' }).returning();
     const empty = await app.request(`/api/features/${f.id}/collaborators`, { headers: auth });
     expect(empty.status).toBe(200);
     expect(await empty.json()).toEqual([]);

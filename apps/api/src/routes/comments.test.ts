@@ -2,10 +2,10 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { products, features, documents, users, comments, activity, featureCollaborators } from '@productmap/db';
+import { projects, features, documents, users, comments, activity, featureCollaborators } from '@productmap/db';
 import { asc, eq } from 'drizzle-orm';
 
-let productId: string;
+let projectId: string;
 let userId: string;
 let otherId: string;
 let featureId: string;
@@ -32,11 +32,11 @@ beforeEach(async () => {
   const other = await createTestUser({ role: 'member', name: 'Ada', email: 'ada@test.co', color: '#3c6b46' });
   otherId = other.id;
   otherAuth = { cookie: await authCookie(other), origin: 'http://localhost', host: 'localhost' };
-  const [p] = await db.insert(products).values({ name: 'ProductMap', vision: 'v', aboutMd: '' }).returning();
-  productId = p.id;
-  const [f] = await db.insert(features).values({ productId, title: 'Gantt roadmap', horizon: 'next' }).returning();
+  const [p] = await db.insert(projects).values({ name: 'ProductMap', vision: 'v', aboutMd: '' }).returning();
+  projectId = p.id;
+  const [f] = await db.insert(features).values({ projectId, title: 'Gantt roadmap', horizon: 'next' }).returning();
   featureId = f.id;
-  const [df] = await db.insert(features).values({ productId, title: 'Rich markdown editor', horizon: 'now' }).returning();
+  const [df] = await db.insert(features).values({ projectId, title: 'Rich markdown editor', horizon: 'now' }).returning();
   docFeatureId = df.id;
   const [d] = await db.insert(documents).values({ featureId: docFeatureId, type: 'prd', title: 'PRD' }).returning();
   documentId = d.id;

@@ -21,7 +21,7 @@ if (typeof window !== 'undefined' && !window.PointerEvent) {
 function feature(overrides: Partial<Feature>): Feature {
   return {
     id: 'f-' + Math.random().toString(36).slice(2),
-    productId: 'p1',
+    projectId: 'p1',
     score: 0,
     boosts: 0,
     cools: 0,

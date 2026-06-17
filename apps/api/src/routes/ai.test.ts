@@ -7,7 +7,7 @@ import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } fro
 
 const { app } = await import('../app');
 const { db } = await import('../db');
-const { products, features, users, activity, templates } = await import('@productmap/db');
+const { projects, features, users, activity, templates } = await import('@productmap/db');
 const { setAiModelFactory } = await import('../lib/ai');
 
 const AWS_ENV = ['AWS_REGION', 'AWS_PROFILE', 'AWS_ACCESS_KEY_ID', 'BEDROCK_MODEL_ID'] as const;
@@ -40,13 +40,13 @@ afterAll(async () => {
 });
 
 async function seedFeature() {
-  const [product] = await db
-    .insert(products)
+  const [project] = await db
+    .insert(projects)
     .values({ name: 'ProductMap', vision: 'v', aboutMd: '' })
     .returning();
   const [feature] = await db
     .insert(features)
-    .values({ productId: product.id, title: 'Rich markdown editor', horizon: 'now' })
+    .values({ projectId: project.id, title: 'Rich markdown editor', horizon: 'now' })
     .returning();
   return feature;
 }

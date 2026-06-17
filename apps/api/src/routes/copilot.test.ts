@@ -6,7 +6,7 @@ import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } fro
 
 const { app } = await import('../app');
 const { db } = await import('../db');
-const { products, features, documents, comments, users } = await import('@productmap/db');
+const { projects, features, documents, comments, users } = await import('@productmap/db');
 const { setAiModelFactory } = await import('../lib/ai');
 
 const AWS_ENV = ['AWS_REGION', 'AWS_PROFILE', 'AWS_ACCESS_KEY_ID', 'BEDROCK_MODEL_ID'] as const;
@@ -87,16 +87,16 @@ function enableAi(deltas = ['## Problem clarity\n\n', 'Looks sharp.']) {
 
 async function seedProduct() {
   const [product] = await db
-    .insert(products)
+    .insert(projects)
     .values({ name: 'ProductMap', vision: 'v', aboutMd: '' })
     .returning();
   return product;
 }
 
-async function seedFeature(productId: string, overrides: Record<string, unknown> = {}) {
+async function seedFeature(projectId: string, overrides: Record<string, unknown> = {}) {
   const [feature] = await db
     .insert(features)
-    .values({ productId, title: 'Rich markdown editor', horizon: 'now', ...overrides })
+    .values({ projectId, title: 'Rich markdown editor', horizon: 'now', ...overrides })
     .returning();
   return feature;
 }

@@ -2,9 +2,9 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { products } from '@productmap/db';
+import { projects } from '@productmap/db';
 
-let productId: string;
+let projectId: string;
 let auth: Record<string, string> = {};
 
 beforeAll(async () => {
@@ -20,10 +20,10 @@ beforeEach(async () => {
   const actor = await createTestUser({ role: 'admin' });
   auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
   const [p] = await db
-    .insert(products)
+    .insert(projects)
     .values({ name: 'ProductMap', vision: 'old vision', aboutMd: 'about' })
     .returning();
-  productId = p.id;
+  projectId = p.id;
 });
 
 const patch = (body: unknown) => ({
@@ -32,20 +32,20 @@ const patch = (body: unknown) => ({
   body: JSON.stringify(body),
 });
 
-describe('PATCH /api/products/:id', () => {
+describe('PATCH /api/projects/:id', () => {
   it('updates vision', async () => {
-    const res = await app.request(`/api/products/${productId}`, patch({ vision: 'new vision' }));
+    const res = await app.request(`/api/projects/${projectId}`, patch({ vision: 'new vision' }));
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.vision).toBe('new vision');
     expect(body.name).toBe('ProductMap');
     expect(body.aboutMd).toBe('about');
-    expect(body.id).toBe(productId);
+    expect(body.id).toBe(projectId);
   });
 
   it('updates name and aboutMd', async () => {
     const res = await app.request(
-      `/api/products/${productId}`,
+      `/api/projects/${projectId}`,
       patch({ name: 'PM2', aboutMd: 'changed' }),
     );
     expect(res.status).toBe(200);
@@ -56,14 +56,14 @@ describe('PATCH /api/products/:id', () => {
   });
 
   it('400 on invalid body', async () => {
-    const res = await app.request(`/api/products/${productId}`, patch({ name: '' }));
+    const res = await app.request(`/api/projects/${projectId}`, patch({ name: '' }));
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe('validation');
   });
 
   it('404 on unknown id', async () => {
     const res = await app.request(
-      '/api/products/00000000-0000-4000-8000-000000000000',
+      '/api/projects/00000000-0000-4000-8000-000000000000',
       patch({ vision: 'x' }),
     );
     expect(res.status).toBe(404);

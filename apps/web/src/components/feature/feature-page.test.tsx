@@ -31,7 +31,7 @@ const ada: User = { id: 'u2', name: 'Ada', color: '#3c6b46', role: 'member', cre
 
 const feature: FeatureWithDocs = {
   id: 'f1',
-  productId: 'p1',
+  projectId: 'p1',
   score: 0,
   boosts: 0,
   cools: 0,

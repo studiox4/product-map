@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { objectives, products, features } from '@productmap/db';
+import { objectives, projects, features } from '@productmap/db';
 
 let userId: string;
 let auth: Record<string, string> = {};
@@ -146,16 +146,16 @@ describe('objectives dream-tier-2 properties + joins', () => {
   });
 
   it('GET / joins owner {name,color} and featureCount', async () => {
-    const [p] = await db.insert(products).values({ name: 'ProductMap', vision: 'v', aboutMd: '' }).returning();
+    const [p] = await db.insert(projects).values({ name: 'ProductMap', vision: 'v', aboutMd: '' }).returning();
     const [owned] = await db
       .insert(objectives)
       .values({ title: 'Owned', ownerId: userId, metric: 'WAU', target: '500', current: '320' })
       .returning();
     const [bare] = await db.insert(objectives).values({ title: 'Bare' }).returning();
     await db.insert(features).values([
-      { productId: p.id, title: 'F1', horizon: 'now', objectiveId: owned.id },
-      { productId: p.id, title: 'F2', horizon: 'next', objectiveId: owned.id },
-      { productId: p.id, title: 'F3', horizon: 'later' },
+      { projectId: p.id, title: 'F1', horizon: 'now', objectiveId: owned.id },
+      { projectId: p.id, title: 'F2', horizon: 'next', objectiveId: owned.id },
+      { projectId: p.id, title: 'F3', horizon: 'later' },
     ]);
 
     const res = await app.request('/api/objectives', { headers: auth });

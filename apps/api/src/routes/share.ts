@@ -5,7 +5,7 @@ import { Hono } from 'hono';
 import { and, eq, isNull } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { db } from '../db';
-import { products, features, documents, releases, shareTokens } from '@productmap/db';
+import { projects, features, documents, releases, shareTokens } from '@productmap/db';
 import type { DocumentMeta, FeatureWithDocs, Horizon, ShareData } from '@productmap/shared';
 import { EMPTY_VOTE_SUMMARY, voteSummaries } from '../lib/votes';
 
@@ -36,13 +36,13 @@ export const shareRoutes = new Hono()
       .where(and(eq(shareTokens.token, c.req.param('token')), isNull(shareTokens.revokedAt)));
     if (!tokenRow) return c.json({ error: 'not_found' }, 404);
 
-    const [product] = await db.select().from(products).limit(1);
-    if (!product) return c.json({ error: 'not_found' }, 404);
+    const [project] = await db.select().from(projects).limit(1);
+    if (!project) return c.json({ error: 'not_found' }, 404);
 
     const featureRows = await db
       .select()
       .from(features)
-      .where(eq(features.productId, product.id));
+      .where(eq(features.projectId, project.id));
     featureRows.sort(
       (a, b) =>
         HORIZON_ORDER[a.horizon] - HORIZON_ORDER[b.horizon] ||
@@ -65,7 +65,7 @@ export const shareRoutes = new Hono()
       })
       .from(documents)
       .innerJoin(features, eq(documents.featureId, features.id))
-      .where(eq(features.productId, product.id));
+      .where(eq(features.projectId, project.id));
 
     const docsByFeature = new Map<string, DocumentMeta[]>();
     for (const d of docRows) {
@@ -105,11 +105,11 @@ export const shareRoutes = new Hono()
     );
 
     const response: ShareData = {
-      product: {
-        id: product.id,
-        name: product.name,
-        vision: product.vision,
-        aboutMd: product.aboutMd,
+      project: {
+        id: project.id,
+        name: project.name,
+        vision: project.vision,
+        aboutMd: project.aboutMd,
       },
       features: featuresWithDocs,
       releases: releaseRows.map((r) => ({

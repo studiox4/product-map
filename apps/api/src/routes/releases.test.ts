@@ -2,11 +2,11 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { products, features, documents, releases, activity, templates } from '@productmap/db';
+import { projects, features, documents, releases, activity, templates } from '@productmap/db';
 import { markdownToTiptap } from '../lib/markdown';
 import { asc, eq } from 'drizzle-orm';
 
-let productId: string;
+let projectId: string;
 let userId: string;
 let releaseId: string;
 let featureA: string;
@@ -26,8 +26,8 @@ beforeEach(async () => {
   const actor = await createTestUser({ role: 'admin', name: 'Corban', email: 'corban@test.co' });
   userId = actor.id;
   auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
-  const [p] = await db.insert(products).values({ name: 'ProductMap', vision: 'v', aboutMd: '' }).returning();
-  productId = p.id;
+  const [p] = await db.insert(projects).values({ name: 'ProductMap', vision: 'v', aboutMd: '' }).returning();
+  projectId = p.id;
   const [r] = await db
     .insert(releases)
     .values({ name: 'v0.2 — Team ready', targetDate: '2026-07-01' })
@@ -35,12 +35,12 @@ beforeEach(async () => {
   releaseId = r.id;
   const [a] = await db
     .insert(features)
-    .values({ productId, title: 'Comments & review', horizon: 'now', releaseId, sortOrder: 0 })
+    .values({ projectId, title: 'Comments & review', horizon: 'now', releaseId, sortOrder: 0 })
     .returning();
   featureA = a.id;
   const [b] = await db
     .insert(features)
-    .values({ productId, title: 'Voting', horizon: 'now', releaseId, sortOrder: 1 })
+    .values({ projectId, title: 'Voting', horizon: 'now', releaseId, sortOrder: 1 })
     .returning();
   featureB = b.id;
 });
@@ -330,7 +330,7 @@ describe('PUT /api/releases/:id/features (replace-set membership)', () => {
     otherReleaseId = r2.id;
     const [cRow] = await db
       .insert(features)
-      .values({ productId, title: 'Templates', horizon: 'next', releaseId: otherReleaseId, sortOrder: 2 })
+      .values({ projectId, title: 'Templates', horizon: 'next', releaseId: otherReleaseId, sortOrder: 2 })
       .returning();
     featureC = cRow.id;
   });

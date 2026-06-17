@@ -4,7 +4,7 @@ import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } fro
 
 const { app } = await import('../app');
 const { db } = await import('../db');
-const { products, features, documents, releases, shareTokens } = await import('@productmap/db');
+const { projects, features, documents, releases, shareTokens } = await import('@productmap/db');
 
 beforeAll(async () => {
   await setupTestDb();
@@ -19,8 +19,8 @@ afterAll(async () => {
 });
 
 async function seedWorkspace() {
-  const [product] = await db
-    .insert(products)
+  const [project] = await db
+    .insert(projects)
     .values({ name: 'ProductMap', vision: 'Roadmaps people read', aboutMd: '' })
     .returning();
   const [release] = await db
@@ -30,7 +30,7 @@ async function seedWorkspace() {
   const [featureA] = await db
     .insert(features)
     .values({
-      productId: product.id,
+      projectId: project.id,
       title: 'Comments & review',
       horizon: 'now',
       status: 'in_progress',
@@ -39,13 +39,13 @@ async function seedWorkspace() {
     .returning();
   const [featureB] = await db
     .insert(features)
-    .values({ productId: product.id, title: 'Realtime collaboration', horizon: 'later' })
+    .values({ projectId: project.id, title: 'Realtime collaboration', horizon: 'later' })
     .returning();
   const [doc] = await db
     .insert(documents)
     .values({ featureId: featureA.id, type: 'prd', title: 'Comments PRD', contentMd: '# Comments' })
     .returning();
-  return { product, release, featureA, featureB, doc };
+  return { project, release, featureA, featureB, doc };
 }
 
 async function createToken(cookie: string): Promise<string> {
@@ -97,7 +97,7 @@ describe('POST /api/share/roadmap', () => {
 
 describe('GET /api/share/:token/data', () => {
   it('returns the read-only aggregate with NO auth headers (public read)', async () => {
-    const { product, featureA, featureB, doc, release } = await seedWorkspace();
+    const { project, featureA, featureB, doc, release } = await seedWorkspace();
     const admin = await createTestUser({ role: 'admin' });
     const cookie = await authCookie(admin);
     const token = await createToken(cookie);
@@ -107,8 +107,8 @@ describe('GET /api/share/:token/data', () => {
     expect(res.status).toBe(200);
     const data = await res.json();
 
-    expect(data.product).toMatchObject({
-      id: product.id,
+    expect(data.project).toMatchObject({
+      id: project.id,
       name: 'ProductMap',
       vision: 'Roadmaps people read',
     });

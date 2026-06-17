@@ -3,12 +3,12 @@
 import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { products, features, users, activity, featureCollaborators, templates, ideas, releases, documents } from '@productmap/db';
+import { projects, features, users, activity, featureCollaborators, templates, ideas, releases, documents } from '@productmap/db';
 import { asc, eq } from 'drizzle-orm';
 import AdmZip from 'adm-zip';
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 
-let productId: string;
+let projectId: string;
 let featureId: string;
 let userId: string;
 let defaultTemplateId: string;
@@ -29,13 +29,13 @@ beforeEach(async () => {
   userId = actor.id;
   auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
   const [product] = await db
-    .insert(products)
+    .insert(projects)
     .values({ name: 'ProductMap', vision: 'v', aboutMd: '' })
     .returning();
-  productId = product.id;
+  projectId = product.id;
   const [feature] = await db
     .insert(features)
-    .values({ productId, title: 'Rich Markdown Editor', horizon: 'now' })
+    .values({ projectId, title: 'Rich Markdown Editor', horizon: 'now' })
     .returning();
   featureId = feature.id;
   // Default PRD template in the DB — doc creation resolves templates from here.

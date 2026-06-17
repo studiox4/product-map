@@ -22,7 +22,7 @@ const now = '2026-06-09T00:00:00.000Z';
 function makeFeature(overrides: Partial<FeatureWithDocs> = {}): FeatureWithDocs {
   return {
     id: 'f1',
-    productId: 'p1',
+    projectId: 'p1',
     score: 0,
     boosts: 0,
     cools: 0,

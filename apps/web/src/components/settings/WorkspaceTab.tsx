@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Download, TriangleAlert } from 'lucide-react';
-import type { Product } from '@productmap/shared';
-import { useOverview, useResetDemo, useUpdateProduct, type ProductUpdateInput } from '@/lib/api';
+import type { Project } from '@productmap/shared';
+import { useOverview, useResetDemo, useUpdateProject, type ProjectUpdateInput } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,7 +30,7 @@ import { SharingBlock } from '@/components/settings/SharingBlock';
  */
 export function WorkspaceTab() {
   const { data } = useOverview();
-  const product = data?.product;
+  const product = data?.project;
 
   if (!product) {
     return (
@@ -45,12 +45,12 @@ export function WorkspaceTab() {
   return <WorkspaceForm key={product.id} product={product} />;
 }
 
-function WorkspaceForm({ product }: { product: Product }) {
+function WorkspaceForm({ product }: { product: Project }) {
   const [name, setName] = useState(product.name);
   const [vision, setVision] = useState(product.vision);
-  const updateProduct = useUpdateProduct();
+  const updateProduct = useUpdateProject();
 
-  const patch: ProductUpdateInput = {};
+  const patch: ProjectUpdateInput = {};
   if (name.trim() && name.trim() !== product.name) patch.name = name.trim();
   if (vision.trim() !== product.vision) patch.vision = vision.trim();
   const dirty = Object.keys(patch).length > 0;

@@ -9,7 +9,7 @@ import { hash } from '@node-rs/argon2';
 import { sql } from 'drizzle-orm';
 import { TEMPLATES } from '@productmap/templates';
 import {
-  products,
+  projects,
   features,
   documents,
   users,
@@ -48,7 +48,7 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
 
   // Idempotent: wipe everything first.
   await db.execute(
-    sql`truncate table comments, votes, activity, feature_collaborators, uploads, documents, idea_votes, ideas, evidence, decisions, feature_dependencies, share_tokens, plan_entries, plans, features, releases, objectives, products, templates, users restart identity cascade`,
+    sql`truncate table comments, votes, activity, feature_collaborators, uploads, documents, idea_votes, ideas, evidence, decisions, feature_dependencies, share_tokens, plan_entries, plans, features, releases, objectives, projects, templates, users restart identity cascade`,
   );
 
   // The team, in join order. Corban stays first — several code paths fall back
@@ -79,8 +79,8 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
     })),
   );
 
-  const [product] = await db
-    .insert(products)
+  const [project] = await db
+    .insert(projects)
     .values({
       name: 'ProductMap',
       vision: 'Roadmaps and docs your security team will let you run.',
@@ -94,7 +94,7 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
     .values([
       // Now
       {
-        productId: product.id,
+        projectId: project.id,
         title: 'Rich markdown editor',
         horizon: 'now' as const,
         status: 'in_progress' as const,
@@ -107,7 +107,7 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
         updatedBy: corban.id,
       },
       {
-        productId: product.id,
+        projectId: project.id,
         title: 'Now-next-later board',
         horizon: 'now' as const,
         status: 'in_progress' as const,
@@ -121,7 +121,7 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
       },
       // Next
       {
-        productId: product.id,
+        projectId: project.id,
         title: 'Gantt roadmap',
         horizon: 'next' as const,
         status: 'planned' as const,
@@ -134,7 +134,7 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
         updatedBy: elena.id,
       },
       {
-        productId: product.id,
+        projectId: project.id,
         title: 'AI doc drafting',
         horizon: 'next' as const,
         status: 'planned' as const,
@@ -149,7 +149,7 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
       // Later — two dated (so the landing hero shows ≥6 bars per AC2), two dateless
       // (→ unscheduled tray + attention).
       {
-        productId: product.id,
+        projectId: project.id,
         title: 'Comments & review',
         horizon: 'later' as const,
         status: 'idea' as const,
@@ -162,7 +162,7 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
         updatedBy: elena.id,
       },
       {
-        productId: product.id,
+        projectId: project.id,
         title: 'Up/down voting',
         horizon: 'later' as const,
         status: 'idea' as const,
@@ -175,7 +175,7 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
         updatedBy: priya.id,
       },
       {
-        productId: product.id,
+        projectId: project.id,
         title: 'Realtime collaboration (Yjs)',
         horizon: 'later' as const,
         status: 'idea' as const,
@@ -186,7 +186,7 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
         updatedBy: marcus.id,
       },
       {
-        productId: product.id,
+        projectId: project.id,
         title: 'ECS deployment',
         horizon: 'later' as const,
         status: 'idea' as const,

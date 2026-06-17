@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { featureCreate, featureUpdate, collaboratorsPut, voteBody } from '@productmap/shared';
-import { features, documents, products, activity, featureCollaborators, users, votes, featureDependencies } from '@productmap/db';
+import { features, documents, projects, activity, featureCollaborators, users, votes, featureDependencies } from '@productmap/db';
 import { db } from '../db';
 import { type CurrentUserEnv } from '../middleware/current-user';
 import { recordActivity, addCollaborator } from '../lib/activity';
@@ -83,12 +83,12 @@ export const featuresRoutes = new Hono<CurrentUserEnv>()
     async (c) => {
       const body = c.req.valid('json');
       const user = c.get('currentUser');
-      const [product] = await db.select({ id: products.id }).from(products).limit(1);
-      if (!product) return c.json({ error: 'not_found' }, 404);
+      const [project] = await db.select({ id: projects.id }).from(projects).limit(1);
+      if (!project) return c.json({ error: 'not_found' }, 404);
       const [row] = await db
         .insert(features)
         .values({
-          productId: product.id,
+          projectId: project.id,
           title: body.title,
           horizon: body.horizon,
           createdBy: user?.id ?? null,

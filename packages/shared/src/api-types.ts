@@ -4,12 +4,14 @@ import type {
   ObjectiveStatus, PlanStatus,
 } from './constants';
 
-export interface Product { id: string; name: string; vision: string; aboutMd: string; }
+export interface Project { id: string; name: string; vision: string; aboutMd: string; }
+export type MemberRole = 'owner' | 'editor' | 'viewer';
+export interface Membership { userId: string; projectId: string; role: MemberRole; }
 export interface User { id: string; name: string; color: string; role: 'admin' | 'member'; createdAt?: string; }
 export type VoteValue = 1 | -1;
 export interface VoteSummary { score: number; boosts: number; cools: number; myVote: VoteValue | 0; }
 export interface Feature extends VoteSummary {
-  id: string; productId: string; title: string; horizon: Horizon; status: FeatureStatus;
+  id: string; projectId: string; title: string; horizon: Horizon; status: FeatureStatus;
   startDate: string | null; endDate: string | null; sortOrder: number;
   descriptionMd: string;
   /** T-shirt size for capacity math (SIZE_WEEKS heuristic); null = unsized. */
@@ -98,7 +100,7 @@ export type AttentionItem =
   | { kind: 'draft_doc' | 'in_review_doc'; documentId: string; featureId: string; title: string; docType: DocType }
   | { kind: 'missing_dates' | 'no_docs'; featureId: string; title: string };
 export interface OverviewResponse {
-  product: Product;
+  project: Project;
   features: FeatureWithDocs[];
   attention: AttentionItem[];
 }
@@ -172,7 +174,7 @@ export interface ShareTokenInfo {
   id: string; token: string; kind: string; createdAt: string; revokedAt: string | null;
 }
 /** GET /api/share/:token/data — read-only, no auth. */
-export interface ShareData { product: Product; features: FeatureWithDocs[]; releases: Release[]; }
+export interface ShareData { project: Project; features: FeatureWithDocs[]; releases: Release[]; }
 /** GET /api/copilot/nudges — derived hygiene prompts, no table behind them. */
 export type CopilotNudge =
   | { kind: 'stale_draft'; documentId: string; featureId: string; title: string; updatedAt: string }

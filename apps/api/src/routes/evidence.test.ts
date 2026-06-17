@@ -2,10 +2,10 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { products, features, evidence } from '@productmap/db';
+import { projects, features, evidence } from '@productmap/db';
 import { eq } from 'drizzle-orm';
 
-let productId: string;
+let projectId: string;
 let userId: string;
 let featureId: string;
 let auth: Record<string, string> = {};
@@ -26,9 +26,9 @@ beforeEach(async () => {
   const actor = await createTestUser({ role: 'admin', name: 'Corban', email: 'corban@test.co' });
   userId = actor.id;
   auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
-  const [p] = await db.insert(products).values({ name: 'ProductMap', vision: 'v', aboutMd: '' }).returning();
-  productId = p.id;
-  const [f] = await db.insert(features).values({ productId, title: 'Gantt roadmap', horizon: 'next' }).returning();
+  const [p] = await db.insert(projects).values({ name: 'ProductMap', vision: 'v', aboutMd: '' }).returning();
+  projectId = p.id;
+  const [f] = await db.insert(features).values({ projectId, title: 'Gantt roadmap', horizon: 'next' }).returning();
   featureId = f.id;
 });
 
