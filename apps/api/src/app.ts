@@ -11,10 +11,7 @@ import { templatesRoutes } from './routes/templates';
 import { adminRoutes } from './routes/admin';
 // Dream-tier route modules (mounted as stubs by the foundation agent; each
 // feature agent fills in its own file — nobody else edits app.ts).
-import { ideasRoutes } from './routes/ideas';
-import { decisionsRoutes } from './routes/decisions';
-import { shareRoutes } from './routes/share';
-import { copilotRoutes } from './routes/copilot';
+import { publicShareRoutes } from './routes/share';
 import { projectScopedContent } from './routes/project-scoped';
 
 export const app = new Hono()
@@ -49,12 +46,12 @@ export const app = new Hono()
   .route('/api/templates', templatesRoutes)
   .route('/api/admin', adminRoutes)
   // --- Dream tier mounts (paths inside each module are relative to these) ---
-  .route('/api/ideas', ideasRoutes)
-  // decisions defines /decisions… + /ai/suggest-decision
-  .route('/api', decisionsRoutes)
-  .route('/api/share', shareRoutes)
-  // copilot defines /ai/review-doc, /ai/chat, /copilot/nudges
-  .route('/api', copilotRoutes);
+  // decisions migrated to /api/projects/:projectId/ (project-scoped.ts)
+  // copilotRoutes migrated to /api/projects/:projectId/ (project-scoped.ts)
+  // publicShareRoutes: GET /:token/data is public (allowlist: GET /api/share/*);
+  // DELETE /:token is NOT in the public allowlist — requireAuth runs for it via the
+  // /api/* middleware, then the handler enforces membership on tokenRow.projectId.
+  .route('/api/share', publicShareRoutes);
 
 app.notFound((c) => c.json({ error: 'not_found' }, 404));
 

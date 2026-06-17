@@ -1,3 +1,4 @@
+// Mounted at /api/projects/:projectId/ideas (project-scoped.ts).
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
@@ -11,12 +12,12 @@ import {
 } from '@productmap/shared';
 import { activity, documents, features, ideas, ideaVotes, templates, users } from '@productmap/db';
 import { db } from '../db';
-import { getDefaultProjectId } from '../lib/project';
-import { type CurrentUserEnv } from '../middleware/current-user';
+import { type MembershipEnv } from '../middleware/membership';
 import { recordActivity, addCollaborator } from '../lib/activity';
 import { EMPTY_VOTE_SUMMARY, requestUserId } from '../lib/votes';
 import { createAiModel, generateDocStream } from '../lib/ai';
 import { markdownToTiptap } from '../lib/markdown';
+import { loadScoped } from '../lib/scope';
 
 /** Aggregate idea-vote summaries (mirrors lib/votes voteSummaries for features). */
 async function ideaVoteSummaries(
@@ -136,9 +137,10 @@ async function draftAiBrief(
   }
 }
 
-export const ideasRoutes = new Hono<CurrentUserEnv>()
-  // GET /api/ideas?status= — newest first, with vote summaries
+export const ideasRoutes = new Hono<MembershipEnv>()
+  // GET /api/projects/:projectId/ideas?status= — newest first, with vote summaries
   .get('/', async (c) => {
+    const pid = c.get('currentProjectId');
     const status = c.req.query('status');
     if (status && !(IDEA_STATUSES as readonly string[]).includes(status)) {
       return c.json({ error: 'validation' }, 400);
@@ -147,7 +149,11 @@ export const ideasRoutes = new Hono<CurrentUserEnv>()
       .select(CREATOR_COLUMNS)
       .from(ideas)
       .leftJoin(users, eq(ideas.createdBy, users.id))
-      .where(status ? eq(ideas.status, status as (typeof IDEA_STATUSES)[number]) : undefined)
+      .where(
+        status
+          ? and(eq(ideas.projectId, pid), eq(ideas.status, status as (typeof IDEA_STATUSES)[number]))
+          : eq(ideas.projectId, pid),
+      )
       .orderBy(desc(ideas.createdAt));
     const ids = rows.map((r) => r.idea.id);
     const voteMap = await ideaVoteSummaries(ids, requestUserId(c));
@@ -171,7 +177,7 @@ export const ideasRoutes = new Hono<CurrentUserEnv>()
     async (c) => {
       const body = c.req.valid('json');
       const user = c.get('currentUser');
-      const projectId = await getDefaultProjectId();
+      const projectId = c.get('currentProjectId');
       const [row] = await db
         .insert(ideas)
         .values({
@@ -186,7 +192,10 @@ export const ideasRoutes = new Hono<CurrentUserEnv>()
     },
   )
   .get('/:id', async (c) => {
+    const pid = c.get('currentProjectId');
     const id = c.req.param('id');
+    // Guard: throws ScopeError(404) if missing or belongs to another project.
+    await loadScoped(ideas, id, pid);
     const [row] = await db
       .select(CREATOR_COLUMNS)
       .from(ideas)
@@ -208,10 +217,11 @@ export const ideasRoutes = new Hono<CurrentUserEnv>()
       }
     }),
     async (c) => {
+      const pid = c.get('currentProjectId');
       const id = c.req.param('id');
       const updates = c.req.valid('json');
-      const [prev] = await db.select().from(ideas).where(eq(ideas.id, id));
-      if (!prev) return c.json({ error: 'not_found' }, 404);
+      // Guard: throws ScopeError(404) if missing or belongs to another project.
+      const prev = await loadScoped(ideas, id, pid) as typeof ideas.$inferSelect;
       const [row] = await db
         .update(ideas)
         .set({ ...updates, updatedAt: sql`now()` })
@@ -234,12 +244,13 @@ export const ideasRoutes = new Hono<CurrentUserEnv>()
       return c.json(row);
     },
   )
-  // POST /api/ideas/:id/pitch — create the idea's pitch doc from the default
+  // POST /api/projects/:projectId/ideas/:id/pitch — create the idea's pitch doc from the default
   // idea_pitch template ({{title}} = idea title). 409 when one already exists.
   .post('/:id/pitch', async (c) => {
+    const pid = c.get('currentProjectId');
     const id = c.req.param('id');
-    const [idea] = await db.select().from(ideas).where(eq(ideas.id, id));
-    if (!idea) return c.json({ error: 'not_found' }, 404);
+    // Guard: throws ScopeError(404) if missing or belongs to another project.
+    const idea = await loadScoped(ideas, id, pid) as typeof ideas.$inferSelect;
     const [existing] = await db
       .select({ id: documents.id })
       .from(documents)
@@ -283,7 +294,7 @@ export const ideasRoutes = new Hono<CurrentUserEnv>()
       .returning();
     return c.json(doc, 201);
   })
-  // PUT /api/ideas/:id/vote — same contract as feature votes (0 clears)
+  // PUT /api/projects/:projectId/ideas/:id/vote — same contract as feature votes (0 clears)
   .put(
     '/:id/vote',
     zValidator('json', ideaVoteBody, (result, c) => {
@@ -292,11 +303,12 @@ export const ideasRoutes = new Hono<CurrentUserEnv>()
       }
     }),
     async (c) => {
+      const pid = c.get('currentProjectId');
       const id = c.req.param('id');
       const { value } = c.req.valid('json');
       const user = c.get('currentUser');
-      const [idea] = await db.select({ id: ideas.id }).from(ideas).where(eq(ideas.id, id));
-      if (!idea) return c.json({ error: 'not_found' }, 404);
+      // Guard: throws ScopeError(404) if missing or belongs to another project.
+      await loadScoped(ideas, id, pid);
       if (!user) return c.json({ error: 'unauthorized' }, 401);
       if (value === 0) {
         await db.delete(ideaVotes).where(and(eq(ideaVotes.userId, user.id), eq(ideaVotes.ideaId, id)));
@@ -309,7 +321,7 @@ export const ideasRoutes = new Hono<CurrentUserEnv>()
       return c.json(await ideaVoteSummaryFor(id, user.id));
     },
   )
-  // POST /api/ideas/:id/promote — idea → feature (optionally with an AI brief)
+  // POST /api/projects/:projectId/ideas/:id/promote — idea → feature (optionally with an AI brief)
   .post(
     '/:id/promote',
     zValidator('json', ideaPromote, (result, c) => {
@@ -318,11 +330,12 @@ export const ideasRoutes = new Hono<CurrentUserEnv>()
       }
     }),
     async (c) => {
+      const pid = c.get('currentProjectId');
       const id = c.req.param('id');
       const { horizon, withAiBrief } = c.req.valid('json');
       const user = c.get('currentUser');
-      const [idea] = await db.select().from(ideas).where(eq(ideas.id, id));
-      if (!idea) return c.json({ error: 'not_found' }, 404);
+      // Guard: throws ScopeError(404) if missing or belongs to another project.
+      const idea = await loadScoped(ideas, id, pid) as typeof ideas.$inferSelect;
       if (idea.status === 'promoted') return c.json({ error: 'already_promoted' }, 400);
 
       const feature = await db.transaction(async (tx) => {
@@ -365,9 +378,13 @@ export const ideasRoutes = new Hono<CurrentUserEnv>()
     },
   )
   .delete('/:id', async (c) => {
+    const pid = c.get('currentProjectId');
+    const id = c.req.param('id');
+    // Guard: throws ScopeError(404) if missing or belongs to another project.
+    await loadScoped(ideas, id, pid);
     const deleted = await db
       .delete(ideas)
-      .where(eq(ideas.id, c.req.param('id')))
+      .where(eq(ideas.id, id))
       .returning({ id: ideas.id });
     if (deleted.length === 0) return c.json({ error: 'not_found' }, 404);
     return c.body(null, 204);

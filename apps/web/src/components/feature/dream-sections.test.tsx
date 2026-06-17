@@ -118,7 +118,7 @@ const server = setupServer(
   http.get(`/api/projects/${TEST_PROJECT_ID}/features`, () => HttpResponse.json([makeFeature(), blockerFeature])),
   http.get(`/api/projects/${TEST_PROJECT_ID}/features/f1`, () => HttpResponse.json(makeFeature())),
   http.get(`/api/projects/${TEST_PROJECT_ID}/features/f1/evidence`, () => HttpResponse.json(evidenceRows)),
-  http.get('/api/decisions', ({ request }) => {
+  http.get(`/api/projects/${TEST_PROJECT_ID}/decisions`, ({ request }) => {
     const url = new URL(request.url);
     return HttpResponse.json(url.searchParams.get('featureId') === 'f1' ? decisionRows : []);
   }),
@@ -217,7 +217,7 @@ describe('DecisionsSection', () => {
   });
 
   it('shows an empty state when there are no decisions', async () => {
-    server.use(http.get('/api/decisions', () => HttpResponse.json([])));
+    server.use(http.get(`/api/projects/${TEST_PROJECT_ID}/decisions`, () => HttpResponse.json([])));
     renderWithProviders(<DecisionsSection featureId="f1" />);
     expect(await screen.findByText(/no decisions logged yet/i)).toBeTruthy();
   });

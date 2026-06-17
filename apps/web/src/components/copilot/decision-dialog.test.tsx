@@ -107,7 +107,7 @@ describe('DecisionDialog', () => {
 
     await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
     const [url, init] = fetchSpy.mock.calls[0];
-    expect(url).toBe('/api/decisions');
+    expect(url).toBe(`/api/projects/${TEST_PROJECT_ID}/decisions`);
     expect(JSON.parse((init as RequestInit).body as string)).toEqual({
       featureId: 'f1',
       title: 'Adopt SSE everywhere',

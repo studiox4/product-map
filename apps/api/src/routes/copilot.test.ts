@@ -2,7 +2,15 @@ import { beforeAll, beforeEach, afterAll, afterEach, describe, expect, it } from
 import { simulateReadableStream } from 'ai';
 import { MockLanguageModelV3 } from 'ai/test';
 import type { LanguageModelV3StreamPart } from '@ai-sdk/provider';
-import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
+import {
+  setupTestDb,
+  truncateAll,
+  closeTestDb,
+  createTestUser,
+  createTestProject,
+  addMembership,
+  authCookie,
+} from '../test/helpers';
 
 const { app } = await import('../app');
 const { db } = await import('../db');
@@ -15,7 +23,10 @@ function clearAwsEnv() {
   for (const key of AWS_ENV) delete process.env[key];
 }
 
+// Admin actor (super-admin) — bypasses membership checks; used for the happy-path tests.
 let auth: Record<string, string> = {};
+// Project A id — set in each beforeEach after seedProduct().
+let projectId = '';
 
 beforeAll(async () => {
   await setupTestDb();
@@ -26,6 +37,9 @@ beforeEach(async () => {
   await truncateAll();
   const actor = await createTestUser({ role: 'admin' });
   auth = { cookie: await authCookie(actor), origin: 'http://localhost', host: 'localhost' };
+  // Pre-create project A so all tests can use it as the default scoped project.
+  const product = await seedProduct();
+  projectId = product.id;
 });
 
 afterEach(() => {
@@ -85,18 +99,18 @@ function enableAi(deltas = ['## Problem clarity\n\n', 'Looks sharp.']) {
   return captured;
 }
 
-async function seedProduct() {
+async function seedProduct(name = 'ProductMap') {
   const [product] = await db
     .insert(projects)
-    .values({ name: 'ProductMap', vision: 'v', aboutMd: '' })
+    .values({ name, vision: 'v', aboutMd: '' })
     .returning();
   return product;
 }
 
-async function seedFeature(projectId: string, overrides: Record<string, unknown> = {}) {
+async function seedFeature(pId: string, overrides: Record<string, unknown> = {}) {
   const [feature] = await db
     .insert(features)
-    .values({ projectId, title: 'Rich markdown editor', horizon: 'now', ...overrides })
+    .values({ projectId: pId, title: 'Rich markdown editor', horizon: 'now', ...overrides })
     .returning();
   return feature;
 }
@@ -105,9 +119,14 @@ function daysAgo(n: number): Date {
   return new Date(Date.now() - n * 24 * 60 * 60 * 1000);
 }
 
-describe('POST /api/ai/review-doc', () => {
+// Helper: URL for a nested copilot route (under project A by default).
+function url(path: string, pid = projectId) {
+  return `/api/projects/${pid}${path}`;
+}
+
+describe('POST /api/projects/:projectId/ai/review-doc', () => {
   it('503 when AI disabled', async () => {
-    const res = await app.request('/api/ai/review-doc', {
+    const res = await app.request(url('/ai/review-doc'), {
       method: 'POST',
       headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ documentId: '00000000-0000-4000-8000-000000000000' }),
@@ -118,7 +137,7 @@ describe('POST /api/ai/review-doc', () => {
 
   it('400 on invalid body', async () => {
     enableAi();
-    const res = await app.request('/api/ai/review-doc', {
+    const res = await app.request(url('/ai/review-doc'), {
       method: 'POST',
       headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ documentId: 'not-a-uuid' }),
@@ -128,7 +147,7 @@ describe('POST /api/ai/review-doc', () => {
 
   it('404 on unknown document', async () => {
     enableAi();
-    const res = await app.request('/api/ai/review-doc', {
+    const res = await app.request(url('/ai/review-doc'), {
       method: 'POST',
       headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ documentId: '00000000-0000-4000-8000-000000000000' }),
@@ -138,8 +157,7 @@ describe('POST /api/ai/review-doc', () => {
 
   it('streams SSE chunks then done; rubric prompt carries numbered doc content', async () => {
     const captured = enableAi();
-    const product = await seedProduct();
-    const feature = await seedFeature(product.id);
+    const feature = await seedFeature(projectId);
     const [doc] = await db
       .insert(documents)
       .values({
@@ -151,7 +169,7 @@ describe('POST /api/ai/review-doc', () => {
       })
       .returning();
 
-    const res = await app.request('/api/ai/review-doc', {
+    const res = await app.request(url('/ai/review-doc'), {
       method: 'POST',
       headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ documentId: doc.id }),
@@ -182,11 +200,69 @@ describe('POST /api/ai/review-doc', () => {
     expect(captured.user).toContain('1: # Editor PRD');
     expect(captured.user).toContain('5: ## Goals');
   });
+
+  // ---- Cross-project security tests ----
+
+  it('404 when documentId belongs to a different project (cross-project body-id)', async () => {
+    enableAi();
+    // Project B with its own document
+    const projectB = await seedProduct('Project B');
+    const featureB = await seedFeature(projectB.id, { title: 'B feature' });
+    const [docB] = await db
+      .insert(documents)
+      .values({
+        projectId: projectB.id,
+        featureId: featureB.id,
+        type: 'prd',
+        title: 'B PRD',
+        contentMd: 'secret B content',
+      })
+      .returning();
+
+    // Request A's endpoint with B's documentId → must 404 (scope rejection)
+    const res = await app.request(url('/ai/review-doc'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...auth },
+      body: JSON.stringify({ documentId: docB.id }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it('403 when viewer POSTs review-doc (viewers cannot trigger AI mutations)', async () => {
+    enableAi();
+    // Create a viewer-role user with membership on project A
+    const viewer = await createTestUser({ role: 'member' });
+    await addMembership(viewer.id, projectId, 'viewer');
+    const viewerAuth = {
+      cookie: await authCookie(viewer),
+      origin: 'http://localhost',
+      host: 'localhost',
+    };
+
+    const feature = await seedFeature(projectId);
+    const [doc] = await db
+      .insert(documents)
+      .values({
+        projectId: feature.projectId,
+        featureId: feature.id,
+        type: 'prd',
+        title: 'Editor PRD',
+        contentMd: 'content',
+      })
+      .returning();
+
+    const res = await app.request(url('/ai/review-doc'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...viewerAuth },
+      body: JSON.stringify({ documentId: doc.id }),
+    });
+    expect(res.status).toBe(403);
+  });
 });
 
-describe('POST /api/ai/chat', () => {
+describe('POST /api/projects/:projectId/ai/chat', () => {
   it('503 when AI disabled', async () => {
-    const res = await app.request('/api/ai/chat', {
+    const res = await app.request(url('/ai/chat'), {
       method: 'POST',
       headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ question: 'What is shipping next?' }),
@@ -196,7 +272,7 @@ describe('POST /api/ai/chat', () => {
 
   it('400 on empty question', async () => {
     enableAi();
-    const res = await app.request('/api/ai/chat', {
+    const res = await app.request(url('/ai/chat'), {
       method: 'POST',
       headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ question: '' }),
@@ -206,8 +282,7 @@ describe('POST /api/ai/chat', () => {
 
   it('ranks full-text matches into the system context and streams SSE', async () => {
     const captured = enableAi(['Per the **Telemetry PRD**, ', 'exports run nightly.']);
-    const product = await seedProduct();
-    const feature = await seedFeature(product.id, { title: 'Telemetry pipeline', status: 'planned' });
+    const feature = await seedFeature(projectId, { title: 'Telemetry pipeline', status: 'planned' });
     await db.insert(documents).values([
       {
         projectId: feature.projectId,
@@ -234,7 +309,7 @@ describe('POST /api/ai/chat', () => {
       },
     ]);
 
-    const res = await app.request('/api/ai/chat', {
+    const res = await app.request(url('/ai/chat'), {
       method: 'POST',
       headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ question: 'telemetry pipeline' }),
@@ -261,8 +336,7 @@ describe('POST /api/ai/chat', () => {
 
   it('caps retrieval at the top 8 documents', async () => {
     const captured = enableAi();
-    const product = await seedProduct();
-    const feature = await seedFeature(product.id);
+    const feature = await seedFeature(projectId);
     await db.insert(documents).values(
       Array.from({ length: 10 }, (_, i) => ({
         projectId: feature.projectId,
@@ -273,7 +347,7 @@ describe('POST /api/ai/chat', () => {
       })),
     );
 
-    const res = await app.request('/api/ai/chat', {
+    const res = await app.request(url('/ai/chat'), {
       method: 'POST',
       headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ question: 'kraken' }),
@@ -287,30 +361,58 @@ describe('POST /api/ai/chat', () => {
     expect(system).not.toContain('K-doc-02');
     expect(system).not.toContain('K-doc-01');
   });
+
+  // ---- Cross-project security tests ----
+
+  it('chat context never surfaces project B docs or features (list isolation)', async () => {
+    const captured = enableAi(['No info found.']);
+    // Project B with its own matching doc and feature
+    const projectB = await seedProduct('Project B');
+    const featureB = await seedFeature(projectB.id, { title: 'Secret B pipeline' });
+    await db.insert(documents).values({
+      projectId: projectB.id,
+      featureId: featureB.id,
+      type: 'prd',
+      title: 'Secret B PRD',
+      contentMd: 'kraken confidential B content for project B only',
+    });
+
+    const res = await app.request(url('/ai/chat'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...auth },
+      body: JSON.stringify({ question: 'kraken confidential' }),
+    });
+    expect(res.status).toBe(200);
+    await res.text();
+
+    const system = captured.system!;
+    // B's doc and feature must NOT appear in the context sent to the model
+    expect(system).not.toContain('Secret B PRD');
+    expect(system).not.toContain('Secret B pipeline');
+  });
 });
 
-describe('GET /api/copilot/nudges', () => {
+describe('GET /api/projects/:projectId/copilot/nudges', () => {
   it('returns the four derived nudge kinds and excludes healthy rows', async () => {
-    const product = await seedProduct();
     const [author] = await db.insert(users).values({ name: 'Mara', color: '#a3b18a' }).returning();
 
     // dateless_now hit + control (dated now-feature, dateless later-feature)
-    const dateless = await seedFeature(product.id, { title: 'Dateless now feature' });
-    const dated = await seedFeature(product.id, {
+    const dateless = await seedFeature(projectId, { title: 'Dateless now feature' });
+    const dated = await seedFeature(projectId, {
       title: 'Dated now feature',
       startDate: '2026-06-01',
       endDate: '2026-06-30',
     });
-    await seedFeature(product.id, { title: 'Later feature', horizon: 'later' });
+    await seedFeature(projectId, { title: 'Later feature', horizon: 'later' });
 
     // oversized hit (l-size in now, no docs) + controls
-    const oversized = await seedFeature(product.id, {
+    const oversized = await seedFeature(projectId, {
       title: 'Oversized feature',
       size: 'l',
       startDate: '2026-06-01',
       endDate: '2026-06-30',
     });
-    const largeWithDoc = await seedFeature(product.id, {
+    const largeWithDoc = await seedFeature(projectId, {
       title: 'Large but documented',
       size: 'l',
       startDate: '2026-06-01',
@@ -323,7 +425,7 @@ describe('GET /api/copilot/nudges', () => {
       title: 'Covered',
       contentMd: 'covered',
     });
-    await seedFeature(product.id, {
+    await seedFeature(projectId, {
       title: 'Medium now feature',
       size: 'm',
       startDate: '2026-06-01',
@@ -395,7 +497,7 @@ describe('GET /api/copilot/nudges', () => {
       },
     ]);
 
-    const res = await app.request('/api/copilot/nudges', { headers: auth });
+    const res = await app.request(url('/copilot/nudges'), { headers: auth });
     expect(res.status).toBe(200);
     const nudges = await res.json();
 
@@ -439,7 +541,48 @@ describe('GET /api/copilot/nudges', () => {
   });
 
   it('works with AI disabled and returns [] for an empty workspace', async () => {
-    const res = await app.request('/api/copilot/nudges', { headers: auth });
+    const res = await app.request(url('/copilot/nudges'), { headers: auth });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual([]);
+  });
+
+  // ---- Cross-project security tests ----
+
+  it('nudges never surface project B docs or features (list isolation)', async () => {
+    // Project B with stale data
+    const projectB = await seedProduct('Project B');
+    const featureB = await seedFeature(projectB.id, {
+      title: 'B dateless now feature',
+      // dateless_now: now + missing dates
+    });
+    // Stale draft doc in B
+    await db.insert(documents).values({
+      projectId: projectB.id,
+      featureId: featureB.id,
+      type: 'prd',
+      title: 'B Stale draft',
+      status: 'draft',
+      updatedAt: daysAgo(20),
+    });
+
+    // Request nudges for project A — should be empty (A has no stale data)
+    const res = await app.request(url('/copilot/nudges'), { headers: auth });
+    expect(res.status).toBe(200);
+    const nudges = await res.json();
+    // None of B's data should appear
+    expect(nudges.every((n: { title: string }) => !n.title.includes('B '))).toBe(true);
+  });
+
+  it('GET nudges is viewer-allowed (read-only, no 403)', async () => {
+    const viewer = await createTestUser({ role: 'member' });
+    await addMembership(viewer.id, projectId, 'viewer');
+    const viewerAuth = {
+      cookie: await authCookie(viewer),
+      origin: 'http://localhost',
+      host: 'localhost',
+    };
+
+    const res = await app.request(url('/copilot/nudges'), { headers: viewerAuth });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual([]);
   });

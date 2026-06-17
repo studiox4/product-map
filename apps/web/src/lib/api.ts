@@ -556,7 +556,8 @@ export function useAddComment() {
     mutationFn: ({ target, body, parentId }: AddCommentVars) =>
       fetchJson<Comment>(apiPath(pid, 'comments'), {
         method: 'POST',
-        body: JSON.stringify({ ...target, body, ...(parentId ? { parentId } : {}) }),
+        // Replies carry only parentId + body; roots carry the target surface (featureId or documentId).
+        body: JSON.stringify(parentId ? { parentId, body } : { ...target, body }),
       }),
     onSettled: (_data, _err, { target }) => invalidateComments(qc, pid, target),
   });
@@ -975,11 +976,13 @@ export function apiErrorMessage(err: unknown, fallback: string): string {
 
 type ShareData = import('@productmap/shared').ShareData;
 
-/** POST /api/share/roadmap → { url: "/share/:token" }. */
+/** POST /api/projects/:projectId/share/roadmap → { url: "/share/:token" }.
+ * Nested under the project — editor-gated by the method gate. */
 export function useCreateShare() {
+  const pid = useProjectId();
   return useMutation({
     mutationFn: () =>
-      fetchJson<{ url: string }>('/api/share/roadmap', { method: 'POST' }),
+      fetchJson<{ url: string }>(apiPath(pid, 'share', 'roadmap'), { method: 'POST' }),
   });
 }
 
@@ -1031,24 +1034,26 @@ import type {
   SuggestDecisionResponse,
 } from '@productmap/shared';
 
-export const copilotNudgesKey = ['copilot', 'nudges'] as const;
-export const decisionsRootKey = ['decisions'] as const;
+export const copilotNudgesKey = (pid: string) => ['p', pid, 'copilot', 'nudges'] as const;
+export const decisionsRootKey = (pid: string) => ['p', pid, 'decisions'] as const;
 
 /** Derived hygiene nudges (no AI behind them). Fetched lazily — pass enabled=false until the panel opens. */
 export function useCopilotNudges(enabled = true) {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: copilotNudgesKey,
-    queryFn: () => fetchJson<CopilotNudge[]>('/api/copilot/nudges'),
+    queryKey: copilotNudgesKey(pid),
+    queryFn: () => fetchJson<CopilotNudge[]>(apiPath(pid, 'copilot', 'nudges')),
     enabled,
     staleTime: 30_000,
   });
 }
 
-/** POST /api/ai/suggest-decision {commentId} — AI reads the thread, suggests a decision draft. */
+/** POST /api/projects/:pid/ai/suggest-decision {commentId} — AI reads the thread, suggests a decision draft. */
 export function useSuggestDecision() {
+  const pid = useProjectId();
   return useMutation({
     mutationFn: (commentId: string) =>
-      fetchJson<SuggestDecisionResponse>('/api/ai/suggest-decision', {
+      fetchJson<SuggestDecisionResponse>(apiPath(pid, 'ai', 'suggest-decision'), {
         method: 'POST',
         body: JSON.stringify({ commentId }),
       }),
@@ -1063,18 +1068,18 @@ export interface DecisionCreateInput {
   sourceCommentId?: string;
 }
 
-/** POST /api/decisions — log a decision (optionally sourced from a resolved thread). */
+/** POST /api/projects/:pid/decisions — log a decision (optionally sourced from a resolved thread). */
 export function useCreateDecision() {
   const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: DecisionCreateInput) =>
-      fetchJson<Decision>('/api/decisions', {
+      fetchJson<Decision>(apiPath(pid, 'decisions'), {
         method: 'POST',
         body: JSON.stringify(input),
       }),
     onSettled: (_data, _err, { featureId }) => {
-      qc.invalidateQueries({ queryKey: decisionsRootKey });
+      qc.invalidateQueries({ queryKey: decisionsRootKey(pid) });
       if (featureId) {
         qc.invalidateQueries({ queryKey: queryKeys.activity(pid, featureId) });
       }
@@ -1162,13 +1167,14 @@ export function useDeleteEvidence() {
   });
 }
 
-export const decisionsKey = (featureId: string) => ['decisions', featureId] as const;
+export const decisionsKey = (pid: string, featureId: string) => ['p', pid, 'decisions', featureId] as const;
 
 /** Decisions for a feature, newest first (display only here — creation lives with comments extraction). */
 export function useDecisions(featureId: string) {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: decisionsKey(featureId),
-    queryFn: () => fetchJson<Decision[]>(`/api/decisions?featureId=${featureId}`),
+    queryKey: decisionsKey(pid, featureId),
+    queryFn: () => fetchJson<Decision[]>(`${apiPath(pid, 'decisions')}?featureId=${featureId}`),
     enabled: !!featureId,
   });
 }
@@ -1234,18 +1240,21 @@ export function isCycleError(err: unknown): boolean {
 
 import type { IdeaStatus, IdeaWithVotes } from '@productmap/shared';
 
-export const ideasRootKey = ['ideas'] as const;
+export function ideasRootKey(pid: string) {
+  return ['p', pid, 'ideas'] as const;
+}
 
-export function ideasKey(status?: IdeaStatus) {
-  return ['ideas', status ?? 'all'] as const;
+export function ideasKey(pid: string, status?: IdeaStatus) {
+  return ['p', pid, 'ideas', status ?? 'all'] as const;
 }
 
 /** Ideas, newest first, optionally filtered by status (server-side). */
 export function useIdeas(status?: IdeaStatus) {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: ideasKey(status),
+    queryKey: ideasKey(pid, status),
     queryFn: () =>
-      fetchJson<IdeaWithVotes[]>(`/api/ideas${status ? `?status=${status}` : ''}`),
+      fetchJson<IdeaWithVotes[]>(apiPath(pid, 'ideas') + (status ? `?status=${status}` : '')),
   });
 }
 
@@ -1256,15 +1265,16 @@ export interface IdeaCreateInput {
 }
 
 export function useCreateIdea() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: IdeaCreateInput) =>
-      fetchJson<IdeaWithVotes>('/api/ideas', {
+      fetchJson<IdeaWithVotes>(apiPath(pid, 'ideas'), {
         method: 'POST',
         body: JSON.stringify(input),
       }),
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: ideasRootKey });
+      qc.invalidateQueries({ queryKey: ideasRootKey(pid) });
     },
   });
 }
@@ -1281,15 +1291,16 @@ export interface UpdateIdeaVars extends IdeaUpdateInput {
 }
 
 export function useUpdateIdea() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, ...patch }: UpdateIdeaVars) =>
-      fetchJson<IdeaWithVotes>(`/api/ideas/${id}`, {
+      fetchJson<IdeaWithVotes>(apiPath(pid, 'ideas', id), {
         method: 'PATCH',
         body: JSON.stringify(patch),
       }),
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: ideasRootKey });
+      qc.invalidateQueries({ queryKey: ideasRootKey(pid) });
     },
   });
 }
@@ -1300,17 +1311,18 @@ export function useUpdateIdea() {
  * applies the derived summary immediately, rolls back on error.
  */
 export function useIdeaVote(ideaId: string) {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (value: VoteInput) =>
-      fetchJson<VoteCounts>(`/api/ideas/${ideaId}/vote`, {
+      fetchJson<VoteCounts>(apiPath(pid, 'ideas', ideaId, 'vote'), {
         method: 'PUT',
         body: JSON.stringify({ value }),
       }),
     onMutate: async (value) => {
-      await qc.cancelQueries({ queryKey: ideasRootKey });
-      const snapshot = qc.getQueriesData<IdeaWithVotes[]>({ queryKey: ideasRootKey });
-      qc.setQueriesData<IdeaWithVotes[]>({ queryKey: ideasRootKey }, (old) =>
+      await qc.cancelQueries({ queryKey: ideasRootKey(pid) });
+      const snapshot = qc.getQueriesData<IdeaWithVotes[]>({ queryKey: ideasRootKey(pid) });
+      qc.setQueriesData<IdeaWithVotes[]>({ queryKey: ideasRootKey(pid) }, (old) =>
         old?.map((i) => (i.id === ideaId ? applyVote(i, value) : i)),
       );
       return snapshot;
@@ -1321,7 +1333,7 @@ export function useIdeaVote(ideaId: string) {
       }
     },
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: ideasRootKey });
+      qc.invalidateQueries({ queryKey: ideasRootKey(pid) });
     },
   });
 }
@@ -1332,18 +1344,18 @@ export interface PromoteIdeaVars {
   withAiBrief?: boolean;
 }
 
-/** POST /api/ideas/:id/promote — idea → feature (optionally drafting an AI brief). Returns the new feature. */
+/** POST /api/projects/:pid/ideas/:id/promote — idea → feature (optionally drafting an AI brief). Returns the new feature. */
 export function usePromoteIdea() {
   const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, ...body }: PromoteIdeaVars) =>
-      fetchJson<Feature>(`/api/ideas/${id}/promote`, {
+      fetchJson<Feature>(apiPath(pid, 'ideas', id, 'promote'), {
         method: 'POST',
         body: JSON.stringify(body),
       }),
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: ideasRootKey });
+      qc.invalidateQueries({ queryKey: ideasRootKey(pid) });
       qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
       qc.invalidateQueries({ queryKey: queryKeys.overview(pid) });
     },
@@ -1352,21 +1364,22 @@ export function usePromoteIdea() {
 
 // -- dream tier 2: idea editing + pitch docs (Inbox agent additions) --
 
-export function ideaKey(id: string) {
-  return ['ideas', 'detail', id] as const;
+export function ideaKey(pid: string, id: string) {
+  return ['p', pid, 'ideas', 'detail', id] as const;
 }
 
-/** Single idea with creator + pitchDoc meta (GET /api/ideas/:id). Used by the editor back-link for idea-owned docs. */
+/** Single idea with creator + pitchDoc meta (GET /api/projects/:pid/ideas/:id). Used by the editor back-link for idea-owned docs. */
 export function useIdea(id: string) {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: ideaKey(id),
-    queryFn: () => fetchJson<IdeaWithVotes>(`/api/ideas/${id}`),
+    queryKey: ideaKey(pid, id),
+    queryFn: () => fetchJson<IdeaWithVotes>(apiPath(pid, 'ideas', id)),
     enabled: !!id,
   });
 }
 
 /**
- * POST /api/ideas/:id/pitch — create the idea's pitch doc from the default
+ * POST /api/projects/:pid/ideas/:id/pitch — create the idea's pitch doc from the default
  * idea_pitch template (409 when one exists). Seeds the document cache so
  * navigating straight to /docs/:id renders without a refetch.
  */
@@ -1375,12 +1388,12 @@ export function useCreatePitch() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (ideaId: string) =>
-      fetchJson<DocumentFull>(`/api/ideas/${ideaId}/pitch`, { method: 'POST' }),
+      fetchJson<DocumentFull>(apiPath(pid, 'ideas', ideaId, 'pitch'), { method: 'POST' }),
     onSuccess: (doc) => {
       qc.setQueryData(queryKeys.document(pid, doc.id), doc);
     },
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: ideasRootKey });
+      qc.invalidateQueries({ queryKey: ideasRootKey(pid) });
       qc.invalidateQueries({ queryKey: queryKeys.allDocuments(pid) });
     },
   });

@@ -10,6 +10,10 @@ import { documentsRoutes, exportRoutes } from './documents';
 import { commentsRoutes } from './comments';
 import { activityRoutes } from './activity';
 import { overviewRoutes } from './overview';
+import { ideasRoutes } from './ideas';
+import { decisionsRoutes } from './decisions';
+import { copilotRoutes } from './copilot';
+import { shareMintRoutes } from './share';
 
 /**
  * Content routes scoped to /api/projects/:projectId. One method-based gate:
@@ -33,4 +37,14 @@ export const projectScopedContent = new Hono<MembershipEnv>()
   .route('/', exportRoutes)
   .route('/comments', commentsRoutes)
   .route('/activity', activityRoutes)
-  .route('/overview', overviewRoutes);
+  .route('/overview', overviewRoutes)
+  .route('/ideas', ideasRoutes)
+  // decisionsRoutes defines /decisions… + /ai/suggest-decision — mount at root
+  .route('/', decisionsRoutes)
+  // copilotRoutes defines /ai/review-doc, /ai/chat, /copilot/nudges — mount at root.
+  // NOTE: aiRoutes (/api/ai/status) is GLOBAL config and stays flat in app.ts.
+  // review-doc/chat are POST → editor-gated by the method gate; nudges is GET →
+  // viewer-allowed. Viewers get nudges (read) but not AI mutations — deliberate v1 choice.
+  .route('/', copilotRoutes)
+  // shareMintRoutes: POST /share/roadmap — editor-gated by the method gate above.
+  .route('/share', shareMintRoutes);

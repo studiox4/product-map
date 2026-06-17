@@ -93,8 +93,8 @@ function mockFetch(chatEvents: string[]) {
       const url = String(input);
       if (url === '/api/projects') return jsonResponse([{ id: TEST_PROJECT_ID, name: 'Test', vision: '', aboutMd: '', role: 'owner' }]);
       if (url.startsWith(`/api/projects/${TEST_PROJECT_ID}/documents`)) return jsonResponse(docs);
-      if (url === '/api/copilot/nudges') return jsonResponse(nudges);
-      if (url === '/api/ai/chat') return sseResponse(chatEvents);
+      if (url === `/api/projects/${TEST_PROJECT_ID}/copilot/nudges`) return jsonResponse(nudges);
+      if (url === `/api/projects/${TEST_PROJECT_ID}/ai/chat`) return sseResponse(chatEvents);
       throw new Error(`unhandled fetch ${url}`);
     });
 }
@@ -161,7 +161,7 @@ describe('CopilotPanel', () => {
     const citation = await screen.findByRole('link', { name: 'Telemetry PRD' });
     expect(citation.getAttribute('href')).toBe('/docs/d1');
 
-    const chatCall = fetchSpy.mock.calls.find(([u]) => String(u) === '/api/ai/chat')!;
+    const chatCall = fetchSpy.mock.calls.find(([u]) => String(u) === `/api/projects/${TEST_PROJECT_ID}/ai/chat`)!;
     expect(JSON.parse((chatCall[1] as RequestInit).body as string)).toEqual({
       question: 'How much do we sample?',
     });
@@ -172,7 +172,7 @@ describe('CopilotPanel', () => {
       const url = String(input);
       if (url === '/api/projects') return jsonResponse([{ id: TEST_PROJECT_ID, name: 'Test', vision: '', aboutMd: '', role: 'owner' }]);
       if (url.startsWith(`/api/projects/${TEST_PROJECT_ID}/documents`)) return jsonResponse(docs);
-      if (url === '/api/ai/chat') return new Response('{}', { status: 503 });
+      if (url === `/api/projects/${TEST_PROJECT_ID}/ai/chat`) return new Response('{}', { status: 503 });
       throw new Error(`unhandled fetch ${url}`);
     });
     renderPanel();
@@ -205,7 +205,7 @@ describe('CopilotPanel', () => {
       const url = String(input);
       if (url === '/api/projects') return jsonResponse([{ id: TEST_PROJECT_ID, name: 'Test', vision: '', aboutMd: '', role: 'owner' }]);
       if (url.startsWith(`/api/projects/${TEST_PROJECT_ID}/documents`)) return jsonResponse([]);
-      if (url === '/api/copilot/nudges') return jsonResponse([]);
+      if (url === `/api/projects/${TEST_PROJECT_ID}/copilot/nudges`) return jsonResponse([]);
       throw new Error(`unhandled fetch ${url}`);
     });
     renderPanel();

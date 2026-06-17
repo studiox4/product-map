@@ -266,7 +266,7 @@ describe('CommentsSection', () => {
     const form = box.closest('form')!;
     await user().click(within(form).getByRole('button', { name: 'Reply' }));
     await waitFor(() => expect(posted).not.toBeNull());
-    expect(posted).toMatchObject({ featureId: 'f1', parentId: 'c3', body: 'Agreed' });
+    expect(posted).toMatchObject({ parentId: 'c3', body: 'Agreed' });
   });
 
   it('shows "Log decision" only on resolved roots when AI is enabled', async () => {
@@ -293,7 +293,7 @@ describe('CommentsSection', () => {
     let suggestBody: unknown = null;
     let decisionBody: unknown = null;
     server.use(
-      http.post('/api/ai/suggest-decision', async ({ request }) => {
+      http.post(`/api/projects/${TEST_PROJECT_ID}/ai/suggest-decision`, async ({ request }) => {
         suggestBody = await request.json();
         return HttpResponse.json({
           suggested: true,
@@ -302,7 +302,7 @@ describe('CommentsSection', () => {
           alternativesMd: '- WebSockets',
         });
       }),
-      http.post('/api/decisions', async ({ request }) => {
+      http.post(`/api/projects/${TEST_PROJECT_ID}/decisions`, async ({ request }) => {
         decisionBody = await request.json();
         return HttpResponse.json({ id: 'dec1' }, { status: 201 });
       }),

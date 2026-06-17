@@ -11,6 +11,8 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { streamSse, STREAM_TIMEOUT_MS } from './sse';
+import { apiPath } from '@/lib/api';
+import { useProjectId } from '@/lib/project';
 
 const proseClass =
   'space-y-2 text-sm leading-6 text-body-ink ' +
@@ -30,6 +32,7 @@ export interface ReviewSheetProps {
  * starts every time the sheet opens.
  */
 export function ReviewSheet({ documentId, open, onOpenChange }: ReviewSheetProps) {
+  const pid = useProjectId();
   const [markdown, setMarkdown] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +48,7 @@ export function ReviewSheet({ documentId, open, onOpenChange }: ReviewSheetProps
     const timeout = setTimeout(() => controller.abort(), STREAM_TIMEOUT_MS);
     try {
       await streamSse({
-        url: '/api/ai/review-doc',
+        url: apiPath(pid, 'ai', 'review-doc'),
         body: { documentId },
         signal: controller.signal,
         onText: setMarkdown,

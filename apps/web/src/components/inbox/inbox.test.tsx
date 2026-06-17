@@ -100,7 +100,7 @@ const server = setupServer(
   ),
   http.get('/api/users', () => HttpResponse.json([])),
   http.get('/api/ai/status', () => HttpResponse.json({ enabled: true })),
-  http.get('/api/ideas', async ({ request }) => {
+  http.get(`/api/projects/${TEST_PROJECT_ID}/ideas`, async ({ request }) => {
     await delay(20);
     const status = new URL(request.url).searchParams.get('status');
     return HttpResponse.json(status ? fixture.filter((i) => i.status === status) : fixture);
@@ -166,7 +166,7 @@ describe('Idea Inbox', () => {
   });
 
   it('shows an empty state inviting the first idea', async () => {
-    server.use(http.get('/api/ideas', () => HttpResponse.json([])));
+    server.use(http.get(`/api/projects/${TEST_PROJECT_ID}/ideas`, () => HttpResponse.json([])));
     renderInbox();
     expect(await screen.findByText(/no ideas yet/i)).toBeTruthy();
     expect(screen.getByRole('button', { name: /capture your first idea/i })).toBeTruthy();
@@ -186,7 +186,7 @@ describe('Idea Inbox', () => {
   it('captures a new idea via the dialog', async () => {
     let posted: Record<string, unknown> | null = null;
     server.use(
-      http.post('/api/ideas', async ({ request }) => {
+      http.post(`/api/projects/${TEST_PROJECT_ID}/ideas`, async ({ request }) => {
         posted = (await request.json()) as Record<string, unknown>;
         return HttpResponse.json(
           makeIdea({ id: 'i-new', title: String(posted.title) }),
@@ -216,7 +216,7 @@ describe('Idea Inbox', () => {
   it('boost pill PUTs a vote', async () => {
     let putBody: Record<string, unknown> | null = null;
     server.use(
-      http.put('/api/ideas/:id/vote', async ({ request, params }) => {
+      http.put(`/api/projects/${TEST_PROJECT_ID}/ideas/:id/vote`, async ({ request, params }) => {
         expect(params.id).toBe('i1');
         putBody = (await request.json()) as Record<string, unknown>;
         return HttpResponse.json({ score: 3, boosts: 4, cools: 1, myVote: 1 });
@@ -234,7 +234,7 @@ describe('Idea Inbox', () => {
   it('promotes with horizon picker + AI brief checkbox', async () => {
     let promoted: Record<string, unknown> | null = null;
     server.use(
-      http.post('/api/ideas/:id/promote', async ({ request, params }) => {
+      http.post(`/api/projects/${TEST_PROJECT_ID}/ideas/:id/promote`, async ({ request, params }) => {
         expect(params.id).toBe('i1');
         promoted = (await request.json()) as Record<string, unknown>;
         return HttpResponse.json(
@@ -299,7 +299,7 @@ describe('Idea Inbox', () => {
   it('saves an edited title on blur', async () => {
     let patched: Record<string, unknown> | null = null;
     server.use(
-      http.patch('/api/ideas/:id', async ({ request, params }) => {
+      http.patch(`/api/projects/${TEST_PROJECT_ID}/ideas/:id`, async ({ request, params }) => {
         expect(params.id).toBe('i1');
         patched = (await request.json()) as Record<string, unknown>;
         return HttpResponse.json(makeIdea({ id: 'i1', ...patched }));
@@ -320,7 +320,7 @@ describe('Idea Inbox', () => {
   it('saves source and quick summary edits on blur', async () => {
     const patches: Record<string, unknown>[] = [];
     server.use(
-      http.patch('/api/ideas/:id', async ({ request }) => {
+      http.patch(`/api/projects/${TEST_PROJECT_ID}/ideas/:id`, async ({ request }) => {
         const body = (await request.json()) as Record<string, unknown>;
         patches.push(body);
         return HttpResponse.json(makeIdea({ id: 'i1', ...body }));
@@ -351,7 +351,7 @@ describe('Idea Inbox', () => {
   it('changes status via the detail select', async () => {
     let patched: Record<string, unknown> | null = null;
     server.use(
-      http.patch('/api/ideas/:id', async ({ request, params }) => {
+      http.patch(`/api/projects/${TEST_PROJECT_ID}/ideas/:id`, async ({ request, params }) => {
         expect(params.id).toBe('i1');
         patched = (await request.json()) as Record<string, unknown>;
         return HttpResponse.json(makeIdea({ id: 'i1', ...patched }));
@@ -368,7 +368,7 @@ describe('Idea Inbox', () => {
 
   it('"Write the pitch" creates the pitch doc and navigates to the editor', async () => {
     server.use(
-      http.post('/api/ideas/:id/pitch', ({ params }) => {
+      http.post(`/api/projects/${TEST_PROJECT_ID}/ideas/:id/pitch`, ({ params }) => {
         expect(params.id).toBe('i1');
         return HttpResponse.json(
           {
@@ -403,7 +403,7 @@ describe('Idea Inbox', () => {
       fixture[1],
     ];
     server.use(
-      http.get('/api/ideas', () => HttpResponse.json(withPitch)),
+      http.get(`/api/projects/${TEST_PROJECT_ID}/ideas`, () => HttpResponse.json(withPitch)),
       http.get(`/api/projects/${TEST_PROJECT_ID}/documents/d-pitch`, () =>
         HttpResponse.json({
           id: 'd-pitch',

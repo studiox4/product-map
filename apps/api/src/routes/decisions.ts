@@ -1,18 +1,19 @@
-// Dream-tier decision routes. Mounted at /api in app.ts, so paths here are
-// /decisions… and /ai/suggest-decision.
+// Dream-tier decision routes. Mounted at /api/projects/:projectId in project-scoped.ts,
+// so paths here are /decisions… and /ai/suggest-decision.
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { asc, desc, eq, or } from 'drizzle-orm';
+import { and, asc, desc, eq, or } from 'drizzle-orm';
 import { generateObject } from 'ai';
 import { z } from 'zod';
+const uuidSchema = z.string().uuid();
 import { decisionCreate, suggestDecisionBody } from '@productmap/shared';
 import { comments, decisions, features, users } from '@productmap/db';
 import { db } from '../db';
-import { getDefaultProjectId } from '../lib/project';
-import { type CurrentUserEnv } from '../middleware/current-user';
+import { type MembershipEnv } from '../middleware/membership';
 import { loadUser } from '../middleware/auth';
 import { recordActivity, addCollaborator } from '../lib/activity';
 import { createAiModel } from '../lib/ai';
+import { loadScoped, loadScopedComment } from '../lib/scope';
 
 const decisionColumns = {
   id: decisions.id,
@@ -41,16 +42,21 @@ const decisionSuggestion = z.object({
   alternativesMd: z.string(),
 });
 
-export const decisionsRoutes = new Hono<CurrentUserEnv>()
+export const decisionsRoutes = new Hono<MembershipEnv>()
   .get('/decisions', async (c) => {
+    const pid = c.get('currentProjectId');
     const featureId = c.req.query('featureId');
-    const base = db
+    if (featureId !== undefined && !uuidSchema.safeParse(featureId).success) {
+      return c.json({ error: 'validation', field: 'featureId' }, 400);
+    }
+    const projectFilter = eq(decisions.projectId, pid);
+    const where = featureId ? and(projectFilter, eq(decisions.featureId, featureId)) : projectFilter;
+    const rows = await db
       .select(decisionColumns)
       .from(decisions)
-      .leftJoin(users, eq(decisions.decidedBy, users.id));
-    const rows = await (featureId ? base.where(eq(decisions.featureId, featureId)) : base).orderBy(
-      desc(decisions.decidedAt),
-    );
+      .leftJoin(users, eq(decisions.decidedBy, users.id))
+      .where(where)
+      .orderBy(desc(decisions.decidedAt));
     return c.json(rows);
   })
   .post(
@@ -65,26 +71,19 @@ export const decisionsRoutes = new Hono<CurrentUserEnv>()
       const user = c.get('currentUser');
       if (!user) return c.json({ error: 'unauthorized' }, 401);
 
+      const pid = c.get('currentProjectId');
+
       if (body.featureId) {
-        const [feature] = await db
-          .select({ id: features.id })
-          .from(features)
-          .where(eq(features.id, body.featureId));
-        if (!feature) return c.json({ error: 'not_found' }, 404);
+        await loadScoped(features, body.featureId, pid);
       }
       if (body.sourceCommentId) {
-        const [comment] = await db
-          .select({ id: comments.id })
-          .from(comments)
-          .where(eq(comments.id, body.sourceCommentId));
-        if (!comment) return c.json({ error: 'not_found' }, 404);
+        await loadScopedComment(body.sourceCommentId, pid);
       }
 
-      const projectId = await getDefaultProjectId();
       const [row] = await db
         .insert(decisions)
         .values({
-          projectId,
+          projectId: pid,
           featureId: body.featureId ?? null,
           title: body.title,
           decisionMd: body.decisionMd,
@@ -107,8 +106,8 @@ export const decisionsRoutes = new Hono<CurrentUserEnv>()
   )
   .delete('/decisions/:id', async (c) => {
     const id = c.req.param('id');
-    const [existing] = await db.select({ id: decisions.id }).from(decisions).where(eq(decisions.id, id));
-    if (!existing) return c.json({ error: 'not_found' }, 404);
+    const pid = c.get('currentProjectId');
+    await loadScoped(decisions, id, pid);
     await db.delete(decisions).where(eq(decisions.id, id));
     return c.body(null, 204);
   })
@@ -124,8 +123,8 @@ export const decisionsRoutes = new Hono<CurrentUserEnv>()
       if (!model) return c.json({ error: 'ai_disabled' }, 503);
 
       const { commentId } = c.req.valid('json');
-      const [comment] = await db.select().from(comments).where(eq(comments.id, commentId));
-      if (!comment) return c.json({ error: 'not_found' }, 404);
+      const pid = c.get('currentProjectId');
+      const comment = await loadScopedComment(commentId, pid);
       const rootId = comment.parentId ?? comment.id;
 
       // Full thread (root first, then replies in order) with author names.

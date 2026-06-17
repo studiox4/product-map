@@ -132,7 +132,7 @@ test('AC3: log decision from resolved thread (mocked AI) and manual decision', a
   request,
 }) => {
   await enableAi(page);
-  await page.route('**/api/ai/suggest-decision', (route) =>
+  await page.route('**/ai/suggest-decision', (route) =>
     route.fulfill({
       json: {
         suggested: true,
@@ -164,7 +164,8 @@ test('AC3: log decision from resolved thread (mocked AI) and manual decision', a
   await expect(decisions.getByText('Defer tables to post-demo')).toBeVisible();
 
   // Manual decision creation (no AI involved) renders too.
-  const created = await request.post('/api/decisions', {
+  const decisionsPid = await getProjectId(request);
+  const created = await request.post(`/api/projects/${decisionsPid}/decisions`, {
     data: {
       featureId: editor.id,
       title: 'Manual decision: keep turndown',
@@ -376,7 +377,7 @@ test('AC9a: copilot chat streams with doc citation links; nudges list real items
   request,
 }) => {
   await enableAi(page);
-  await page.route('**/api/ai/chat', (route) =>
+  await page.route('**/ai/chat', (route) =>
     route.fulfill({
       contentType: 'text/event-stream',
       body: sseBody([
@@ -421,7 +422,7 @@ test('AC9b: AI review streams rubric sections into the side sheet', async ({
   request,
 }) => {
   await enableAi(page);
-  await page.route('**/api/ai/review-doc', (route) =>
+  await page.route('**/ai/review-doc', (route) =>
     route.fulfill({
       contentType: 'text/event-stream',
       body: sseBody([

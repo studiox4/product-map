@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ProjectProvider } from '@/lib/project';
 import { SharingBlock, SHARE_URL_KEY } from './SharingBlock';
 
 // Node's experimental webstorage shadows jsdom's localStorage in this env —
@@ -32,7 +33,12 @@ let createCalls = 0;
 let revokedToken: string | null = null;
 
 const server = setupServer(
-  http.post('/api/share/roadmap', () => {
+  // ProjectProvider calls GET /api/projects to resolve the active project id.
+  http.get('/api/projects', () =>
+    HttpResponse.json([{ id: 'p-test', name: 'Test Project', role: 'owner' }]),
+  ),
+  // Mint route is now nested under /api/projects/:projectId/share/roadmap.
+  http.post('/api/projects/:projectId/share/roadmap', () => {
     createCalls += 1;
     return HttpResponse.json({ url: '/share/tok-abc' }, { status: 201 });
   }),
@@ -58,7 +64,9 @@ function renderBlock() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <SharingBlock />
+      <ProjectProvider>
+        <SharingBlock />
+      </ProjectProvider>
     </QueryClientProvider>,
   );
 }
@@ -68,7 +76,8 @@ describe('SharingBlock', () => {
     const user = userEvent.setup();
     renderBlock();
 
-    await user.click(screen.getByRole('button', { name: 'Create share link' }));
+    // Wait for ProjectProvider to resolve the active project (GET /api/projects).
+    await user.click(await screen.findByRole('button', { name: 'Create share link' }));
 
     const input = await screen.findByRole('textbox', { name: 'Share link' });
     expect((input as HTMLInputElement).value).toContain('/share/tok-abc');
@@ -81,7 +90,8 @@ describe('SharingBlock', () => {
     const user = userEvent.setup();
     renderBlock();
 
-    await user.click(screen.getByRole('button', { name: 'Revoke link' }));
+    // Wait for ProjectProvider to resolve, then the share link UI appears.
+    await user.click(await screen.findByRole('button', { name: 'Revoke link' }));
 
     expect(await screen.findByRole('button', { name: 'Create share link' })).toBeDefined();
     expect(revokedToken).toBe('tok-abc');
@@ -99,7 +109,8 @@ describe('SharingBlock', () => {
     const user = userEvent.setup();
     renderBlock();
 
-    await user.click(screen.getByRole('button', { name: 'Revoke link' }));
+    // Wait for ProjectProvider to resolve, then the share link UI appears.
+    await user.click(await screen.findByRole('button', { name: 'Revoke link' }));
 
     expect(await screen.findByRole('button', { name: 'Create share link' })).toBeDefined();
     expect(localStorage.getItem(SHARE_URL_KEY)).toBeNull();

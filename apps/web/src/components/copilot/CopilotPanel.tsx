@@ -12,7 +12,8 @@ import {
   Sparkles,
 } from 'lucide-react';
 import type { CopilotNudge, DocumentListItem } from '@productmap/shared';
-import { useAllDocuments, useCopilotNudges } from '@/lib/api';
+import { useAllDocuments, useCopilotNudges, apiPath } from '@/lib/api';
+import { useProjectId } from '@/lib/project';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -102,6 +103,7 @@ function AssistantMessage({
 }
 
 function ChatTab({ onNavigate }: { onNavigate: (href: string) => void }) {
+  const pid = useProjectId();
   const docs = useAllDocuments().data ?? [];
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [question, setQuestion] = useState('');
@@ -124,7 +126,7 @@ function ChatTab({ onNavigate }: { onNavigate: (href: string) => void }) {
     const timeout = setTimeout(() => controller.abort(), STREAM_TIMEOUT_MS);
     try {
       await streamSse({
-        url: '/api/ai/chat',
+        url: apiPath(pid, 'ai', 'chat'),
         body: { question: q },
         signal: controller.signal,
         onText: (text) =>
