@@ -252,3 +252,51 @@ describe('project members', () => {
     expect((await res.json()).error).toBe('last_owner');
   });
 });
+
+describe('project invites (create/revoke)', () => {
+  it('owner creates a link-only invite (no email) → token returned, no send', async () => {
+    const owner = await createTestUser({ role: 'member' });
+    const p = await createTestProject();
+    await addMembership(owner.id, p.id, 'owner');
+    const res = await app.request(`/api/projects/${p.id}/invites`, json('POST', { role: 'viewer' }, await auth(owner)));
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.token).toBeTruthy();
+    expect(body.role).toBe('viewer');
+    expect(body.email).toBeNull();
+    expect(body.emailSent).toBe(false); // no SMTP configured in tests
+  });
+
+  it('owner lists then revokes an invite', async () => {
+    const owner = await createTestUser({ role: 'member' });
+    const p = await createTestProject();
+    await addMembership(owner.id, p.id, 'owner');
+    const h = await auth(owner);
+    const created = await (await app.request(`/api/projects/${p.id}/invites`, json('POST', { role: 'editor' }, h))).json();
+
+    const list = await app.request(`/api/projects/${p.id}/invites`, { headers: h });
+    expect((await list.json()).length).toBe(1);
+
+    const del = await app.request(`/api/projects/${p.id}/invites/${created.token}`, { method: 'DELETE', headers: h });
+    expect(del.status).toBe(204);
+
+    // After revoke the list omits it.
+    const list2 = await app.request(`/api/projects/${p.id}/invites`, { headers: h });
+    expect((await list2.json()).length).toBe(0);
+  });
+
+  it('editor cannot create or revoke invites (403)', async () => {
+    const u = await createTestUser({ role: 'member' });
+    const p = await createTestProject();
+    await addMembership(u.id, p.id, 'editor');
+    const res = await app.request(`/api/projects/${p.id}/invites`, json('POST', { role: 'viewer' }, await auth(u)));
+    expect(res.status).toBe(403);
+  });
+
+  it('non-member gets 404 on invite create (no existence leak)', async () => {
+    const u = await createTestUser({ role: 'member' });
+    const p = await createTestProject();
+    const res = await app.request(`/api/projects/${p.id}/invites`, json('POST', { role: 'viewer' }, await auth(u)));
+    expect(res.status).toBe(404);
+  });
+});
