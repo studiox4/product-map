@@ -215,3 +215,21 @@ export const adminUpdateUserInput = z.object({
   isActive: z.boolean().optional(),
   resetPassword: z.boolean().optional(),
 });
+
+export const projectCreate = z.object({
+  name: z.string().min(1).max(120),
+  vision: z.string().max(2000).optional(),
+  aboutMd: z.string().max(20000).optional(),
+});
+
+const role = z.enum(['owner', 'editor', 'viewer']);
+
+export const memberAdd = z
+  .object({
+    userId: z.string().uuid().optional(),
+    email: z.string().email().optional(),
+    role: role.default('editor'),
+  })
+  .refine((v) => !!v.userId || !!v.email, { message: 'userId or email required' });
+
+export const memberUpdate = z.object({ role });

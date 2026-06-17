@@ -60,3 +60,6 @@ export const USER_COLORS = ['#2b557e', '#3c6b46', '#9a6428', '#6d3f9e', '#0e7490
 
 /** Minimum password length, enforced in shared schemas and reused on the client. */
 export const MIN_PASSWORD_LENGTH = 10;
+
+/** Project role hierarchy — higher rank ⊇ lower rank's capabilities. */
+export const ROLE_RANK = { viewer: 1, editor: 2, owner: 3 } as const;
