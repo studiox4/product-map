@@ -49,8 +49,7 @@ export const app = new Hono()
   // Content sub-app: registered AFTER mgmt so projectsRoutes /:projectId* get
   // first crack. A non-match falls through to this mount (Hono chain semantics).
   .route('/api/projects/:projectId', projectScopedContent)
-  .route('/api/documents', documentsRoutes)
-  .route('/api', exportRoutes)
+  // documentsRoutes + exportRoutes → moved to /api/projects/:projectId/* in project-scoped.ts
   .route('/api/uploads', uploadsRoutes)
   .route('/api/overview', overviewRoutes)
   .route('/api/ai', aiRoutes)

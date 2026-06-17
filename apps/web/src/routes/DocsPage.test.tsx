@@ -75,14 +75,14 @@ const server = setupServer(
   http.get('/api/projects', () =>
     HttpResponse.json([{ id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'owner' }]),
   ),
-  http.get('/api/documents', ({ request }) => {
+  http.get(`/api/projects/${TEST_PROJECT_ID}/documents`, ({ request }) => {
     const url = new URL(request.url);
     if (url.searchParams.get('all') !== 'true') {
       return new HttpResponse(null, { status: 400 });
     }
     return HttpResponse.json(fixture);
   }),
-  http.get('/api/documents/:id', ({ params }) =>
+  http.get(`/api/projects/${TEST_PROJECT_ID}/documents/:id`, ({ params }) =>
     HttpResponse.json({
       ...fixture.find((d) => d.id === params.id)!,
       contentJson: { type: 'doc', content: [] },
@@ -201,7 +201,7 @@ describe('DocsPage', () => {
 
   it('sanitizes markup in doc content', async () => {
     server.use(
-      http.get('/api/documents/:id', () =>
+      http.get(`/api/projects/${TEST_PROJECT_ID}/documents/:id`, () =>
         HttpResponse.json({
           ...fixture[0],
           contentJson: { type: 'doc', content: [] },
@@ -263,7 +263,7 @@ describe('DocsPage', () => {
         ownerLabel: null,
       },
     ];
-    server.use(http.get('/api/documents', () => HttpResponse.json([...fixture, ...extra])));
+    server.use(http.get(`/api/projects/${TEST_PROJECT_ID}/documents`, () => HttpResponse.json([...fixture, ...extra])));
     renderDocs();
     await screen.findByText('Bulk export — Idea pitch');
 
@@ -287,7 +287,7 @@ describe('DocsPage', () => {
 
   it('shows error state with retry', async () => {
     server.use(
-      http.get('/api/documents', () => new HttpResponse(null, { status: 500 })),
+      http.get(`/api/projects/${TEST_PROJECT_ID}/documents`, () => new HttpResponse(null, { status: 500 })),
     );
     renderDocs();
     await screen.findByText("Couldn't load docs.");

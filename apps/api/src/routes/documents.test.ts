@@ -1,6 +1,6 @@
-// Integration tests for documents routes + markdown export (Task 2B).
+// Integration tests for documents routes + markdown export (Task 2B / B4).
 // helpers must be imported before ../app so DATABASE_URL points at productmap_test.
-import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
+import { setupTestDb, truncateAll, closeTestDb, createTestUser, createTestProject, addMembership, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
 import { projects, features, users, activity, featureCollaborators, templates, ideas, releases, documents } from '@productmap/db';
@@ -70,7 +70,7 @@ async function activityRows() {
 }
 
 async function createDoc(overrides: Record<string, unknown> = {}) {
-  const res = await app.request('/api/documents', {
+  const res = await app.request(`/api/projects/${projectId}/documents`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...auth },
     body: JSON.stringify({
@@ -84,7 +84,7 @@ async function createDoc(overrides: Record<string, unknown> = {}) {
   return res;
 }
 
-describe('POST /api/documents', () => {
+describe('POST /api/projects/:projectId/documents', () => {
   it('fromTemplate:true returns 201 with template content, {{title}} replaced', async () => {
     const res = await createDoc();
     expect(res.status).toBe(201);
@@ -178,7 +178,7 @@ describe('POST /api/documents', () => {
   });
 
   it('rejects invalid body with 400 validation', async () => {
-    const res = await app.request('/api/documents', {
+    const res = await app.request(`/api/projects/${projectId}/documents`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ featureId, type: 'nope', title: '' }),
@@ -194,13 +194,32 @@ describe('POST /api/documents', () => {
     expect(res.status).toBe(404);
     expect((await res.json()).error).toBe('not_found');
   });
+
+  // --- cross-project: featureId from project B → 404 ---
+  it('POST {featureId: <project B feature>} → 404 (body-id IDOR)', async () => {
+    const userB = await createTestUser({ role: 'member', email: 'b@test.co' });
+    const projB = await createTestProject('Project B');
+    await addMembership(userB.id, projB.id, 'editor');
+    const [featureB] = await db.insert(features).values({ projectId: projB.id, title: 'B Feature', horizon: 'now' }).returning();
+
+    const memberA = await createTestUser({ role: 'member', email: 'memberA@test.co' });
+    await addMembership(memberA.id, projectId, 'editor');
+    const memberAAuth = { cookie: await authCookie(memberA), origin: 'http://localhost', host: 'localhost' };
+
+    const res = await app.request(`/api/projects/${projectId}/documents`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...memberAAuth },
+      body: JSON.stringify({ featureId: featureB.id, type: 'prd', title: 'Attack doc', fromTemplate: false }),
+    });
+    expect(res.status).toBe(404);
+  });
 });
 
-describe('GET /api/documents', () => {
+describe('GET /api/projects/:projectId/documents', () => {
   it('lists document metas filtered by featureId', async () => {
     await createDoc();
     await createDoc({ type: 'tech_spec', title: 'Editor tech spec' });
-    const res = await app.request(`/api/documents?featureId=${featureId}`, { headers: auth });
+    const res = await app.request(`/api/projects/${projectId}/documents?featureId=${featureId}`, { headers: auth });
     expect(res.status).toBe(200);
     const list = await res.json();
     expect(list).toHaveLength(2);
@@ -210,7 +229,7 @@ describe('GET /api/documents', () => {
 
   it('?all=true returns DocumentListItems with featureTitle, featureHorizon and wordCount', async () => {
     await createDoc(); // templated PRD → non-trivial word count
-    const res = await app.request('/api/documents?all=true', { headers: auth });
+    const res = await app.request(`/api/projects/${projectId}/documents?all=true`, { headers: auth });
     expect(res.status).toBe(200);
     const list = await res.json();
     expect(list).toHaveLength(1);
@@ -235,7 +254,7 @@ describe('GET /api/documents', () => {
         contentMd: 'one two three',
       })
       .returning();
-    const list = await (await app.request('/api/documents?all=true', { headers: auth })).json();
+    const list = await (await app.request(`/api/projects/${projectId}/documents?all=true`, { headers: auth })).json();
     const item = list.find((d: { id: string }) => d.id === doc.id);
     expect(item).toBeDefined();
     expect(item.ownerLabel).toEqual({ kind: 'idea', id: idea.id, title: 'SSO via OIDC' });
@@ -253,7 +272,7 @@ describe('GET /api/documents', () => {
       .insert(releases)
       .values({ projectId, name: 'v0.3', notesDocId: doc.id })
       .returning();
-    const list = await (await app.request('/api/documents?all=true', { headers: auth })).json();
+    const list = await (await app.request(`/api/projects/${projectId}/documents?all=true`, { headers: auth })).json();
     const item = list.find((d: { id: string }) => d.id === doc.id);
     expect(item).toBeDefined();
     expect(item.ownerLabel).toEqual({ kind: 'release', id: release.id, title: 'v0.3' });
@@ -274,7 +293,7 @@ describe('GET /api/documents', () => {
         contentMd: '',
       })
       .returning();
-    const list = await (await app.request('/api/documents?all=true', { headers: auth })).json();
+    const list = await (await app.request(`/api/projects/${projectId}/documents?all=true`, { headers: auth })).json();
     const item = list.find((d: { id: string }) => d.id === doc.id);
     expect(item.ownerLabel).toEqual({ kind: 'feature', id: featureId, title: 'Rich Markdown Editor' });
     expect(item.ideaId).toBe(idea.id);
@@ -282,15 +301,31 @@ describe('GET /api/documents', () => {
 
   it('?all=true wordCount counts whitespace-separated words of contentMd', async () => {
     const doc = await (await createDoc({ fromTemplate: false })).json();
-    const full = await (await app.request(`/api/documents/${doc.id}`, { headers: auth })).json();
+    const full = await (await app.request(`/api/projects/${projectId}/documents/${doc.id}`, { headers: auth })).json();
     expect(full.contentMd).toBe('');
-    const res = await app.request('/api/documents?all=true', { headers: auth });
+    const res = await app.request(`/api/projects/${projectId}/documents?all=true`, { headers: auth });
     const [item] = await res.json();
     expect(item.wordCount).toBe(0);
   });
+
+  // --- cross-project: ?all list must exclude project B's docs ---
+  it('?all=true excludes docs from project B (list isolation)', async () => {
+    // create a doc in A
+    await createDoc();
+    // create a project B with its own doc
+    const projB = await createTestProject('Project B');
+    const [featureB] = await db.insert(features).values({ projectId: projB.id, title: 'B Feature', horizon: 'now' }).returning();
+    await db.insert(documents).values({ projectId: projB.id, featureId: featureB.id, type: 'prd', title: 'B PRD', contentMd: 'b content' });
+
+    const res = await app.request(`/api/projects/${projectId}/documents?all=true`, { headers: auth });
+    const list = await res.json();
+    const bDoc = list.find((d: { title: string }) => d.title === 'B PRD');
+    expect(bDoc).toBeUndefined();
+    expect(list.some((d: { title: string }) => d.title === 'Editor PRD')).toBe(true);
+  });
 });
 
-describe('PATCH /api/documents/:id', () => {
+describe('PATCH /api/projects/:projectId/documents/:id', () => {
   it('contentJson PATCH derives contentMd server-side (visible on follow-up GET)', async () => {
     const doc = await (await createDoc({ fromTemplate: false })).json();
     const typed = {
@@ -302,13 +337,13 @@ describe('PATCH /api/documents/:id', () => {
         },
       ],
     };
-    const patch = await app.request(`/api/documents/${doc.id}`, {
+    const patch = await app.request(`/api/projects/${projectId}/documents/${doc.id}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ contentJson: typed }),
     });
     expect(patch.status).toBe(200);
-    const get = await app.request(`/api/documents/${doc.id}`, { headers: auth });
+    const get = await app.request(`/api/projects/${projectId}/documents/${doc.id}`, { headers: auth });
     expect(get.status).toBe(200);
     const full = await get.json();
     expect(full.contentMd).toContain('hello typed text');
@@ -317,14 +352,14 @@ describe('PATCH /api/documents/:id', () => {
   it('status transitions draft -> in_review -> final', async () => {
     const doc = await (await createDoc()).json();
     expect(doc.status).toBe('draft');
-    const r1 = await app.request(`/api/documents/${doc.id}`, {
+    const r1 = await app.request(`/api/projects/${projectId}/documents/${doc.id}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ status: 'in_review' }),
     });
     expect(r1.status).toBe(200);
     expect((await r1.json()).status).toBe('in_review');
-    const r2 = await app.request(`/api/documents/${doc.id}`, {
+    const r2 = await app.request(`/api/projects/${projectId}/documents/${doc.id}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ status: 'final' }),
@@ -335,7 +370,7 @@ describe('PATCH /api/documents/:id', () => {
   it('cover PATCH sets and clears the gradient cover', async () => {
     const doc = await (await createDoc()).json();
     expect(doc.cover).toBeNull();
-    const r1 = await app.request(`/api/documents/${doc.id}`, {
+    const r1 = await app.request(`/api/projects/${projectId}/documents/${doc.id}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ cover: 'dawn' }),
@@ -343,10 +378,10 @@ describe('PATCH /api/documents/:id', () => {
     expect(r1.status).toBe(200);
     expect((await r1.json()).cover).toBe('dawn');
     // persists on follow-up GET
-    const get = await app.request(`/api/documents/${doc.id}`, { headers: auth });
+    const get = await app.request(`/api/projects/${projectId}/documents/${doc.id}`, { headers: auth });
     expect((await get.json()).cover).toBe('dawn');
     // null clears it
-    const r2 = await app.request(`/api/documents/${doc.id}`, {
+    const r2 = await app.request(`/api/projects/${projectId}/documents/${doc.id}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ cover: null }),
@@ -356,7 +391,7 @@ describe('PATCH /api/documents/:id', () => {
 
   it('records doc_status_changed and doc_renamed activity with {from,to} payloads', async () => {
     const doc = await (await createDoc()).json();
-    await app.request(`/api/documents/${doc.id}`, {
+    await app.request(`/api/projects/${projectId}/documents/${doc.id}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ status: 'in_review', title: 'Editor PRD v2' }),
@@ -372,9 +407,11 @@ describe('PATCH /api/documents/:id', () => {
   it('sets updatedBy from auth cookie and content-only saves record no activity', async () => {
     const doc = await (await createDoc({ fromTemplate: false })).json();
     const other = await createTestUser({ role: 'member', name: 'Ada', email: 'ada@test.co', color: '#3c6b46' });
+    // Editor membership required for PATCH (method gate)
+    await addMembership(other.id, projectId, 'editor');
     const otherCookie = await authCookie(other);
     const otherAuth = { cookie: otherCookie, origin: 'http://localhost', host: 'localhost' };
-    const res = await app.request(`/api/documents/${doc.id}`, {
+    const res = await app.request(`/api/projects/${projectId}/documents/${doc.id}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json', ...otherAuth },
       body: JSON.stringify({ contentJson: { type: 'doc', content: [] } }),
@@ -386,7 +423,7 @@ describe('PATCH /api/documents/:id', () => {
   });
 
   it('404 for unknown id', async () => {
-    const res = await app.request('/api/documents/00000000-0000-0000-0000-000000000000', {
+    const res = await app.request(`/api/projects/${projectId}/documents/00000000-0000-0000-0000-000000000000`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json', ...auth },
       body: JSON.stringify({ title: 'x' }),
@@ -395,20 +432,20 @@ describe('PATCH /api/documents/:id', () => {
   });
 });
 
-describe('DELETE /api/documents/:id', () => {
+describe('DELETE /api/projects/:projectId/documents/:id', () => {
   it('204 then GET 404', async () => {
     const doc = await (await createDoc()).json();
-    const del = await app.request(`/api/documents/${doc.id}`, { method: 'DELETE', headers: auth });
+    const del = await app.request(`/api/projects/${projectId}/documents/${doc.id}`, { method: 'DELETE', headers: auth });
     expect(del.status).toBe(204);
-    const get = await app.request(`/api/documents/${doc.id}`, { headers: auth });
+    const get = await app.request(`/api/projects/${projectId}/documents/${doc.id}`, { headers: auth });
     expect(get.status).toBe(404);
   });
 });
 
-describe('GET /api/documents/:id/export.md', () => {
+describe('GET /api/projects/:projectId/documents/:id/export.md', () => {
   it('returns markdown attachment whose body equals contentMd', async () => {
     const doc = await (await createDoc()).json();
-    const res = await app.request(`/api/documents/${doc.id}/export.md`, { headers: auth });
+    const res = await app.request(`/api/projects/${projectId}/documents/${doc.id}/export.md`, { headers: auth });
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/markdown');
     expect(res.headers.get('content-disposition')).toContain('attachment');
@@ -417,10 +454,10 @@ describe('GET /api/documents/:id/export.md', () => {
   });
 });
 
-describe('GET /api/export.zip', () => {
+describe('GET /api/projects/:projectId/export.zip', () => {
   it('returns a zip with <feature-slug>/<doc-slug>.md entries', async () => {
     const doc = await (await createDoc()).json();
-    const res = await app.request('/api/export.zip', { headers: auth });
+    const res = await app.request(`/api/projects/${projectId}/export.zip`, { headers: auth });
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('zip');
     const buf = Buffer.from(await res.arrayBuffer());
@@ -429,5 +466,72 @@ describe('GET /api/export.zip', () => {
     expect(names).toContain('rich-markdown-editor/editor-prd.md');
     const entry = zip.getEntry('rich-markdown-editor/editor-prd.md');
     expect(entry!.getData().toString('utf8')).toBe(doc.contentMd);
+  });
+
+  // --- cross-project: export.zip must exclude project B's docs/features ---
+  it('export.zip excludes project B docs and features', async () => {
+    // doc in A
+    await createDoc();
+    // project B with its own feature + doc
+    const projB = await createTestProject('Project B');
+    const [featureB] = await db.insert(features).values({ projectId: projB.id, title: 'B Exclusive Feature', horizon: 'now' }).returning();
+    await db.insert(documents).values({ projectId: projB.id, featureId: featureB.id, type: 'prd', title: 'B Only Doc', contentMd: 'secret b content' });
+
+    const res = await app.request(`/api/projects/${projectId}/export.zip`, { headers: auth });
+    expect(res.status).toBe(200);
+    const buf = Buffer.from(await res.arrayBuffer());
+    const zip = new AdmZip(buf);
+    const names = zip.getEntries().map((e) => e.entryName);
+    // B's feature-slug should not appear
+    expect(names.some((n) => n.includes('b-exclusive-feature'))).toBe(false);
+    expect(names.some((n) => n.includes('b-only-doc'))).toBe(false);
+    // A's doc should be present
+    expect(names).toContain('rich-markdown-editor/editor-prd.md');
+  });
+});
+
+// --- Cross-project security tests (path-id IDOR + viewer write) ---
+
+describe('cross-project IDOR + role enforcement', () => {
+  it('GET /:id → 404 when doc belongs to project B (path-id IDOR)', async () => {
+    const memberA = await createTestUser({ role: 'member', email: 'memberA2@test.co' });
+    const projB = await createTestProject('Project B');
+    await addMembership(memberA.id, projectId, 'editor');
+    const [featureB] = await db.insert(features).values({ projectId: projB.id, title: 'B Feature', horizon: 'now' }).returning();
+    const [docB] = await db.insert(documents).values({ projectId: projB.id, featureId: featureB.id, type: 'prd', title: 'B Doc', contentMd: '' }).returning();
+
+    const memberAAuth = { cookie: await authCookie(memberA), origin: 'http://localhost', host: 'localhost' };
+    const res = await app.request(`/api/projects/${projectId}/documents/${docB.id}`, { headers: memberAAuth });
+    expect(res.status).toBe(404);
+  });
+
+  it('viewer write → 403 (POST, PATCH, DELETE)', async () => {
+    const viewer = await createTestUser({ role: 'member', email: 'viewer@test.co' });
+    await addMembership(viewer.id, projectId, 'viewer');
+    const viewerAuth = { cookie: await authCookie(viewer), origin: 'http://localhost', host: 'localhost' };
+
+    // POST → 403
+    const post = await app.request(`/api/projects/${projectId}/documents`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...viewerAuth },
+      body: JSON.stringify({ featureId, type: 'prd', title: 'nope', fromTemplate: false }),
+    });
+    expect(post.status).toBe(403);
+
+    // Create a doc as admin to try PATCH/DELETE
+    const doc = await (await createDoc()).json();
+
+    const patch = await app.request(`/api/projects/${projectId}/documents/${doc.id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json', ...viewerAuth },
+      body: JSON.stringify({ title: 'hacked' }),
+    });
+    expect(patch.status).toBe(403);
+
+    const del = await app.request(`/api/projects/${projectId}/documents/${doc.id}`, {
+      method: 'DELETE',
+      headers: viewerAuth,
+    });
+    expect(del.status).toBe(403);
   });
 });

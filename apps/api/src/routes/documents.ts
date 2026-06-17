@@ -7,7 +7,8 @@ import { documents, features, ideas, releases, templates } from '@productmap/db'
 import type { Context } from 'hono';
 import { db } from '../db';
 import { tiptapToMarkdown } from '../lib/markdown';
-import { type CurrentUserEnv } from '../middleware/current-user';
+import { type MembershipEnv } from '../middleware/membership';
+import { loadScoped } from '../lib/scope';
 import { recordActivity, addCollaborator } from '../lib/activity';
 
 const EMPTY_DOC = { type: 'doc', content: [] };
@@ -41,10 +42,11 @@ function wordCount(md: string): number {
   return md.split(/\s+/).filter(Boolean).length;
 }
 
-export const documentsRoutes = new Hono<CurrentUserEnv>()
-  // GET /api/documents?featureId= → DocumentMeta[]
-  // GET /api/documents?all=true   → DocumentListItem[] (meta + featureTitle/featureHorizon/wordCount)
+export const documentsRoutes = new Hono<MembershipEnv>()
+  // GET /api/projects/:projectId/documents?featureId= → DocumentMeta[]
+  // GET /api/projects/:projectId/documents?all=true   → DocumentListItem[] (meta + featureTitle/featureHorizon/wordCount)
   .get('/', async (c) => {
+    const pid = c.get('currentProjectId');
     if (c.req.query('all') === 'true') {
       const rows = await db
         .select({
@@ -70,6 +72,7 @@ export const documentsRoutes = new Hono<CurrentUserEnv>()
         .leftJoin(features, eq(documents.featureId, features.id))
         .leftJoin(ideas, eq(documents.ideaId, ideas.id))
         .leftJoin(releases, eq(releases.notesDocId, documents.id))
+        .where(eq(documents.projectId, pid))
         .orderBy(asc(documents.createdAt));
       return c.json(
         rows.map(({ contentMd, ideaTitle, releaseId, releaseName, ...item }) => {
@@ -96,15 +99,16 @@ export const documentsRoutes = new Hono<CurrentUserEnv>()
     const rows = await db
       .select()
       .from(documents)
-      .where(featureId ? eq(documents.featureId, featureId) : undefined)
+      .where(featureId ? and(eq(documents.projectId, pid), eq(documents.featureId, featureId)) : eq(documents.projectId, pid))
       .orderBy(asc(documents.createdAt));
     return c.json(rows.map(toMeta));
   })
-  // POST /api/documents → DocumentFull (201)
+  // POST /api/projects/:projectId/documents → DocumentFull (201)
   .post('/', zValidator('json', documentCreate, validationHook), async (c) => {
     const body = c.req.valid('json');
-    const [feature] = await db.select().from(features).where(eq(features.id, body.featureId));
-    if (!feature) return c.json({ error: 'not_found' }, 404);
+    const pid = c.get('currentProjectId');
+    // Scope feature to this project (404 if cross-project or missing)
+    const feature = await loadScoped(features, body.featureId, pid) as typeof features.$inferSelect;
 
     // Template resolution: explicit templateId → that template; else the
     // default DB template for the doc type; fromTemplate:false → blank.
@@ -138,7 +142,7 @@ export const documentsRoutes = new Hono<CurrentUserEnv>()
     const [row] = await db
       .insert(documents)
       .values({
-        projectId: feature.projectId,
+        projectId: pid,
         featureId: body.featureId,
         type: body.type,
         title: body.title,
@@ -152,28 +156,28 @@ export const documentsRoutes = new Hono<CurrentUserEnv>()
     await addCollaborator(body.featureId, user?.id);
     return c.json(row, 201);
   })
-  // GET /api/documents/:id/export.md → text/markdown attachment
+  // GET /api/projects/:projectId/documents/:id/export.md → text/markdown attachment
   .get('/:id/export.md', async (c) => {
-    const [row] = await db.select().from(documents).where(eq(documents.id, c.req.param('id')));
-    if (!row) return c.json({ error: 'not_found' }, 404);
+    const pid = c.get('currentProjectId');
+    const row = await loadScoped(documents, c.req.param('id'), pid) as typeof documents.$inferSelect;
     return c.body(row.contentMd, 200, {
       'content-type': 'text/markdown; charset=utf-8',
       'content-disposition': `attachment; filename="${slugify(row.title)}.md"`,
     });
   })
-  // GET /api/documents/:id → DocumentFull
+  // GET /api/projects/:projectId/documents/:id → DocumentFull
   .get('/:id', async (c) => {
-    const [row] = await db.select().from(documents).where(eq(documents.id, c.req.param('id')));
-    if (!row) return c.json({ error: 'not_found' }, 404);
+    const pid = c.get('currentProjectId');
+    const row = await loadScoped(documents, c.req.param('id'), pid) as typeof documents.$inferSelect;
     return c.json(row);
   })
-  // PATCH /api/documents/:id → DocumentMeta (server derives contentMd)
+  // PATCH /api/projects/:projectId/documents/:id → DocumentMeta (server derives contentMd)
   .patch('/:id', zValidator('json', documentUpdate, validationHook), async (c) => {
     const id = c.req.param('id')!;
     const body = c.req.valid('json');
+    const pid = c.get('currentProjectId');
     const user = c.get('currentUser');
-    const [prev] = await db.select().from(documents).where(eq(documents.id, id));
-    if (!prev) return c.json({ error: 'not_found' }, 404);
+    const prev = await loadScoped(documents, id, pid) as typeof documents.$inferSelect;
     const set: Partial<typeof documents.$inferInsert> = {
       updatedAt: new Date(),
       updatedBy: user?.id ?? null,
@@ -207,20 +211,21 @@ export const documentsRoutes = new Hono<CurrentUserEnv>()
     }
     return c.json(toMeta(row));
   })
-  // DELETE /api/documents/:id → 204
+  // DELETE /api/projects/:projectId/documents/:id → 204
   .delete('/:id', async (c) => {
-    const [row] = await db
+    const pid = c.get('currentProjectId');
+    await loadScoped(documents, c.req.param('id'), pid);
+    await db
       .delete(documents)
-      .where(eq(documents.id, c.req.param('id')))
-      .returning({ id: documents.id });
-    if (!row) return c.json({ error: 'not_found' }, 404);
+      .where(eq(documents.id, c.req.param('id')));
     return c.body(null, 204);
   });
 
-// Mounted at /api in app.ts → GET /api/export.zip
-export const exportRoutes = new Hono().get('/export.zip', async (c) => {
-  const featureRows = await db.select().from(features).orderBy(asc(features.createdAt));
-  const docRows = await db.select().from(documents).orderBy(asc(documents.createdAt));
+// Mounted at /api/projects/:projectId in project-scoped.ts → GET /api/projects/:projectId/export.zip
+export const exportRoutes = new Hono<MembershipEnv>().get('/export.zip', async (c) => {
+  const pid = c.get('currentProjectId');
+  const featureRows = await db.select().from(features).where(eq(features.projectId, pid)).orderBy(asc(features.createdAt));
+  const docRows = await db.select().from(documents).where(eq(documents.projectId, pid)).orderBy(asc(documents.createdAt));
 
   const archive = archiver('zip', { zlib: { level: 9 } });
   const chunks: Buffer[] = [];

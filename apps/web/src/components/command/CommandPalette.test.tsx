@@ -108,7 +108,7 @@ const server = setupServer(
     HttpResponse.json([{ id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'owner' }]),
   ),
   http.get(`/api/projects/${TEST_PROJECT_ID}/features`, () => HttpResponse.json(features)),
-  http.get('/api/documents', () => HttpResponse.json(docs)),
+  http.get(`/api/projects/${TEST_PROJECT_ID}/documents`, () => HttpResponse.json(docs)),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));

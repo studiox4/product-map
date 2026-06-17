@@ -119,7 +119,7 @@ const server = setupServer(
     const f = fixture.find((x) => x.id === params.id)!;
     return HttpResponse.json({ ...f, ...body });
   }),
-  http.post('/api/documents', async ({ request }) => {
+  http.post(`/api/projects/${TEST_PROJECT_ID}/documents`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
     return HttpResponse.json(
       {

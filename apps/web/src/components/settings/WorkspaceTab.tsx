@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Download, TriangleAlert } from 'lucide-react';
 import type { Project } from '@productmap/shared';
-import { useOverview, useResetDemo, useUpdateProject, type ProjectUpdateInput } from '@/lib/api';
+import { useOverview, useResetDemo, useUpdateProject, apiPath, type ProjectUpdateInput } from '@/lib/api';
+import { useProjectId } from '@/lib/project';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -46,6 +47,7 @@ export function WorkspaceTab() {
 }
 
 function WorkspaceForm({ product }: { product: Project }) {
+  const pid = useProjectId();
   const [name, setName] = useState(product.name);
   const [vision, setVision] = useState(product.vision);
   const updateProduct = useUpdateProject();
@@ -114,7 +116,7 @@ function WorkspaceForm({ product }: { product: Project }) {
         </CardHeader>
         <CardContent>
           <Button asChild variant="outline">
-            <a href="/api/export.zip" download>
+            <a href={apiPath(pid, 'export.zip')} download>
               <Download aria-hidden />
               Export workspace
             </a>

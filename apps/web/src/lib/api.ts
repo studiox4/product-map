@@ -127,8 +127,8 @@ export const queryKeys = {
   overview: (pid: string) => ['p', pid, 'overview'] as const,
   features: (pid: string) => ['p', pid, 'features'] as const,
   feature: (pid: string, id: string) => ['p', pid, 'features', id] as const,
-  document: (id: string) => ['documents', id] as const,
-  allDocuments: ['documents', 'all'] as const,
+  document: (pid: string, id: string) => ['p', pid, 'documents', id] as const,
+  allDocuments: (pid: string) => ['p', pid, 'documents', 'all'] as const,
   users: ['users'] as const,
   activity: (pid: string, featureId: string) => ['p', pid, 'features', featureId, 'activity'] as const,
   aiStatus: ['ai', 'status'] as const,
@@ -162,9 +162,10 @@ export function useFeature(id: string) {
 }
 
 export function useDocument(id: string) {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: queryKeys.document(id),
-    queryFn: () => fetchJson<DocumentFull>(`/api/documents/${id}`),
+    queryKey: queryKeys.document(pid, id),
+    queryFn: () => fetchJson<DocumentFull>(apiPath(pid, 'documents', id)),
     enabled: !!id,
   });
 }
@@ -201,9 +202,10 @@ export function useActivity(featureId: string) {
 }
 
 export function useAllDocuments() {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: queryKeys.allDocuments,
-    queryFn: () => fetchJson<DocumentListItem[]>('/api/documents?all=true'),
+    queryKey: queryKeys.allDocuments(pid),
+    queryFn: () => fetchJson<DocumentListItem[]>(apiPath(pid, 'documents') + '?all=true'),
   });
 }
 
@@ -318,14 +320,14 @@ export function useUpdateDocument() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, ...patch }: UpdateDocumentVars) =>
-      fetchJson<DocumentMeta>(`/api/documents/${id}`, {
+      fetchJson<DocumentMeta>(apiPath(pid, 'documents', id), {
         method: 'PATCH',
         body: JSON.stringify(patch),
       }),
     onSuccess: (meta, { id, contentJson }) => {
       // Merge server meta into the cached full document without clobbering
       // the editor's local contentJson (avoids re-render churn while typing).
-      qc.setQueryData<DocumentFull>(queryKeys.document(id), (old) =>
+      qc.setQueryData<DocumentFull>(queryKeys.document(pid, id), (old) =>
         old
           ? { ...old, ...meta, ...(contentJson !== undefined ? { contentJson } : {}) }
           : old,
@@ -341,12 +343,12 @@ export function useCreateDocument() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: DocumentCreateInput) =>
-      fetchJson<DocumentFull>('/api/documents', {
+      fetchJson<DocumentFull>(apiPath(pid, 'documents'), {
         method: 'POST',
         body: JSON.stringify(input),
       }),
     onSuccess: (doc) => {
-      qc.setQueryData(queryKeys.document(doc.id), doc);
+      qc.setQueryData(queryKeys.document(pid, doc.id), doc);
       qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
       qc.invalidateQueries({ queryKey: queryKeys.overview(pid) });
     },
@@ -358,7 +360,7 @@ export function useDeleteDocument() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) =>
-      fetchJson<void>(`/api/documents/${id}`, { method: 'DELETE' }),
+      fetchJson<void>(apiPath(pid, 'documents', id), { method: 'DELETE' }),
     onSettled: () => {
       qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
       qc.invalidateQueries({ queryKey: queryKeys.overview(pid) });
@@ -1365,16 +1367,17 @@ export function useIdea(id: string) {
  * navigating straight to /docs/:id renders without a refetch.
  */
 export function useCreatePitch() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (ideaId: string) =>
       fetchJson<DocumentFull>(`/api/ideas/${ideaId}/pitch`, { method: 'POST' }),
     onSuccess: (doc) => {
-      qc.setQueryData(queryKeys.document(doc.id), doc);
+      qc.setQueryData(queryKeys.document(pid, doc.id), doc);
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ideasRootKey });
-      qc.invalidateQueries({ queryKey: queryKeys.allDocuments });
+      qc.invalidateQueries({ queryKey: queryKeys.allDocuments(pid) });
     },
   });
 }
@@ -1485,12 +1488,12 @@ export function useCreateReleaseNotesDoc() {
     mutationFn: (releaseId: string) =>
       fetchJson<DocumentFull>(apiPath(pid, 'releases', releaseId, 'notes-doc'), { method: 'POST' }),
     onSuccess: (doc) => {
-      qc.setQueryData(queryKeys.document(doc.id), doc);
+      qc.setQueryData(queryKeys.document(pid, doc.id), doc);
     },
     onSettled: (_data, _err, releaseId) => {
       qc.invalidateQueries({ queryKey: releasesKey(pid) });
       qc.invalidateQueries({ queryKey: releaseKey(pid, releaseId) });
-      qc.invalidateQueries({ queryKey: queryKeys.allDocuments });
+      qc.invalidateQueries({ queryKey: queryKeys.allDocuments(pid) });
     },
   });
 }
@@ -1507,12 +1510,12 @@ export function useGenerateReleaseNotes() {
     mutationFn: (releaseId: string) =>
       fetchJson<DocumentFull>(apiPath(pid, 'releases', releaseId, 'generate-notes'), { method: 'POST' }),
     onSuccess: (doc) => {
-      qc.setQueryData(queryKeys.document(doc.id), doc);
+      qc.setQueryData(queryKeys.document(pid, doc.id), doc);
     },
     onSettled: (_data, _err, releaseId) => {
       qc.invalidateQueries({ queryKey: releasesKey(pid) });
       qc.invalidateQueries({ queryKey: releaseKey(pid, releaseId) });
-      qc.invalidateQueries({ queryKey: queryKeys.allDocuments });
+      qc.invalidateQueries({ queryKey: queryKeys.allDocuments(pid) });
     },
   });
 }

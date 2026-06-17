@@ -389,7 +389,7 @@ describe('Idea Inbox', () => {
           { status: 201 },
         );
       }),
-      http.get('/api/documents', () => HttpResponse.json([])),
+      http.get(`/api/projects/${TEST_PROJECT_ID}/documents`, () => HttpResponse.json([])),
     );
     renderInbox();
     await screen.findAllByText('Bulk export to CSV');
@@ -404,7 +404,7 @@ describe('Idea Inbox', () => {
     ];
     server.use(
       http.get('/api/ideas', () => HttpResponse.json(withPitch)),
-      http.get('/api/documents/d-pitch', () =>
+      http.get(`/api/projects/${TEST_PROJECT_ID}/documents/d-pitch`, () =>
         HttpResponse.json({
           id: 'd-pitch',
           featureId: null,

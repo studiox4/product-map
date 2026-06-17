@@ -75,7 +75,7 @@ const server = setupServer(
     HttpResponse.json([{ id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'owner' }]),
   ),
   http.get('/api/templates', () => HttpResponse.json(templates)),
-  http.post('/api/documents', async ({ request }) => {
+  http.post(`/api/projects/${TEST_PROJECT_ID}/documents`, async ({ request }) => {
     const body = await request.json();
     createBodies.push(body);
     return HttpResponse.json(

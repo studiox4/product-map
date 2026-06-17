@@ -67,7 +67,7 @@ export function useTrackRecents(): void {
     const target = featureMatch?.params.id
       ? { kind: 'feature' as const, id: featureMatch.params.id, key: queryKeys.feature(pid, featureMatch.params.id) }
       : docMatch?.params.id
-        ? { kind: 'doc' as const, id: docMatch.params.id, key: queryKeys.document(docMatch.params.id) }
+        ? { kind: 'doc' as const, id: docMatch.params.id, key: queryKeys.document(pid, docMatch.params.id) }
         : null;
     if (!target) return;
 

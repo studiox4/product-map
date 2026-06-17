@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { DocStatus } from '@productmap/shared';
 import {
+  apiPath,
   useAiStatus,
   useComments,
   useDocument,
@@ -10,6 +11,7 @@ import {
   useIdea,
   useUpdateDocument,
 } from '@/lib/api';
+import { useProjectId } from '@/lib/project';
 import { docBackLink } from './doc-back-link';
 import { DocTypeChip } from '@/components/DocTypeChip';
 import { Button } from '@/components/ui/button';
@@ -51,6 +53,7 @@ function DocSkeleton() {
 }
 
 export default function DocPage() {
+  const pid = useProjectId();
   const { id = '' } = useParams<{ id: string }>();
   const docQuery = useDocument(id);
   const doc = docQuery.data;
@@ -204,7 +207,7 @@ export default function DocPage() {
         status={doc.status}
         onStatusChange={handleStatusChange}
         saveState={autosave.state}
-        exportHref={`/api/documents/${doc.id}/export.md`}
+        exportHref={apiPath(pid, 'documents', doc.id, 'export.md')}
         commentCount={unresolvedCount}
         onToggleComments={() => setCommentsOpen((open) => !open)}
         titleTransitionName={morphName('doc-title', doc.id)}

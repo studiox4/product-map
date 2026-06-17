@@ -107,7 +107,7 @@ describe('WorkspaceTab', () => {
   it('exposes the workspace export as a download link', async () => {
     renderTab();
     const link = await screen.findByRole('link', { name: /export workspace/i });
-    expect(link.getAttribute('href')).toBe('/api/export.zip');
+    expect(link.getAttribute('href')).toBe(`/api/projects/${TEST_PROJECT_ID}/export.zip`);
   });
 
   it('reset demo is confirm-gated and POSTs /api/admin/reset-demo', async () => {
