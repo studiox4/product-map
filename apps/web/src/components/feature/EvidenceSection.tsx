@@ -18,6 +18,7 @@ import {
   useEvidence,
   type EvidenceItem,
 } from '@/lib/api';
+import { useCanEdit } from '@/lib/project';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -117,6 +118,7 @@ export function EvidenceSection({ featureId }: { featureId: string }) {
   const evidenceQuery = useEvidence(featureId);
   const addEvidence = useAddEvidence();
   const deleteEvidence = useDeleteEvidence();
+  const canEdit = useCanEdit();
 
   const [addOpen, setAddOpen] = useState(false);
   const [kind, setKind] = useState<EvidenceKind>('quote');
@@ -177,6 +179,7 @@ export function EvidenceSection({ featureId }: { featureId: string }) {
             </span>
           ) : null}
         </h2>
+        {canEdit ? (
         <Popover open={addOpen} onOpenChange={setAddOpen}>
           <PopoverTrigger asChild>
             <Button variant="ghost" size="sm" className="rounded-full">
@@ -269,6 +272,7 @@ export function EvidenceSection({ featureId }: { featureId: string }) {
             </form>
           </PopoverContent>
         </Popover>
+        ) : null}
       </div>
 
       <div className="mt-3">

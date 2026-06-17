@@ -10,6 +10,7 @@ import { PromoteIdeaDialog } from '@/components/inbox/PromoteIdeaDialog';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { useCanEdit } from '@/lib/project';
 
 const FILTERS: { value: IdeaStatus | undefined; label: string }[] = [
   { value: undefined, label: 'All' },
@@ -53,6 +54,7 @@ export default function Inbox() {
   const { data: ideas, isLoading, isError, refetch } = useIdeas(filter);
   const [newOpen, setNewOpen] = useState(false);
   const [promoteOpen, setPromoteOpen] = useState(false);
+  const canEdit = useCanEdit();
 
   // ⌘K "New idea…" deep link: /inbox?new=1 opens the capture dialog once.
   useEffect(() => {
@@ -105,10 +107,12 @@ export default function Inbox() {
             Capture everything; promote what earns a spot on the board.
           </p>
         </div>
-        <Button className="rounded-full" onClick={() => setNewOpen(true)}>
-          <Plus className="h-4 w-4" aria-hidden />
-          New idea
-        </Button>
+        {canEdit ? (
+          <Button className="rounded-full" onClick={() => setNewOpen(true)}>
+            <Plus className="h-4 w-4" aria-hidden />
+            New idea
+          </Button>
+        ) : null}
       </div>
 
       <div className="flex items-center gap-1.5" role="group" aria-label="Filter by status">
@@ -143,7 +147,7 @@ export default function Inbox() {
               ? `No ${STATUS_LABELS[filter].toLowerCase()} ideas.`
               : 'No ideas yet — capture your first one.'}
           </p>
-          {!filter ? (
+          {!filter && canEdit ? (
             <Button className="mt-4 rounded-full" onClick={() => setNewOpen(true)}>
               <Plus className="h-4 w-4" aria-hidden />
               Capture your first idea

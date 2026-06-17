@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { FeatureCard } from '@/components/board/FeatureCard';
 import { NewFeatureDialog } from '@/components/board/NewFeatureDialog';
+import { useCanEdit } from '@/lib/project';
 
 const HORIZON_LABELS: Record<Horizon, string> = {
   now: 'Now',
@@ -39,6 +40,7 @@ export function BoardColumn({
 }: BoardColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: horizon });
   const [dialogOpen, setDialogOpen] = useState(false);
+  const canEdit = useCanEdit();
 
   return (
     <section
@@ -92,16 +94,20 @@ export function BoardColumn({
             ))
           )}
         </SortableContext>
-        <Button
-          variant="ghost"
-          className="justify-start rounded-full text-muted-ink hover:bg-wash"
-          onClick={() => setDialogOpen(true)}
-        >
-          <Plus className="mr-1 h-4 w-4" />
-          Add feature
-        </Button>
+        {canEdit ? (
+          <Button
+            variant="ghost"
+            className="justify-start rounded-full text-muted-ink hover:bg-wash"
+            onClick={() => setDialogOpen(true)}
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            Add feature
+          </Button>
+        ) : null}
       </div>
-      <NewFeatureDialog horizon={horizon} open={dialogOpen} onOpenChange={setDialogOpen} />
+      {canEdit ? (
+        <NewFeatureDialog horizon={horizon} open={dialogOpen} onOpenChange={setDialogOpen} />
+      ) : null}
     </section>
   );
 }

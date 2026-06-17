@@ -7,6 +7,7 @@ import {
   type FeatureWithDocs,
 } from '@productmap/shared';
 import { useDeleteFeature, useFeature, useUpdateFeature } from '@/lib/api';
+import { useCanEdit } from '@/lib/project';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -83,10 +84,14 @@ export default function FeaturePage() {
 const pillTriggerClass =
   'rounded-full border-transparent bg-inset px-4 transition-colors duration-150 ease-out hover:bg-wash';
 
+/** Hover hint shown on content controls left visible-but-locked for viewers. */
+const READ_ONLY_HINT = 'Read-only — you have viewer access.';
+
 function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
   const navigate = useNavigate();
   const updateFeature = useUpdateFeature();
   const deleteFeature = useDeleteFeature();
+  const canEdit = useCanEdit();
 
   const [startDate, setStartDate] = useState(feature.startDate ?? '');
   const [endDate, setEndDate] = useState(feature.endDate ?? '');
@@ -133,6 +138,8 @@ function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
         <Input
           aria-label="Feature title"
           defaultValue={feature.title}
+          readOnly={!canEdit}
+          title={!canEdit ? READ_ONLY_HINT : undefined}
           onBlur={(e) => {
             const next = e.target.value.trim();
             if (next && next !== feature.title) {
@@ -148,6 +155,7 @@ function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
           <HorizonBadge horizon={feature.horizon} />
           <Select
             value={feature.status}
+            disabled={!canEdit}
             onValueChange={(status) => {
               if (status === 'shipped' && feature.status !== 'shipped') confettiBurst();
               updateFeature.mutate(
@@ -156,7 +164,11 @@ function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
               );
             }}
           >
-            <SelectTrigger aria-label="Status" className={pillTriggerClass}>
+            <SelectTrigger
+              aria-label="Status"
+              title={!canEdit ? READ_ONLY_HINT : undefined}
+              className={pillTriggerClass}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -196,6 +208,8 @@ function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
               <Input
                 id="feature-page-start-date"
                 type="date"
+                disabled={!canEdit}
+                title={!canEdit ? READ_ONLY_HINT : undefined}
                 value={startDate}
                 onChange={(e) => {
                   setStartDate(e.target.value);
@@ -211,6 +225,8 @@ function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
               <Input
                 id="feature-page-end-date"
                 type="date"
+                disabled={!canEdit}
+                title={!canEdit ? READ_ONLY_HINT : undefined}
                 value={endDate}
                 onChange={(e) => {
                   setEndDate(e.target.value);
@@ -230,6 +246,7 @@ function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
             <h2 className="font-display text-sm font-semibold text-ink">Horizon</h2>
             <Select
               value={feature.horizon}
+              disabled={!canEdit}
               onValueChange={(horizon) =>
                 updateFeature.mutate(
                   { id: feature.id, horizon: horizon as FeatureWithDocs['horizon'] },
@@ -237,7 +254,11 @@ function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
                 )
               }
             >
-              <SelectTrigger aria-label="Horizon" className={pillTriggerClass}>
+              <SelectTrigger
+                aria-label="Horizon"
+                title={!canEdit ? READ_ONLY_HINT : undefined}
+                className={pillTriggerClass}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -250,16 +271,18 @@ function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
             </Select>
           </section>
 
-          <div className="pt-2">
-            <Button
-              variant="destructive"
-              size="sm"
-              className="rounded-full"
-              onClick={() => setConfirmDeleteOpen(true)}
-            >
-              Delete feature
-            </Button>
-          </div>
+          {canEdit ? (
+            <div className="pt-2">
+              <Button
+                variant="destructive"
+                size="sm"
+                className="rounded-full"
+                onClick={() => setConfirmDeleteOpen(true)}
+              >
+                Delete feature
+              </Button>
+            </div>
+          ) : null}
         </aside>
       </div>
 

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import type { DocStatus, DocType, FeatureWithDocs } from '@productmap/shared';
 import { HORIZON_COLORS } from '@productmap/shared';
 import { useAllDocuments, useFeatures } from '@/lib/api';
+import { useCanEdit } from '@/lib/project';
 import { NewDocDialog } from '@/components/board/NewDocDialog';
 import { DocsFilters } from '@/components/docs/DocsFilters';
 import { DocsTable, type DocsSort, type DocsSortKey } from '@/components/docs/DocsTable';
@@ -92,6 +93,7 @@ function DocsSkeleton() {
 export default function DocsPage() {
   const docsQuery = useAllDocuments();
   const featuresQuery = useFeatures();
+  const canEdit = useCanEdit();
 
   const [typeFilters, setTypeFilters] = useState<DocType[]>([]);
   const [statusFilters, setStatusFilters] = useState<DocStatus[]>([]);
@@ -149,6 +151,7 @@ export default function DocsPage() {
         onToggleStatus={(s) => setStatusFilters((prev) => toggle(prev, s))}
         onSearchChange={setSearch}
         onNewDoc={() => setPickingFeature(true)}
+        canEdit={canEdit}
       />
 
       {docsQuery.isLoading && <DocsSkeleton />}

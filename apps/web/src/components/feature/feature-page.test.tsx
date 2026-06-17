@@ -253,4 +253,38 @@ describe('FeaturePage', () => {
     await waitFor(() => expect(deleted).toBe(true));
     expect(await screen.findByText('board page')).toBeTruthy();
   });
+
+  it('role-aware: viewer cannot mutate — delete hidden, title/status read-only', async () => {
+    server.use(
+      http.get('/api/projects', () =>
+        HttpResponse.json([
+          { id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'viewer' },
+        ]),
+      ),
+    );
+    renderPage();
+    const title = (await screen.findByLabelText('Feature title')) as HTMLInputElement;
+    // Content stays visible but read-only / disabled.
+    expect(title.readOnly).toBe(true);
+    expect((screen.getByRole('combobox', { name: 'Status' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('combobox', { name: 'Horizon' }) as HTMLButtonElement).disabled).toBe(true);
+    // Pure actions are hidden.
+    expect(screen.queryByRole('button', { name: 'Delete feature' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /add evidence/i })).toBeNull();
+  });
+
+  it('role-aware: editor keeps mutate affordances — delete present, title editable', async () => {
+    server.use(
+      http.get('/api/projects', () =>
+        HttpResponse.json([
+          { id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'editor' },
+        ]),
+      ),
+    );
+    renderPage();
+    const title = (await screen.findByLabelText('Feature title')) as HTMLInputElement;
+    expect(title.readOnly).toBe(false);
+    expect(screen.getByRole('button', { name: 'Delete feature' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /add evidence/i })).toBeTruthy();
+  });
 });

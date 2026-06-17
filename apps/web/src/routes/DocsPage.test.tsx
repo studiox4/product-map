@@ -285,6 +285,25 @@ describe('DocsPage', () => {
     expect(within(pitchRow).getByText('Idea pitch')).toBeTruthy();
   });
 
+  it('role-aware: owner sees the "New doc" control', async () => {
+    renderDocs();
+    await screen.findByText('Editor PRD');
+    expect(screen.getByRole('button', { name: 'New doc' })).toBeTruthy();
+  });
+
+  it('role-aware: viewer sees no "New doc" control', async () => {
+    server.use(
+      http.get('/api/projects', () =>
+        HttpResponse.json([
+          { id: TEST_PROJECT_ID, name: 'Test Project', vision: '', aboutMd: '', role: 'viewer' },
+        ]),
+      ),
+    );
+    renderDocs();
+    await screen.findByText('Editor PRD');
+    expect(screen.queryByRole('button', { name: 'New doc' })).toBeNull();
+  });
+
   it('shows error state with retry', async () => {
     server.use(
       http.get(`/api/projects/${TEST_PROJECT_ID}/documents`, () => new HttpResponse(null, { status: 500 })),

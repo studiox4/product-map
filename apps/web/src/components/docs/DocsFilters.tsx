@@ -21,6 +21,8 @@ interface DocsFiltersProps {
   onToggleStatus: (status: DocStatus) => void;
   onSearchChange: (value: string) => void;
   onNewDoc: () => void;
+  /** When false (viewer access), the "New doc" affordance is hidden. */
+  canEdit?: boolean;
 }
 
 const pillBase =
@@ -37,6 +39,7 @@ export function DocsFilters({
   onToggleStatus,
   onSearchChange,
   onNewDoc,
+  canEdit = true,
 }: DocsFiltersProps) {
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -95,10 +98,12 @@ export function DocsFilters({
           className="rounded-full bg-surface pl-9"
         />
       </div>
-      <Button onClick={onNewDoc} className="rounded-full">
-        <Plus className="h-4 w-4" aria-hidden />
-        New doc
-      </Button>
+      {canEdit ? (
+        <Button onClick={onNewDoc} className="rounded-full">
+          <Plus className="h-4 w-4" aria-hidden />
+          New doc
+        </Button>
+      ) : null}
     </div>
   );
 }
