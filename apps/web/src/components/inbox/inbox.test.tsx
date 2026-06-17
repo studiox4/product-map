@@ -118,7 +118,7 @@ afterAll(() => server.close());
 // jsdom can't resolve the cascade back to auto on portal content.
 const user = () => userEvent.setup({ pointerEventsCheck: PointerEventsCheckLevel.Never });
 
-function renderInbox(entries: string[] = ['/inbox']) {
+function renderInbox(entries: string[] = ['/app/inbox']) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -127,9 +127,9 @@ function renderInbox(entries: string[] = ['/inbox']) {
       <ProjectProvider>
         <MemoryRouter initialEntries={entries}>
           <Routes>
-            <Route path="/inbox" element={<Inbox />} />
-            <Route path="/features/:id" element={<div>feature page</div>} />
-            <Route path="/docs/:id" element={<div>editor route</div>} />
+            <Route path="/app/inbox" element={<Inbox />} />
+            <Route path="/app/features/:id" element={<div>feature page</div>} />
+            <Route path="/app/docs/:id" element={<div>editor route</div>} />
           </Routes>
         </MemoryRouter>
       </ProjectProvider>
@@ -271,16 +271,16 @@ describe('Idea Inbox', () => {
   });
 
   it('promoted ideas link to their feature instead of promoting again', async () => {
-    renderInbox(['/inbox?idea=i2']);
+    renderInbox(['/app/inbox?idea=i2']);
     await screen.findAllByText('Realtime cursors');
     const detail = screen.getByRole('region', { name: /idea detail/i });
     const link = within(detail).getByRole('link', { name: /view feature/i });
-    expect(link.getAttribute('href')).toBe('/features/f9');
+    expect(link.getAttribute('href')).toBe('/app/features/f9');
     expect(within(detail).queryByRole('button', { name: /promote to feature/i })).toBeNull();
   });
 
   it('?new=1 deep link (⌘K "New idea…") opens the capture dialog', async () => {
-    renderInbox(['/inbox?new=1']);
+    renderInbox(['/app/inbox?new=1']);
     expect(await screen.findByRole('dialog', { name: /new idea/i })).toBeTruthy();
   });
 
@@ -455,7 +455,7 @@ describe('Idea Inbox', () => {
     const detail = screen.getByRole('region', { name: /idea detail/i });
     expect(within(detail).queryByRole('button', { name: /write the pitch/i })).toBeNull();
     const card = within(detail).getByRole('link', { name: /open pitch/i });
-    expect(card.getAttribute('href')).toBe('/docs/d-pitch');
+    expect(card.getAttribute('href')).toBe('/app/docs/d-pitch');
     expect(within(card as HTMLElement).getByText('Idea pitch')).toBeTruthy();
     expect(within(card as HTMLElement).getByText('Draft')).toBeTruthy();
     await within(card as HTMLElement).findByText('5 words');

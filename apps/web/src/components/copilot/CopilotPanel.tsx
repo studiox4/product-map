@@ -14,6 +14,7 @@ import {
 import type { CopilotNudge, DocumentListItem } from '@productmap/shared';
 import { useAllDocuments, useCopilotNudges, apiPath } from '@/lib/api';
 import { useProjectId } from '@/lib/project';
+import { appRoutes } from '@/lib/routes';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -56,7 +57,7 @@ export function linkifyDocTitles(
     if (!doc.title) continue;
     const needle = `<strong>${escapeHtml(doc.title)}</strong>`;
     out = out.split(needle).join(
-      `<a href="/docs/${doc.id}" data-doc-link="${doc.id}"><strong>${escapeHtml(doc.title)}</strong></a>`,
+      `<a href="${appRoutes.doc(doc.id)}" data-doc-link="${doc.id}"><strong>${escapeHtml(doc.title)}</strong></a>`,
     );
   }
   return out;
@@ -227,14 +228,14 @@ const NUDGE_META: Record<
 function nudgeHref(nudge: CopilotNudge): string {
   switch (nudge.kind) {
     case 'stale_draft':
-      return `/docs/${nudge.documentId}`;
+      return appRoutes.doc(nudge.documentId);
     case 'dateless_now':
     case 'oversized':
-      return `/features/${nudge.featureId}`;
+      return appRoutes.feature(nudge.featureId);
     case 'stale_thread':
       return nudge.featureId
-        ? `/features/${nudge.featureId}`
-        : `/docs/${nudge.documentId}`;
+        ? appRoutes.feature(nudge.featureId)
+        : appRoutes.doc(nudge.documentId ?? '');
   }
 }
 

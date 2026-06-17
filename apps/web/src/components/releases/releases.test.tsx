@@ -197,10 +197,10 @@ function renderAt(initialEntry: string, options: { withNotesDoc?: boolean } = {}
       <ProjectProvider>
         <MemoryRouter initialEntries={[initialEntry]}>
           <Routes>
-            <Route path="/releases" element={<ReleasesPage />} />
-            <Route path="/releases/:id" element={<ReleaseDetail />} />
-            <Route path="/features/:id" element={<div>feature route</div>} />
-            <Route path="/docs/:id" element={<div>doc editor route</div>} />
+            <Route path="/app/releases" element={<ReleasesPage />} />
+            <Route path="/app/releases/:id" element={<ReleaseDetail />} />
+            <Route path="/app/features/:id" element={<div>feature route</div>} />
+            <Route path="/app/docs/:id" element={<div>doc editor route</div>} />
           </Routes>
         </MemoryRouter>
       </ProjectProvider>
@@ -210,7 +210,7 @@ function renderAt(initialEntry: string, options: { withNotesDoc?: boolean } = {}
 
 describe('Releases list', () => {
   it('shows target date, feature count, and a status select per row', async () => {
-    renderAt('/releases');
+    renderAt('/app/releases');
     await screen.findByText('v0.2 — Team ready');
 
     expect(screen.getByText('2 features')).toBeTruthy();
@@ -223,7 +223,7 @@ describe('Releases list', () => {
   });
 
   it('planned→shipped via the status select fires confetti', async () => {
-    renderAt('/releases');
+    renderAt('/app/releases');
     const u = user();
     await screen.findByText('v0.2 — Team ready');
 
@@ -237,7 +237,7 @@ describe('Releases list', () => {
   });
 
   it('shipped→planned via the status select reverts WITHOUT confetti', async () => {
-    renderAt('/releases');
+    renderAt('/app/releases');
     const u = user();
     await screen.findByText('v0.1 — Foundations');
 
@@ -251,7 +251,7 @@ describe('Releases list', () => {
   });
 
   it('creates a release from the dialog', async () => {
-    renderAt('/releases');
+    renderAt('/app/releases');
     const u = user();
     await screen.findByText('v0.2 — Team ready');
 
@@ -267,7 +267,7 @@ describe('Releases list', () => {
 
 describe('Release detail — features membership', () => {
   it('renders the member table with horizon, status, and size', async () => {
-    renderAt('/releases/r1');
+    renderAt('/app/releases/r1');
     await screen.findByRole('heading', { name: 'v0.2 — Team ready' });
 
     const table = screen.getByRole('table');
@@ -275,7 +275,7 @@ describe('Release detail — features membership', () => {
     expect(rows).toHaveLength(2);
     expect(within(rows[0]).getByRole('link', { name: 'Comments & review' })).toHaveProperty(
       'pathname',
-      '/features/f1',
+      '/app/features/f1',
     );
     expect(within(rows[0]).getByText('Shipped')).toBeTruthy();
     expect(within(rows[0]).getByText('m')).toBeTruthy();
@@ -283,7 +283,7 @@ describe('Release detail — features membership', () => {
   });
 
   it('removes a member via the row ✕ (replace-set PUT without it)', async () => {
-    renderAt('/releases/r1');
+    renderAt('/app/releases/r1');
     const u = user();
     await screen.findByRole('heading', { name: 'v0.2 — Team ready' });
 
@@ -292,7 +292,7 @@ describe('Release detail — features membership', () => {
   });
 
   it('adds unassigned features via the popover checklist', async () => {
-    renderAt('/releases/r1');
+    renderAt('/app/releases/r1');
     const u = user();
     await screen.findByRole('heading', { name: 'v0.2 — Team ready' });
 
@@ -311,7 +311,7 @@ describe('Release detail — features membership', () => {
 
 describe('Release detail — notes doc', () => {
   it('creates the notes doc and navigates to the editor', async () => {
-    renderAt('/releases/r1');
+    renderAt('/app/releases/r1');
     const u = user();
     await screen.findByRole('heading', { name: 'v0.2 — Team ready' });
 
@@ -321,18 +321,18 @@ describe('Release detail — notes doc', () => {
   });
 
   it('shows the doc card with chip, status, and word count when notes exist', async () => {
-    renderAt('/releases/r1', { withNotesDoc: true });
+    renderAt('/app/releases/r1', { withNotesDoc: true });
     await screen.findByRole('heading', { name: 'v0.2 — Team ready' });
 
     const card = await screen.findByRole('link', { name: /Release notes/ });
-    expect(card).toHaveProperty('pathname', '/docs/d1');
+    expect(card).toHaveProperty('pathname', '/app/docs/d1');
     expect(within(card).getByText('Release notes')).toBeTruthy();
     expect(within(card).getByText('draft')).toBeTruthy();
     expect(within(card).getByText('5 words')).toBeTruthy();
   });
 
   it('generates a draft from features behind an overwrite confirm', async () => {
-    renderAt('/releases/r1', { withNotesDoc: true });
+    renderAt('/app/releases/r1', { withNotesDoc: true });
     const u = user();
     await screen.findByRole('heading', { name: 'v0.2 — Team ready' });
 

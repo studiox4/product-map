@@ -12,6 +12,7 @@ import {
   useSetDefaultTemplate,
   useTemplates,
 } from '@/lib/api';
+import { appRoutes } from '@/lib/routes';
 import { DocTypeChip } from '@/components/DocTypeChip';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -138,7 +139,7 @@ function NewTemplateInline({ type }: { type: DocType }) {
     create.mutate(
       { type, name: trimmed },
       {
-        onSuccess: (tpl) => navigate(`/settings/templates/${tpl.id}`),
+        onSuccess: (tpl) => navigate(appRoutes.templateEditor(tpl.id)),
         onError: () => toast.error(`Couldn't create '${trimmed}'`),
       },
     );
@@ -206,7 +207,7 @@ export function TemplatesTab() {
     };
   }, [templatesQuery.data]);
 
-  const onEdit = (id: string) => navigate(`/settings/templates/${id}`);
+  const onEdit = (id: string) => navigate(appRoutes.templateEditor(id));
 
   if (templatesQuery.isLoading) {
     return (

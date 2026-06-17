@@ -14,6 +14,7 @@ import {
   type ReleaseDetail as ReleaseDetailData,
 } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { appRoutes } from '@/lib/routes';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -143,7 +144,7 @@ function FeaturesSection({ release }: { release: ReleaseDetailData }) {
                 <tr key={feature.id} className="transition-colors duration-150 hover:bg-wash/60">
                   <td className="px-4 py-3">
                     <Link
-                      to={`/features/${feature.id}`}
+                      to={appRoutes.feature(feature.id)}
                       className="font-medium text-ink outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       {feature.title}
@@ -198,7 +199,7 @@ function NotesSection({ release }: { release: ReleaseDetailData }) {
   const create = () => {
     if (createNotesDoc.isPending) return;
     createNotesDoc.mutate(release.id, {
-      onSuccess: (doc) => navigate(`/docs/${doc.id}`),
+      onSuccess: (doc) => navigate(appRoutes.doc(doc.id)),
       onError: () => toast.error(`Couldn't create notes for '${release.name}'`),
     });
   };
@@ -208,7 +209,7 @@ function NotesSection({ release }: { release: ReleaseDetailData }) {
     generateNotes.mutate(release.id, {
       onSuccess: (doc) => {
         setConfirmOpen(false);
-        navigate(`/docs/${doc.id}`);
+        navigate(appRoutes.doc(doc.id));
       },
       onError: () => toast.error(`Couldn't assemble notes for '${release.name}'`),
     });
@@ -249,7 +250,7 @@ function NotesSection({ release }: { release: ReleaseDetailData }) {
         </div>
       ) : doc ? (
         <Link
-          to={`/docs/${doc.id}`}
+          to={appRoutes.doc(doc.id)}
           className="flex items-center gap-3 rounded-2xl border border-transparent bg-surface px-5 py-4 shadow-card outline-none transition-[box-shadow,transform] duration-150 ease-out hover:-translate-y-px hover:shadow-card-hover focus-visible:ring-2 focus-visible:ring-ring"
         >
           <FileText className="h-4 w-4 shrink-0 text-muted-ink" aria-hidden />
@@ -323,7 +324,7 @@ export default function ReleaseDetail() {
       <div className="rounded-2xl border border-transparent bg-surface p-10 text-center shadow-card">
         <p className="text-sm text-body-ink">Release not found.</p>
         <Button asChild variant="outline" className="mt-4 rounded-full">
-          <Link to="/releases">Back to releases</Link>
+          <Link to={appRoutes.releases}>Back to releases</Link>
         </Button>
       </div>
     );
@@ -333,7 +334,7 @@ export default function ReleaseDetail() {
     <div className="space-y-6">
       <div>
         <Link
-          to="/releases"
+          to={appRoutes.releases}
           className="inline-flex items-center gap-1 text-sm text-muted-ink outline-none transition-colors duration-150 hover:text-ink focus-visible:ring-2 focus-visible:ring-ring"
         >
           <ArrowLeft className="h-3.5 w-3.5" aria-hidden />

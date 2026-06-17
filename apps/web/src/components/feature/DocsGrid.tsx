@@ -7,6 +7,7 @@ import { useAllDocuments } from '@/lib/api';
 import { DocTypeChip } from '@/components/DocTypeChip';
 import { StatusBadge } from '@/components/StatusBadge';
 import { NewDocDialog } from '@/components/board/NewDocDialog';
+import { appRoutes } from '@/lib/routes';
 
 /** Card grid of the feature's docs: type-colored top edge, status, word count, updated. */
 export function DocsGrid({ feature }: { feature: FeatureWithDocs }) {
@@ -29,7 +30,7 @@ export function DocsGrid({ feature }: { feature: FeatureWithDocs }) {
             <button
               key={doc.id}
               type="button"
-              onClick={() => navigate(`/docs/${doc.id}`)}
+              onClick={() => navigate(appRoutes.doc(doc.id))}
               className="overflow-hidden rounded-xl bg-surface text-left shadow-card transition-[box-shadow,transform] duration-150 ease-out hover:-translate-y-px hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <span

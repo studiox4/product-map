@@ -96,7 +96,7 @@ function renderInvite(token: string) {
           <Routes>
             <Route path="/invite/:token" element={<AcceptInvite />} />
             <Route path="/login" element={<LoginProbe />} />
-            <Route path="/" element={<div>Landing route</div>} />
+            <Route path="/app" element={<div>Landing route</div>} />
           </Routes>
         </AuthProvider>
       </MemoryRouter>

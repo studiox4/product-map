@@ -10,6 +10,7 @@ import {
   type Template,
 } from '@productmap/shared';
 import { useCreateDocument, useTemplates } from '@/lib/api';
+import { appRoutes } from '@/lib/routes';
 import {
   Dialog,
   DialogContent,
@@ -122,7 +123,7 @@ export function NewDocDialog({ feature, open, onOpenChange, returnFocusRef }: Ne
       {
         onSuccess: (doc) => {
           onOpenChange(false);
-          navigate(`/docs/${doc.id}`);
+          navigate(appRoutes.doc(doc.id));
         },
         onError: () => toast.error(`Couldn't create '${trimmed}'`),
       },

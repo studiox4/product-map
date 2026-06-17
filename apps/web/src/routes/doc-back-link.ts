@@ -1,4 +1,5 @@
 import type { DocumentMeta } from '@productmap/shared';
+import { appRoutes } from '@/lib/routes';
 
 /**
  * Editor toolbar back-link for a doc's owning surface (dream tier 2):
@@ -12,15 +13,15 @@ export function docBackLink(
 ): { href: string; label: string } {
   if (doc.featureId) {
     return {
-      href: `/board?feature=${doc.featureId}`,
+      href: `${appRoutes.board}?feature=${doc.featureId}`,
       label: titles.featureTitle ?? 'Back to board',
     };
   }
   if (doc.ideaId) {
     return {
-      href: `/inbox?idea=${doc.ideaId}`,
+      href: `${appRoutes.inbox}?idea=${doc.ideaId}`,
       label: `Idea: ${titles.ideaTitle ?? '…'}`,
     };
   }
-  return { href: '/docs', label: 'All docs' };
+  return { href: appRoutes.docs, label: 'All docs' };
 }

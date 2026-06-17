@@ -118,16 +118,16 @@ describe('linkifyDocTitles', () => {
   it('wraps bold doc-title citations in doc links', () => {
     const html = '<p>See <strong>Telemetry PRD</strong> for details.</p>';
     const out = linkifyDocTitles(html, docs);
-    expect(out).toContain('<a href="/docs/d1" data-doc-link="d1"><strong>Telemetry PRD</strong></a>');
+    expect(out).toContain('<a href="/app/docs/d1" data-doc-link="d1"><strong>Telemetry PRD</strong></a>');
   });
 
   it('matches HTML-escaped titles and leaves non-citations alone', () => {
     const out = linkifyDocTitles('<p><strong>Q&amp;A doc</strong> and <strong>other</strong></p>', [
       { id: 'd9', title: 'Q&A doc' },
     ]);
-    expect(out).toContain('href="/docs/d9"');
+    expect(out).toContain('href="/app/docs/d9"');
     expect(out).toContain('<strong>other</strong>');
-    expect(out).not.toContain('<a href="/docs/d9" data-doc-link="d9"><strong>other</strong></a>');
+    expect(out).not.toContain('<a href="/app/docs/d9" data-doc-link="d9"><strong>other</strong></a>');
   });
 });
 
@@ -159,7 +159,7 @@ describe('CopilotPanel', () => {
     // question bubble + streamed answer
     expect(await screen.findByText('How much do we sample?')).toBeTruthy();
     const citation = await screen.findByRole('link', { name: 'Telemetry PRD' });
-    expect(citation.getAttribute('href')).toBe('/docs/d1');
+    expect(citation.getAttribute('href')).toBe("/app/docs/d1");
 
     const chatCall = fetchSpy.mock.calls.find(([u]) => String(u) === `/api/projects/${TEST_PROJECT_ID}/ai/chat`)!;
     expect(JSON.parse((chatCall[1] as RequestInit).body as string)).toEqual({
@@ -192,11 +192,11 @@ describe('CopilotPanel', () => {
     fireEvent.click(await screen.findByRole('tab', { name: 'Nudges' }));
 
     const staleDraft = await screen.findByRole('link', { name: /Telemetry PRD/ });
-    expect(staleDraft.getAttribute('href')).toBe('/docs/d1');
+    expect(staleDraft.getAttribute('href')).toBe("/app/docs/d1");
     expect(screen.getByText('Draft untouched for 2+ weeks')).toBeTruthy();
 
     const dateless = screen.getByRole('link', { name: /Realtime collaboration/ });
-    expect(dateless.getAttribute('href')).toBe('/features/f2');
+    expect(dateless.getAttribute('href')).toBe("/app/features/f2");
     expect(screen.getByText('Now feature missing dates')).toBeTruthy();
   });
 

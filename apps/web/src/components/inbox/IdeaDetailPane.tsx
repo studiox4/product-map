@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import type { IdeaStatus, IdeaWithVotes } from '@productmap/shared';
 import { useCreatePitch, useDocument, useUpdateIdea } from '@/lib/api';
 import { useCanEdit } from '@/lib/project';
+import { appRoutes } from '@/lib/routes';
 import { countWords } from '@/components/editor/word-count';
 import { DocTypeChip } from '@/components/DocTypeChip';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -70,7 +71,7 @@ function PitchBlock({ idea }: { idea: IdeaWithVotes }) {
         disabled={createPitch.isPending}
         onClick={() =>
           createPitch.mutate(idea.id, {
-            onSuccess: (doc) => navigate(`/docs/${doc.id}`),
+            onSuccess: (doc) => navigate(appRoutes.doc(doc.id)),
             onError: () => toast.error("Couldn't create the pitch doc"),
           })
         }
@@ -83,7 +84,7 @@ function PitchBlock({ idea }: { idea: IdeaWithVotes }) {
 
   return (
     <Link
-      to={`/docs/${pitch.id}`}
+      to={appRoutes.doc(pitch.id)}
       aria-label={`Open pitch: ${pitch.title}`}
       className="flex items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 shadow-sm-card transition-[box-shadow,transform] duration-150 ease-out hover:-translate-y-px hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
@@ -227,7 +228,7 @@ export function IdeaDetailPane({ idea, onPromote }: IdeaDetailPaneProps) {
       <div className="mt-6 flex flex-wrap items-center gap-2">
         {idea.status === 'promoted' && idea.promotedFeatureId ? (
           <Button asChild variant="outline" className="rounded-full">
-            <Link to={`/features/${idea.promotedFeatureId}`}>
+            <Link to={appRoutes.feature(idea.promotedFeatureId)}>
               <ArrowUpRight className="h-4 w-4" aria-hidden />
               View feature
             </Link>

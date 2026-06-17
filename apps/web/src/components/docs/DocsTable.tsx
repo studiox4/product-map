@@ -14,6 +14,7 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { cn } from '@/lib/utils';
 import { apiPath, fetchJson, queryKeys } from '@/lib/api';
 import { useProjectId } from '@/lib/project';
+import { appRoutes } from '@/lib/routes';
 import { hasOpenOverlay, isEditableTarget } from '@/components/command/useGlobalShortcuts';
 import { makeHoverPrefetch } from '@/lib/delight';
 import { morphStyle } from '@/lib/transitions';
@@ -64,9 +65,9 @@ function SortableHeader({
 
 /** Route for a doc's owning surface chip (dream tier 2 — docs can belong to features, ideas, or releases). */
 function ownerHref(owner: DocOwnerLabel): string {
-  if (owner.kind === 'idea') return `/inbox?idea=${owner.id}`;
-  if (owner.kind === 'release') return `/releases/${owner.id}`;
-  return `/features/${owner.id}`;
+  if (owner.kind === 'idea') return `${appRoutes.inbox}?idea=${owner.id}`;
+  if (owner.kind === 'release') return appRoutes.release(owner.id);
+  return appRoutes.feature(owner.id);
 }
 
 /**

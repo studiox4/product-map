@@ -159,10 +159,10 @@ function renderOutcomes() {
   return render(
     <QueryClientProvider client={qc}>
       <ProjectProvider>
-        <MemoryRouter initialEntries={['/outcomes']}>
+        <MemoryRouter initialEntries={['/app/outcomes']}>
           <Routes>
-            <Route path="/outcomes" element={<Outcomes />} />
-            <Route path="/features/:id" element={<div>feature route</div>} />
+            <Route path="/app/outcomes" element={<Outcomes />} />
+            <Route path="/app/features/:id" element={<div>feature route</div>} />
           </Routes>
         </MemoryRouter>
       </ProjectProvider>
@@ -202,7 +202,7 @@ describe('Outcomes', () => {
     // Rows land under their horizon, with status + size chips.
     expect(within(card).getByRole('link', { name: 'Comments & review' })).toHaveProperty(
       'pathname',
-      '/features/f1',
+      '/app/features/f1',
     );
     expect(within(card).getByText('Shipped')).toBeTruthy();
     expect(within(card).getByText('m')).toBeTruthy();
