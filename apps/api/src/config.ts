@@ -1,5 +1,13 @@
 import { randomBytes } from 'node:crypto';
 
+export interface SmtpConfig {
+  host: string;
+  port: number;
+  user?: string;
+  pass?: string;
+  from: string;
+}
+
 export interface AppConfig {
   isProd: boolean;
   authSecret: string;
@@ -7,6 +15,10 @@ export interface AppConfig {
   trustProxy: boolean;
   accessTtlSec: number;
   refreshTtlSec: number;
+  /** App base URL used to build absolute invite links in emails. */
+  appUrl: string;
+  /** null when SMTP is not configured → invites are link-only (air-gapped fallback). */
+  smtp: SmtpConfig | null;
 }
 
 const bool = (v: string | undefined) => v === 'true' || v === '1';
@@ -20,6 +32,16 @@ export function loadConfig(): AppConfig {
   if (!process.env.AUTH_SECRET && !isProd) {
     console.warn('[config] AUTH_SECRET unset — using an ephemeral dev secret (sessions reset on restart).');
   }
+  const smtp: SmtpConfig | null = process.env.SMTP_HOST
+    ? {
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT ?? 587),
+        user: process.env.SMTP_USER || undefined,
+        pass: process.env.SMTP_PASS || undefined,
+        from: process.env.SMTP_FROM ?? 'ProductMap <no-reply@productmap.local>',
+      }
+    : null;
+
   return {
     isProd,
     authSecret,
@@ -27,6 +49,8 @@ export function loadConfig(): AppConfig {
     trustProxy: bool(process.env.TRUST_PROXY),
     accessTtlSec: 15 * 60,
     refreshTtlSec: 30 * 24 * 60 * 60,
+    appUrl: process.env.APP_URL ?? 'http://localhost:5173',
+    smtp,
   };
 }
 

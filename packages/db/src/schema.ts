@@ -289,6 +289,26 @@ export const shareTokens = pgTable('share_tokens', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
 }, (t) => [index('share_tokens_project_id_idx').on(t.projectId)]);
+export const invites = pgTable(
+  'invites',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    token: text('token').notNull().unique(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    role: memberRoleEnum('role').notNull().default('editor'),
+    // Email-bound when set: only this address may accept. Null = link-only.
+    email: text('email'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('invites_project_id_idx').on(t.projectId)],
+);
 export const uploads = pgTable('uploads', {
   id: uuid('id').defaultRandom().primaryKey(),
   documentId: uuid('document_id').references(() => documents.id, { onDelete: 'set null' }),

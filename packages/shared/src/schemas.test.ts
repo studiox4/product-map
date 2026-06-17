@@ -176,3 +176,21 @@ describe('auth schemas', () => {
     expect(changePasswordInput.safeParse({ currentPassword: 'old', newPassword: 'short' }).success).toBe(false);
   });
 });
+
+import { inviteCreate, INVITE_TTL_SEC } from './index';
+
+describe('invite schema', () => {
+  it('accepts a role; email optional', () => {
+    expect(inviteCreate.safeParse({ role: 'editor' }).success).toBe(true);
+    expect(inviteCreate.safeParse({ role: 'viewer', email: 'a@b.co' }).success).toBe(true);
+    expect(inviteCreate.safeParse({ role: 'boss' }).success).toBe(false);
+    expect(inviteCreate.safeParse({ role: 'editor', email: 'not-an-email' }).success).toBe(false);
+  });
+  it('defaults role to editor when omitted', () => {
+    const r = inviteCreate.parse({});
+    expect(r.role).toBe('editor');
+  });
+  it('INVITE_TTL_SEC is 7 days', () => {
+    expect(INVITE_TTL_SEC).toBe(7 * 24 * 60 * 60);
+  });
+});

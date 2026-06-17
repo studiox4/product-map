@@ -252,3 +252,101 @@ describe('project members', () => {
     expect((await res.json()).error).toBe('last_owner');
   });
 });
+
+describe('project invites (create/revoke)', () => {
+  it('owner creates a link-only invite (no email) → token returned, no send', async () => {
+    const owner = await createTestUser({ role: 'member' });
+    const p = await createTestProject();
+    await addMembership(owner.id, p.id, 'owner');
+    const res = await app.request(`/api/projects/${p.id}/invites`, json('POST', { role: 'viewer' }, await auth(owner)));
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.token).toBeTruthy();
+    expect(body.role).toBe('viewer');
+    expect(body.email).toBeNull();
+    expect(body.emailSent).toBe(false); // no SMTP configured in tests
+  });
+
+  it('owner lists then revokes an invite', async () => {
+    const owner = await createTestUser({ role: 'member' });
+    const p = await createTestProject();
+    await addMembership(owner.id, p.id, 'owner');
+    const h = await auth(owner);
+    const created = await (await app.request(`/api/projects/${p.id}/invites`, json('POST', { role: 'editor' }, h))).json();
+
+    const list = await app.request(`/api/projects/${p.id}/invites`, { headers: h });
+    expect((await list.json()).length).toBe(1);
+
+    const del = await app.request(`/api/projects/${p.id}/invites/${created.token}`, { method: 'DELETE', headers: h });
+    expect(del.status).toBe(204);
+
+    // After revoke the list omits it.
+    const list2 = await app.request(`/api/projects/${p.id}/invites`, { headers: h });
+    expect((await list2.json()).length).toBe(0);
+  });
+
+  it('editor cannot create or revoke invites (403)', async () => {
+    const u = await createTestUser({ role: 'member' });
+    const p = await createTestProject();
+    await addMembership(u.id, p.id, 'editor');
+    const res = await app.request(`/api/projects/${p.id}/invites`, json('POST', { role: 'viewer' }, await auth(u)));
+    expect(res.status).toBe(403);
+  });
+
+  it('non-member gets 404 on invite create (no existence leak)', async () => {
+    const u = await createTestUser({ role: 'member' });
+    const p = await createTestProject();
+    const res = await app.request(`/api/projects/${p.id}/invites`, json('POST', { role: 'viewer' }, await auth(u)));
+    expect(res.status).toBe(404);
+  });
+
+  it('viewer cannot create an invite (403)', async () => {
+    const viewer = await createTestUser({ role: 'member' });
+    const p = await createTestProject();
+    await addMembership(viewer.id, p.id, 'viewer');
+    const res = await app.request(`/api/projects/${p.id}/invites`, json('POST', { role: 'editor' }, await auth(viewer)));
+    expect(res.status).toBe(403);
+  });
+
+  it('editor cannot GET invite list (403)', async () => {
+    const editor = await createTestUser({ role: 'member' });
+    const p = await createTestProject();
+    await addMembership(editor.id, p.id, 'editor');
+    const res = await app.request(`/api/projects/${p.id}/invites`, { headers: await auth(editor) });
+    expect(res.status).toBe(403);
+  });
+
+  it('editor cannot DELETE (revoke) an invite (403)', async () => {
+    const owner = await createTestUser({ role: 'member' });
+    const editor = await createTestUser({ role: 'member' });
+    const p = await createTestProject();
+    await addMembership(owner.id, p.id, 'owner');
+    await addMembership(editor.id, p.id, 'editor');
+    const hOwner = await auth(owner);
+    const created = await (await app.request(`/api/projects/${p.id}/invites`, json('POST', { role: 'viewer' }, hOwner))).json();
+    const res = await app.request(`/api/projects/${p.id}/invites/${created.token}`, { method: 'DELETE', headers: await auth(editor) });
+    expect(res.status).toBe(403);
+  });
+
+  it('revoking a valid token under the WRONG projectId → 404 AND invite remains active in its true project', async () => {
+    const owner = await createTestUser({ role: 'member' });
+    const projectA = await createTestProject('Project A');
+    const projectB = await createTestProject('Project B');
+    await addMembership(owner.id, projectA.id, 'owner');
+    await addMembership(owner.id, projectB.id, 'owner');
+    const hOwner = await auth(owner);
+
+    // Mint invite under projectA.
+    const created = await (await app.request(`/api/projects/${projectA.id}/invites`, json('POST', { role: 'editor' }, hOwner))).json();
+    const token = created.token;
+
+    // Try to revoke that token under projectB → 404 (token/projectId mismatch).
+    const wrongDel = await app.request(`/api/projects/${projectB.id}/invites/${token}`, { method: 'DELETE', headers: hOwner });
+    expect(wrongDel.status).toBe(404);
+
+    // Invite is still active in projectA.
+    const list = await app.request(`/api/projects/${projectA.id}/invites`, { headers: hOwner });
+    const invites = await list.json() as Array<{ token: string }>;
+    expect(invites.some((i) => i.token === token)).toBe(true);
+  });
+});
