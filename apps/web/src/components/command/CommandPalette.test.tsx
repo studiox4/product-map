@@ -136,8 +136,8 @@ function Harness() {
       <ShortcutsOverlay open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       <Routes>
         <Route path="/" element={<div>home page</div>} />
-        <Route path="/features/:id" element={<div>feature page</div>} />
-        <Route path="/docs/:id" element={<div>doc page</div>} />
+        <Route path="/app/features/:id" element={<div>feature page</div>} />
+        <Route path="/app/docs/:id" element={<div>doc page</div>} />
       </Routes>
     </>
   );
