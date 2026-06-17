@@ -1,14 +1,15 @@
-// Mounted at /api/plans (app.ts). Roadmap scenario plans: snapshots of the
-// feature schedule (dates + horizon) edited in isolation, then applied back to
-// the real roadmap in one transaction with per-field activity.
+// Mounted at /api/projects/:projectId/plans (project-scoped.ts). Roadmap
+// scenario plans: snapshots of the feature schedule (dates + horizon) edited
+// in isolation, then applied back to the real roadmap in one transaction with
+// per-field activity.
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { and, asc, eq, ne, sql } from 'drizzle-orm';
 import { planCreate, planUpdate, planEntryUpdate } from '@productmap/shared';
 import { plans, planEntries, features, activity } from '@productmap/db';
 import { db } from '../db';
-import { getDefaultProjectId } from '../lib/project';
-import { type CurrentUserEnv } from '../middleware/current-user';
+import { type MembershipEnv } from '../middleware/membership';
+import { loadScoped } from '../lib/scope';
 
 async function entriesFor(planId: string) {
   return db.select().from(planEntries).where(eq(planEntries.planId, planId));
@@ -32,9 +33,10 @@ function diffFields(
   return Object.keys(fields).length > 0 ? fields : null;
 }
 
-export const plansRoutes = new Hono<CurrentUserEnv>()
+export const plansRoutes = new Hono<MembershipEnv>()
   .get('/', async (c) => {
-    const rows = await db.select().from(plans).orderBy(asc(plans.createdAt));
+    const pid = c.get('currentProjectId');
+    const rows = await db.select().from(plans).where(eq(plans.projectId, pid)).orderBy(asc(plans.createdAt));
     return c.json(rows);
   })
   .post(
@@ -47,6 +49,7 @@ export const plansRoutes = new Hono<CurrentUserEnv>()
     async (c) => {
       const { name, copyFrom } = c.req.valid('json');
       const user = c.get('currentUser');
+      const pid = c.get('currentProjectId');
 
       // Snapshot source: the live feature schedule, or another plan's entries.
       let snapshot: Array<{
@@ -63,10 +66,11 @@ export const plansRoutes = new Hono<CurrentUserEnv>()
             endDate: features.endDate,
             horizon: features.horizon,
           })
-          .from(features);
+          .from(features)
+          .where(eq(features.projectId, pid));
       } else {
-        const [source] = await db.select({ id: plans.id }).from(plans).where(eq(plans.id, copyFrom));
-        if (!source) return c.json({ error: 'not_found' }, 404);
+        // copyFrom is a plan id — verify it belongs to this project
+        await loadScoped(plans, copyFrom, pid);
         snapshot = (await entriesFor(copyFrom)).map((e) => ({
           featureId: e.featureId,
           startDate: e.startDate,
@@ -75,7 +79,7 @@ export const plansRoutes = new Hono<CurrentUserEnv>()
         }));
       }
 
-      const projectId = await getDefaultProjectId();
+      const projectId = pid;
       const plan = await db.transaction(async (tx) => {
         const [row] = await tx
           .insert(plans)
@@ -91,8 +95,8 @@ export const plansRoutes = new Hono<CurrentUserEnv>()
   )
   .get('/:id', async (c) => {
     const id = c.req.param('id');
-    const [row] = await db.select().from(plans).where(eq(plans.id, id));
-    if (!row) return c.json({ error: 'not_found' }, 404);
+    const pid = c.get('currentProjectId');
+    const row = await loadScoped(plans, id, pid);
     return c.json({ ...row, entries: await entriesFor(id) });
   })
   .patch(
@@ -104,6 +108,8 @@ export const plansRoutes = new Hono<CurrentUserEnv>()
     }),
     async (c) => {
       const id = c.req.param('id');
+      const pid = c.get('currentProjectId');
+      await loadScoped(plans, id, pid);
       const updates = c.req.valid('json');
       const [row] = await db
         .update(plans)
@@ -115,7 +121,10 @@ export const plansRoutes = new Hono<CurrentUserEnv>()
     },
   )
   .delete('/:id', async (c) => {
-    const deleted = await db.delete(plans).where(eq(plans.id, c.req.param('id'))).returning({ id: plans.id });
+    const id = c.req.param('id');
+    const pid = c.get('currentProjectId');
+    await loadScoped(plans, id, pid);
+    const deleted = await db.delete(plans).where(eq(plans.id, id)).returning({ id: plans.id });
     if (deleted.length === 0) return c.json({ error: 'not_found' }, 404);
     return c.body(null, 204);
   })
@@ -132,8 +141,11 @@ export const plansRoutes = new Hono<CurrentUserEnv>()
       const planId = c.req.param('id');
       const featureId = c.req.param('featureId');
       const updates = c.req.valid('json');
-      const [plan] = await db.select({ id: plans.id }).from(plans).where(eq(plans.id, planId));
-      if (!plan) return c.json({ error: 'not_found' }, 404);
+      const pid = c.get('currentProjectId');
+
+      // Scope both the plan and the feature to this project
+      await loadScoped(plans, planId, pid);
+      await loadScoped(features, featureId, pid);
 
       const [existing] = await db
         .select()
@@ -171,8 +183,8 @@ export const plansRoutes = new Hono<CurrentUserEnv>()
   .post('/:id/apply', async (c) => {
     const id = c.req.param('id');
     const user = c.get('currentUser');
-    const [plan] = await db.select().from(plans).where(eq(plans.id, id));
-    if (!plan) return c.json({ error: 'not_found' }, 404);
+    const pid = c.get('currentProjectId');
+    const plan = await loadScoped(plans, id, pid) as typeof plans.$inferSelect;
 
     const result = await db.transaction(async (tx) => {
       const rows = await tx

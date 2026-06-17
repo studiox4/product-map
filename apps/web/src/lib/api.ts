@@ -1531,21 +1531,23 @@ export function useSetReleaseFeatures() {
 // (`Horizon` is already imported at the top of this file.)
 import type { Plan, PlanApplyResult, PlanWithEntries } from '@productmap/shared';
 
-export const plansKey = ['plans'] as const;
-export const planKey = (id: string) => ['plans', id] as const;
+export const plansKey = (pid: string) => ['p', pid, 'plans'] as const;
+export const planKey = (pid: string, id: string) => ['p', pid, 'plans', id] as const;
 
 export function usePlans() {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: plansKey,
-    queryFn: () => fetchJson<Plan[]>('/api/plans'),
+    queryKey: plansKey(pid),
+    queryFn: () => fetchJson<Plan[]>(apiPath(pid, 'plans')),
   });
 }
 
 /** Full plan snapshot (entries) — drives scenario-mode bar rendering. */
 export function usePlan(id: string | null) {
+  const pid = useProjectId();
   return useQuery({
-    queryKey: planKey(id ?? ''),
-    queryFn: () => fetchJson<PlanWithEntries>(`/api/plans/${id}`),
+    queryKey: planKey(pid, id ?? ''),
+    queryFn: () => fetchJson<PlanWithEntries>(apiPath(pid, 'plans', id!)),
     enabled: !!id,
   });
 }
@@ -1557,29 +1559,32 @@ export interface PlanCreateInput {
 }
 
 export function useCreatePlan() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: PlanCreateInput) =>
-      fetchJson<PlanWithEntries>('/api/plans', { method: 'POST', body: JSON.stringify(input) }),
-    onSuccess: (plan) => qc.setQueryData(planKey(plan.id), plan),
-    onSettled: () => qc.invalidateQueries({ queryKey: plansKey }),
+      fetchJson<PlanWithEntries>(apiPath(pid, 'plans'), { method: 'POST', body: JSON.stringify(input) }),
+    onSuccess: (plan) => qc.setQueryData(planKey(pid, plan.id), plan),
+    onSettled: () => qc.invalidateQueries({ queryKey: plansKey(pid) }),
   });
 }
 
 export function useRenamePlan() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, name }: { id: string; name: string }) =>
-      fetchJson<Plan>(`/api/plans/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
-    onSettled: () => qc.invalidateQueries({ queryKey: plansKey }),
+      fetchJson<Plan>(apiPath(pid, 'plans', id), { method: 'PATCH', body: JSON.stringify({ name }) }),
+    onSettled: () => qc.invalidateQueries({ queryKey: plansKey(pid) }),
   });
 }
 
 export function useDeletePlan() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => fetchJson<void>(`/api/plans/${id}`, { method: 'DELETE' }),
-    onSettled: () => qc.invalidateQueries({ queryKey: plansKey }),
+    mutationFn: (id: string) => fetchJson<void>(apiPath(pid, 'plans', id), { method: 'DELETE' }),
+    onSettled: () => qc.invalidateQueries({ queryKey: plansKey(pid) }),
   });
 }
 
@@ -1592,21 +1597,22 @@ export interface PlanEntryUpdateVars {
 }
 
 /**
- * PUT /api/plans/:id/entries/:featureId — scenario editing. Touches plan
- * entries ONLY (never features); optimistic so drags settle instantly.
+ * PUT /api/projects/:pid/plans/:id/entries/:featureId — scenario editing.
+ * Touches plan entries ONLY (never features); optimistic so drags settle instantly.
  */
 export function useUpdatePlanEntry() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ planId, featureId, ...patch }: PlanEntryUpdateVars) =>
       fetchJson<PlanWithEntries['entries'][number]>(
-        `/api/plans/${planId}/entries/${featureId}`,
+        apiPath(pid, 'plans', planId, 'entries', featureId),
         { method: 'PUT', body: JSON.stringify(patch) },
       ),
     onMutate: async ({ planId, featureId, ...patch }) => {
-      await qc.cancelQueries({ queryKey: planKey(planId) });
-      const previous = qc.getQueryData<PlanWithEntries>(planKey(planId));
-      qc.setQueryData<PlanWithEntries>(planKey(planId), (old) => {
+      await qc.cancelQueries({ queryKey: planKey(pid, planId) });
+      const previous = qc.getQueryData<PlanWithEntries>(planKey(pid, planId));
+      qc.setQueryData<PlanWithEntries>(planKey(pid, planId), (old) => {
         if (!old) return old;
         const exists = old.entries.some((e) => e.featureId === featureId);
         const entries = exists
@@ -1628,21 +1634,22 @@ export function useUpdatePlanEntry() {
       return { previous };
     },
     onError: (_err, { planId }, ctx) => {
-      if (ctx?.previous) qc.setQueryData(planKey(planId), ctx.previous);
+      if (ctx?.previous) qc.setQueryData(planKey(pid, planId), ctx.previous);
     },
     onSettled: (_data, _err, { planId }) =>
-      qc.invalidateQueries({ queryKey: planKey(planId) }),
+      qc.invalidateQueries({ queryKey: planKey(pid, planId) }),
   });
 }
 
-/** POST /api/plans/:id/apply — promote the scenario to the real roadmap. */
+/** POST /api/projects/:pid/plans/:id/apply — promote the scenario to the real roadmap. */
 export function useApplyPlan() {
+  const pid = useProjectId();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (planId: string) =>
-      fetchJson<PlanApplyResult>(`/api/plans/${planId}/apply`, { method: 'POST' }),
+      fetchJson<PlanApplyResult>(apiPath(pid, 'plans', planId, 'apply'), { method: 'POST' }),
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: plansKey });
+      qc.invalidateQueries({ queryKey: plansKey(pid) });
       qc.invalidateQueries({ queryKey: queryKeys.features });
       qc.invalidateQueries({ queryKey: queryKeys.overview });
     },

@@ -22,7 +22,6 @@ import { decisionsRoutes } from './routes/decisions';
 import { depsRoutes } from './routes/deps';
 import { shareRoutes } from './routes/share';
 import { copilotRoutes } from './routes/copilot';
-import { plansRoutes } from './routes/plans';
 import { projectScopedContent } from './routes/project-scoped';
 
 export const app = new Hono()
@@ -70,7 +69,6 @@ export const app = new Hono()
   // deps defines /:id/dependencies
   .route('/api/features', depsRoutes)
   .route('/api/share', shareRoutes)
-  .route('/api/plans', plansRoutes)
   // copilot defines /ai/review-doc, /ai/chat, /copilot/nudges
   .route('/api', copilotRoutes);
 
