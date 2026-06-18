@@ -191,7 +191,7 @@ export default function RoadmapPage() {
   return (
     // AppShell's <main> already provides the centered max-width container and page padding.
     <div>
-      <div className="mb-6 flex items-start justify-between gap-4">
+      <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight">Roadmap</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -202,7 +202,7 @@ export default function RoadmapPage() {
                 : 'Drag a bar to move its dates, drag its right edge to resize, or click it for details.'}
           </p>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+        <div className="flex shrink-0 flex-wrap items-center justify-start gap-2 md:justify-end">
         <PlanSwitcher
           plans={plansQuery.data ?? []}
           activePlanId={activePlanId}

@@ -1,12 +1,19 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { ChevronDown, Lightbulb, Search, Settings, Sparkles } from 'lucide-react';
+import { ChevronDown, Lightbulb, Menu, Search, Settings, Sparkles } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import { Toaster } from '@/components/ui/sonner';
 import ThemeToggle from '@/components/ThemeToggle';
 import { BrandMark } from '@/components/BrandMark';
@@ -35,6 +42,14 @@ const PLAN_LINKS: { to: string; label: string }[] = [
 
 const DOCS_LINK = { to: appRoutes.docs, label: 'Docs', end: true };
 
+/** Flat list of every destination, for the mobile drawer (no dropdown nesting). */
+const MOBILE_LINKS: { to: string; label: string; end?: boolean }[] = [
+  ...NAV_LINKS.map(({ to, label, end }) => ({ to, label, end })),
+  ...PLAN_LINKS,
+  DOCS_LINK,
+  { to: appRoutes.settings, label: 'Settings' },
+];
+
 const isMac =
   typeof navigator !== 'undefined' && /Mac|iP(hone|ad|od)/.test(navigator.platform);
 
@@ -52,6 +67,7 @@ export function AppShell() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const aiEnabled = useAiStatus().data?.enabled === true;
 
   useGlobalShortcuts({
@@ -64,7 +80,43 @@ export function AppShell() {
   return (
     <div className="min-h-screen text-foreground">
       <header className="bg-transparent">
-        <nav className="mx-auto flex h-16 max-w-screen-xl items-center gap-6 px-6">
+        <nav className="mx-auto flex h-16 max-w-screen-xl items-center gap-3 px-4 md:gap-6 md:px-6">
+          {/* Mobile menu (hamburger → left drawer with all destinations) */}
+          <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+            <SheetTrigger
+              aria-label="Open menu"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-body-ink outline-none transition-colors hover:bg-surface/60 hover:text-ink focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+            >
+              <Menu className="h-5 w-5" aria-hidden />
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72 p-0">
+              <SheetTitle className="px-5 pt-5 text-sm font-semibold text-ink">Menu</SheetTitle>
+              <div className="border-b border-line px-3 py-3">
+                <ProjectSwitcher />
+              </div>
+              <div className="flex flex-col gap-0.5 p-3">
+                {MOBILE_LINKS.map((link) => (
+                  <SheetClose asChild key={link.to}>
+                    <NavLink
+                      to={link.to}
+                      end={link.end}
+                      className={({ isActive }) =>
+                        cn(
+                          'rounded-lg px-3 py-2.5 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
+                          isActive
+                            ? 'bg-surface text-ink shadow-sm-card'
+                            : 'text-body-ink hover:bg-surface/60 hover:text-ink',
+                        )
+                      }
+                    >
+                      {link.label}
+                    </NavLink>
+                  </SheetClose>
+                ))}
+              </div>
+            </SheetContent>
+          </Sheet>
+
           <Link
             to={appRoutes.dashboard}
             className="flex items-center gap-2 rounded-full font-display text-lg font-bold tracking-tight text-ink outline-none transition-opacity duration-150 ease-out hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring"
@@ -72,8 +124,10 @@ export function AppShell() {
             <BrandMark className="h-5 w-5" />
             ProductMap
           </Link>
-          <ProjectSwitcher />
-          <div className="flex items-center gap-1.5">
+          <div className="hidden md:block">
+            <ProjectSwitcher />
+          </div>
+          <div className="hidden items-center gap-1.5 md:flex">
             {NAV_LINKS.map((link) => (
               <NavLink
                 key={link.to}
@@ -114,7 +168,7 @@ export function AppShell() {
               {DOCS_LINK.label}
             </NavLink>
           </div>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-1 md:gap-2">
             <button
               type="button"
               onClick={() => setPaletteOpen(true)}
