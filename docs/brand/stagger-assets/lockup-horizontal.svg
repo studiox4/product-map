@@ -1,0 +1,13 @@
+<svg width="430" height="120" viewBox="0 0 430 120" xmlns="http://www.w3.org/2000/svg">
+  <title>Product Map — Stagger horizontal lockup</title>
+  <g>
+    <rect x="18" y="22" width="66" height="14" rx="7" fill="#4338CA"/>
+    <rect x="34" y="44" width="48" height="14" rx="7" fill="#6D63F0"/>
+    <rect x="18" y="66" width="38" height="14" rx="7" fill="#4338CA"/>
+    <rect x="44" y="88" width="52" height="14" rx="7" fill="#6D63F0"/>
+  </g>
+  <!-- outline the text before shipping; Sora 800, tracking -0.03em -->
+  <text x="132" y="76" font-family="Sora, 'Helvetica Neue', Arial, sans-serif" font-size="52" font-weight="800" letter-spacing="-1.4">
+    <tspan fill="#16171C">Product</tspan><tspan fill="#4338CA"> Map</tspan>
+  </text>
+</svg>

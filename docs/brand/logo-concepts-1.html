@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Product Map — Logo Concepts 1 · Foundations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Sora:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --page-bg:#0d0e12;
+    --page-ink:#e9e9ea;
+    --page-muted:#83858f;
+    --hair:rgba(255,255,255,.08);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  body{
+    font-family:'Hanken Grotesk',sans-serif;
+    background:
+      radial-gradient(1200px 600px at 12% -10%, rgba(99,102,241,.10), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(45,212,191,.08), transparent 55%),
+      var(--page-bg);
+    color:var(--page-ink);
+    min-height:100vh;
+    padding:60px 32px 120px;
+  }
+
+  /* ---------- page header ---------- */
+  .head{max-width:1180px;margin:0 auto 56px}
+  .nav{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
+  .nav a{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.06em;color:var(--page-muted);text-decoration:none;padding:6px 12px;border-radius:999px;border:1px solid var(--hair)}
+  .nav a.on{color:#0d0e12;background:#e9e9ea;border-color:#e9e9ea}
+  .eyebrow{
+    font-family:'Space Mono',monospace;
+    font-size:12px;letter-spacing:.32em;text-transform:uppercase;
+    color:var(--page-muted);display:flex;align-items:center;gap:14px;margin-bottom:22px;
+  }
+  .eyebrow::after{content:"";height:1px;flex:1;background:var(--hair)}
+  .head h1{
+    font-family:'Sora',sans-serif;font-weight:800;letter-spacing:-.03em;
+    font-size:clamp(34px,5vw,60px);line-height:1.0;margin-bottom:18px;
+  }
+  .head h1 em{font-style:normal;color:#9aa0ff}
+  .head p{max-width:62ch;color:#b6b8c0;font-size:16px;line-height:1.6}
+  .legend{display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:26px;color:var(--page-muted);font-size:13px}
+  .legend b{color:var(--page-ink);font-weight:600}
+
+  /* ---------- grid of concept cards ---------- */
+  .grid{
+    max-width:1180px;margin:0 auto;
+    display:grid;grid-template-columns:repeat(2,1fr);gap:26px;
+  }
+  @media(max-width:820px){.grid{grid-template-columns:1fr}}
+
+  .card{
+    border-radius:22px;overflow:hidden;position:relative;
+    border:1px solid var(--hair);
+    display:flex;flex-direction:column;min-height:520px;
+  }
+  .card .tag{
+    position:absolute;top:18px;right:18px;z-index:3;
+    font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.14em;
+    padding:6px 11px;border-radius:999px;backdrop-filter:blur(6px);
+  }
+  .stage{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:38px;padding:54px 40px 46px;position:relative;
+  }
+  /* the lockup = icon + wordmark side by side */
+  .lockup{display:flex;align-items:center;gap:18px}
+  .mark{width:74px;height:74px;flex:none}
+  .mark.tile{padding:0}
+  .wordmark{
+    font-weight:800;letter-spacing:-.035em;line-height:1;
+    font-size:40px;white-space:nowrap;
+  }
+
+  .iconrow{display:flex;align-items:center;gap:26px}
+  .iconrow .mark{width:58px;height:58px}
+  .iconrow .mark.big{width:96px;height:96px}
+
+  /* footer strip on each card: usage chips */
+  .meta{
+    padding:18px 22px;border-top:1px solid var(--hair);
+    display:flex;align-items:center;justify-content:space-between;gap:14px;
+    font-size:12.5px;
+  }
+  .meta .name{font-weight:700;letter-spacing:-.01em}
+  .meta .sub{opacity:.62;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.04em}
+  .swatches{display:flex;gap:7px}
+  .swatches i{width:16px;height:16px;border-radius:5px;display:block;border:1px solid rgba(0,0,0,.12)}
+
+  /* grain overlay helper */
+  .grain::before{
+    content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;z-index:1;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+  }
+  .stage>*{position:relative;z-index:2}
+
+  /* STYLE 1 — REFINED LIGHT (indigo, Hanken Grotesk) */
+  .s1{background:#f6f6f2;color:#15171d}
+  .s1 .tag{background:rgba(20,22,29,.06);color:#15171d;border:1px solid rgba(20,22,29,.1)}
+  .s1 .stage{background:linear-gradient(180deg,#fafaf7,#f1f1ec)}
+  .s1 .wordmark{font-family:'Hanken Grotesk',sans-serif}
+  .s1 .wordmark .hi{color:#3b51e0}
+  .s1 .meta{background:#fff;color:#15171d;border-top-color:rgba(20,22,29,.08)}
+
+  /* STYLE 2 — SUNSET GRADIENT (coral→amber, Sora) */
+  .s2{background:#fffdfb;color:#1b1410}
+  .s2 .tag{background:rgba(255,255,255,.6);color:#a8401f;border:1px solid rgba(168,64,31,.18)}
+  .s2 .stage{
+    background:
+      radial-gradient(120% 120% at 0% 0%, #fff1e6 0%, transparent 55%),
+      radial-gradient(120% 120% at 100% 100%, #ffe3ec 0%, transparent 50%),
+      #fffaf6;
+  }
+  .s2 .wordmark{font-family:'Sora',sans-serif;font-weight:700}
+  .s2 .wordmark .hi{background:linear-gradient(120deg,#ff6a4d,#ff9d2e);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .s2 .meta{background:#fff;color:#1b1410;border-top-color:rgba(27,20,16,.08)}
+
+  /* STYLE 3 — DARK NEON (lime/mint, Manrope + mono) */
+  .s3{background:#0a0d0b;color:#eef2ee}
+  .s3 .tag{background:rgba(182,245,0,.1);color:#cdf86b;border:1px solid rgba(182,245,0,.22)}
+  .s3 .stage{
+    background:
+      radial-gradient(90% 120% at 50% -10%, rgba(0,230,168,.12), transparent 60%),
+      linear-gradient(180deg,#0c100d,#080a09);
+  }
+  .s3 .wordmark{font-family:'Manrope',sans-serif;font-weight:800}
+  .s3 .wordmark .base{color:#eef2ee}
+  .s3 .wordmark .hi{color:#c7f94a}
+  .s3 .meta{background:#0e1210;color:#cfd6cf;border-top-color:rgba(255,255,255,.07)}
+  .s3 .meta .sub{opacity:.8}
+
+  /* STYLE 4 — EDITORIAL CREAM (vermillion, Fraunces serif) */
+  .s4{background:#f3ecdb;color:#1d1b16}
+  .s4 .tag{background:rgba(29,27,22,.06);color:#1d1b16;border:1px solid rgba(29,27,22,.16)}
+  .s4 .stage{background:linear-gradient(180deg,#f6f0e1,#efe6d2)}
+  .s4 .wordmark{font-family:'Fraunces',serif;font-weight:900;letter-spacing:-.02em}
+  .s4 .wordmark .hi{color:#df3f1f}
+  .s4 .meta{background:#ece2cd;color:#1d1b16;border-top-color:rgba(29,27,22,.12)}
+
+  .note{
+    max-width:1180px;margin:48px auto 0;color:var(--page-muted);font-size:13.5px;line-height:1.7;
+    border-top:1px solid var(--hair);padding-top:24px;
+  }
+  .note code{font-family:'Space Mono',monospace;color:#cdd0d8;font-size:12.5px}
+</style>
+</head>
+<body>
+
+  <header class="head">
+    <div class="nav">
+      <a class="on" href="logo-concepts-1.html">01 · Foundations</a>
+      <a href="logo-concepts-2.html">02 · Color Variants</a>
+      <a href="logo-concepts-3.html">03 · Designer Takes</a>
+    </div>
+    <div class="eyebrow">Brand exploration · v1</div>
+    <h1>Product Map <em>/</em> logo system</h1>
+    <p>One idea, four directions. The mark turns <b style="color:#cfd2da">P</b> and <b style="color:#cfd2da">M</b> into stacked, staggered rounded bars — read it as a monogram, read it as a Gantt chart. Each card pairs the standalone <b style="color:#cfd2da">icon</b> with the full <b style="color:#cfd2da">wordmark lockup</b>, where the P and M carry the accent and the rest of the word stays ink-black.</p>
+    <div class="legend">
+      <span><b>01</b> Refined Light — indigo · Hanken Grotesk</span>
+      <span><b>02</b> Sunset Gradient — coral→amber · Sora</span>
+      <span><b>03</b> Dark Neon — lime/mint · Manrope</span>
+      <span><b>04</b> Editorial — vermillion · Fraunces</span>
+    </div>
+  </header>
+
+  <main class="grid">
+
+    <!-- STYLE 1 -->
+    <section class="card s1">
+      <span class="tag">01 · REFINED LIGHT</span>
+      <div class="stage grain">
+        <div class="iconrow">
+          <svg class="mark big" data-mark="s1-a"></svg>
+          <svg class="mark" data-mark="s1-b"></svg>
+        </div>
+        <div class="lockup">
+          <svg class="mark" data-mark="s1-c"></svg>
+          <div class="wordmark"><span class="hi">P</span>roduct<span class="hi">&nbsp;M</span>ap</div>
+        </div>
+      </div>
+      <div class="meta">
+        <div><div class="name">Refined Light</div><div class="sub">indigo / clean SaaS</div></div>
+        <div class="swatches"><i style="background:#3b51e0"></i><i style="background:#6a7bff"></i><i style="background:#15171d"></i><i style="background:#f6f6f2"></i></div>
+      </div>
+    </section>
+
+    <!-- STYLE 2 -->
+    <section class="card s2">
+      <span class="tag">02 · SUNSET</span>
+      <div class="stage grain">
+        <div class="iconrow">
+          <svg class="mark big" data-mark="s2-a"></svg>
+          <svg class="mark" data-mark="s2-b"></svg>
+        </div>
+        <div class="lockup">
+          <svg class="mark" data-mark="s2-c"></svg>
+          <div class="wordmark"><span class="hi">P</span>roduct<span class="hi">&nbsp;M</span>ap</div>
+        </div>
+      </div>
+      <div class="meta">
+        <div><div class="name">Sunset Gradient</div><div class="sub">coral → amber</div></div>
+        <div class="swatches"><i style="background:#ff6a4d"></i><i style="background:#ff9d2e"></i><i style="background:#1b1410"></i><i style="background:#fffaf6"></i></div>
+      </div>
+    </section>
+
+    <!-- STYLE 3 -->
+    <section class="card s3">
+      <span class="tag">03 · DARK NEON</span>
+      <div class="stage grain">
+        <div class="iconrow">
+          <svg class="mark big" data-mark="s3-a"></svg>
+          <svg class="mark" data-mark="s3-b"></svg>
+        </div>
+        <div class="lockup">
+          <svg class="mark" data-mark="s3-c"></svg>
+          <div class="wordmark"><span class="hi">P</span><span class="base">roduct</span><span class="hi">&nbsp;M</span><span class="base">ap</span></div>
+        </div>
+      </div>
+      <div class="meta">
+        <div><div class="name">Dark Neon</div><div class="sub">lime / mint · product UI</div></div>
+        <div class="swatches"><i style="background:#c7f94a"></i><i style="background:#00e6a8"></i><i style="background:#eef2ee;border-color:rgba(255,255,255,.2)"></i><i style="background:#0a0d0b;border-color:rgba(255,255,255,.2)"></i></div>
+      </div>
+    </section>
+
+    <!-- STYLE 4 -->
+    <section class="card s4">
+      <span class="tag">04 · EDITORIAL</span>
+      <div class="stage grain">
+        <div class="iconrow">
+          <svg class="mark big" data-mark="s4-a"></svg>
+          <svg class="mark" data-mark="s4-b"></svg>
+        </div>
+        <div class="lockup">
+          <svg class="mark" data-mark="s4-c"></svg>
+          <div class="wordmark"><span class="hi">P</span>roduct<span class="hi">&nbsp;M</span>ap</div>
+        </div>
+      </div>
+      <div class="meta">
+        <div><div class="name">Editorial</div><div class="sub">vermillion · Fraunces</div></div>
+        <div class="swatches"><i style="background:#df3f1f"></i><i style="background:#1d1b16"></i><i style="background:#f3ecdb"></i><i style="background:#ece2cd"></i></div>
+      </div>
+    </section>
+
+  </main>
+
+  <p class="note">
+    Concept: each glyph is drawn on a 7-row grid, then every horizontal run of cells is merged into one rounded bar — the same primitive a Gantt chart uses. Staggered start positions per row give the timeline read. Swap palette / radius / bar height in <code>CONFIG</code> below to retune. All four marks render from the same generator, so the family stays consistent.
+  </p>
+
+<script>
+const P = [
+  [1,1,1,0],
+  [1,0,0,1],
+  [1,1,1,1],
+  [1,0,0,0],
+  [1,0,0,0],
+  [1,0,0,0],
+  [1,0,0,0],
+];
+const M = [
+  [1,0,0,0,1],
+  [1,1,0,1,1],
+  [1,0,1,0,1],
+  [1,0,1,0,1],
+  [1,0,0,0,1],
+  [1,0,0,0,1],
+  [1,0,0,0,1],
+];
+
+const CONFIG = {
+  's1-a':{p:['#3b51e0'],m:['#6a7bff'],tile:null,round:'pill'},
+  's1-b':{p:['#3b51e0'],m:['#6a7bff'],tile:null,round:'pill'},
+  's1-c':{p:['#3b51e0'],m:['#6a7bff'],tile:null,round:'pill'},
+  's2-a':{p:'grad-warm',m:'grad-warm',tile:'#fff',round:'pill',shadow:true},
+  's2-b':{p:'grad-warm',m:'grad-warm',tile:null,round:'pill'},
+  's2-c':{p:'grad-warm',m:'grad-warm',tile:null,round:'pill'},
+  's3-a':{p:['#c7f94a','#a9ee5e','#7eea7f','#4fe79a','#23e3b3','#00e6a8','#00e6a8'],
+          m:['#c7f94a','#a9ee5e','#7eea7f','#4fe79a','#23e3b3','#00e6a8','#00e6a8'],
+          tile:'#0f1411',round:'pill',glow:true},
+  's3-b':{p:['#c7f94a'],m:['#00e6a8'],tile:null,round:'pill',glow:true},
+  's3-c':{p:['#c7f94a'],m:['#00e6a8'],tile:null,round:'pill',glow:true},
+  's4-a':{p:['#df3f1f'],m:['#1d1b16'],tile:'#f7f1e3',round:'soft',inkborder:true},
+  's4-b':{p:['#df3f1f'],m:['#1d1b16'],tile:null,round:'soft'},
+  's4-c':{p:['#df3f1f'],m:['#1d1b16'],tile:null,round:'soft'},
+};
+
+const CELL = 12;
+const GAPV = 2;
+const GAP_LETTERS = 1.4;
+
+function runs(row){
+  const out=[]; let i=0;
+  while(i<row.length){
+    if(row[i]){ let s=i; while(i<row.length&&row[i])i++; out.push([s,i-s]); }
+    else i++;
+  }
+  return out;
+}
+
+function build(svg, cfg){
+  const NS='http://www.w3.org/2000/svg';
+  const pCols=P[0].length, mCols=M[0].length, rows=P.length;
+  const totalCols=pCols+GAP_LETTERS+mCols;
+  const W=totalCols*CELL, H=rows*CELL;
+  const pad = cfg.tile? CELL*0.9 : 0;
+  const VBW=W+pad*2, VBH=H+pad*2;
+  svg.setAttribute('viewBox',`0 0 ${VBW} ${VBH}`);
+  svg.innerHTML='';
+
+  const defs=document.createElementNS(NS,'defs');
+  const lg=document.createElementNS(NS,'linearGradient');
+  lg.id='gw_'+Math.round(VBW*VBH);
+  lg.setAttribute('x1','0');lg.setAttribute('y1','0');lg.setAttribute('x2','1');lg.setAttribute('y2','1');
+  [['0','#ff6a4d'],['1','#ff9d2e']].forEach(([o,c])=>{
+    const s=document.createElementNS(NS,'stop');s.setAttribute('offset',o);s.setAttribute('stop-color',c);lg.appendChild(s);
+  });
+  defs.appendChild(lg);
+  const f=document.createElementNS(NS,'filter');
+  f.id='glow_'+Math.round(VBW*VBH);
+  f.setAttribute('x','-40%');f.setAttribute('y','-40%');f.setAttribute('width','180%');f.setAttribute('height','180%');
+  const fb=document.createElementNS(NS,'feGaussianBlur');fb.setAttribute('stdDeviation','1.4');fb.setAttribute('result','b');
+  const fm=document.createElementNS(NS,'feMerge');
+  ['b','SourceGraphic'].forEach(n=>{const mn=document.createElementNS(NS,'feMergeNode');mn.setAttribute('in',n);fm.appendChild(mn);});
+  f.appendChild(fb);f.appendChild(fm);defs.appendChild(f);
+  svg.appendChild(defs);
+
+  if(cfg.tile){
+    const r=document.createElementNS(NS,'rect');
+    r.setAttribute('x','0');r.setAttribute('y','0');
+    r.setAttribute('width',VBW);r.setAttribute('height',VBH);
+    r.setAttribute('rx',VBW*0.22);
+    r.setAttribute('fill',cfg.tile);
+    if(cfg.inkborder){r.setAttribute('stroke','#1d1b16');r.setAttribute('stroke-width','2');}
+    svg.appendChild(r);
+  }
+
+  const barH=CELL-GAPV;
+  const radius = cfg.round==='soft'? barH*0.32 : barH/2;
+
+  function pickColor(spec,rowIdx,gradId){
+    if(spec==='grad-warm') return `url(#${gradId})`;
+    if(Array.isArray(spec)) return spec[Math.min(rowIdx,spec.length-1)];
+    return spec;
+  }
+
+  function drawLetter(matrix, offsetCols, colorSpec){
+    matrix.forEach((row,ri)=>{
+      runs(row).forEach(([start,len])=>{
+        const rect=document.createElementNS(NS,'rect');
+        const x=pad+(offsetCols+start)*CELL;
+        const y=pad+ri*CELL+GAPV/2;
+        rect.setAttribute('x',x);
+        rect.setAttribute('y',y);
+        rect.setAttribute('width',len*CELL-GAPV);
+        rect.setAttribute('height',barH);
+        rect.setAttribute('rx',radius);
+        rect.setAttribute('fill',pickColor(colorSpec,ri,lg.id));
+        if(cfg.glow) rect.setAttribute('filter',`url(#${f.id})`);
+        svg.appendChild(rect);
+      });
+    });
+  }
+
+  drawLetter(P,0,cfg.p);
+  drawLetter(M,pCols+GAP_LETTERS,cfg.m);
+}
+
+document.querySelectorAll('svg[data-mark]').forEach(svg=>{
+  const cfg=CONFIG[svg.getAttribute('data-mark')];
+  if(cfg) build(svg,cfg);
+});
+</script>
+</body>
+</html>

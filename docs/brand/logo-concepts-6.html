@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Product Map — Logo Concepts 6 · Conceptual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  :root{--bg:#0b0c10;--ink:#eceef2;--muted:#80828c;--hair:rgba(255,255,255,.08);--paper:#f6f5f1;--coal:#16171c}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  body{font-family:'Hanken Grotesk',sans-serif;color:var(--ink);
+    background:radial-gradient(1100px 540px at 8% -10%,rgba(79,70,229,.10),transparent 60%),radial-gradient(900px 480px at 100% 0%,rgba(16,185,129,.06),transparent 55%),var(--bg);
+    min-height:100vh;padding:58px 30px 130px}
+  .wrap{max-width:1180px;margin:0 auto}
+  .nav{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
+  .nav a{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.06em;color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:999px;border:1px solid var(--hair)}
+  .nav a.on{color:#0b0c10;background:#eceef2;border-color:#eceef2}
+  .eyebrow{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);margin-bottom:18px;display:flex;gap:14px;align-items:center}
+  .eyebrow::after{content:"";height:1px;flex:1;background:var(--hair)}
+  h1{font-family:'Sora',sans-serif;font-weight:800;letter-spacing:-.03em;font-size:clamp(32px,4.6vw,56px);line-height:1.02;margin-bottom:16px}
+  h1 em{font-style:normal;color:#9aa0ff}
+  .lede{max-width:72ch;color:#b6b8c0;font-size:15.5px;line-height:1.62}
+  .lede b{color:#dfe1e8;font-weight:600}
+  .gates{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:26px 0 52px}
+  @media(max-width:780px){.gates{grid-template-columns:repeat(2,1fr)}}
+  .gates div{border:1px solid var(--hair);border-radius:13px;padding:14px 15px;background:rgba(255,255,255,.02)}
+  .gates h4{font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#9aa0ff;margin-bottom:6px}
+  .gates p{color:#a4a6af;font-size:12.5px;line-height:1.45}
+
+  .slide{border:1px solid var(--hair);border-radius:24px;overflow:hidden;margin-bottom:30px;background:#0e0f14}
+  .slidehead{display:flex;align-items:baseline;gap:16px;padding:26px 30px 0}
+  .slidehead .n{font-family:'Space Mono',monospace;font-size:13px;color:#9aa0ff}
+  .slidehead h2{font-family:'Sora',sans-serif;font-weight:800;font-size:26px;letter-spacing:-.02em}
+  .slidehead .tag{color:var(--muted);font-size:14px;margin-left:auto}
+  @media(max-width:680px){.slidehead{flex-wrap:wrap}.slidehead .tag{margin-left:0;width:100%}}
+
+  .body{display:grid;grid-template-columns:1.05fr .95fr;gap:0}
+  @media(max-width:860px){.body{grid-template-columns:1fr}}
+  .heroPane{padding:30px;display:flex;align-items:center;justify-content:center;background:var(--paper);min-height:340px}
+  .heroPane svg{width:230px;height:230px;display:block}
+  .info{padding:28px 30px;display:flex;flex-direction:column;gap:18px}
+
+  .panels{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .panel{border:1px solid var(--hair);border-radius:12px;overflow:hidden;background:var(--paper)}
+  .panel .pv{aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;padding:14px}
+  .panel .pv svg{width:100%;height:100%}
+  .panel .cap{font-family:'Space Mono',monospace;font-size:9.5px;letter-spacing:.05em;color:#6c6e78;padding:7px 9px;border-top:1px solid var(--hair);background:#fff}
+  .panel.dark .pv{background:var(--coal)}
+  .panel.dark .cap{background:#1b1c22;color:#9a9ca6;border-top-color:rgba(255,255,255,.08)}
+
+  .concept{display:flex;flex-direction:column;gap:9px}
+  .concept .lbl{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#9aa0ff}
+  .concept p{font-size:13.5px;line-height:1.55;color:#c3c5cd}
+  .concept p b{color:#eceef2;font-weight:600}
+  .craft{list-style:none;display:flex;flex-direction:column;gap:7px}
+  .craft li{font-size:12.5px;line-height:1.45;color:#a9abb4;padding-left:16px;position:relative}
+  .craft li::before{content:"›";position:absolute;left:0;color:#9aa0ff;font-weight:700}
+  .craft li b{color:#dfe1e8;font-weight:600}
+
+  .lockstrip{display:flex;align-items:center;gap:26px;flex-wrap:wrap;padding:22px 30px;border-top:1px solid var(--hair);background:var(--paper)}
+  .lockstrip .lk{display:flex;align-items:center;gap:14px}
+  .lockstrip .lk svg{width:42px;height:42px}
+  .lockstrip .wm{display:flex;flex-direction:column;line-height:.98}
+  .lockstrip .wm .t1{font-family:'Sora',sans-serif;font-weight:700;font-size:21px;letter-spacing:-.02em;color:#16171c}
+  .lockstrip .wm .t2{font-family:'Sora',sans-serif;font-weight:700;font-size:21px;letter-spacing:-.02em;color:#16171c;opacity:.42}
+  .lockstrip .rule{width:1px;height:36px;background:rgba(0,0,0,.14)}
+  .lockstrip .horiz{font-family:'Sora',sans-serif;font-weight:700;font-size:22px;letter-spacing:-.025em;color:#16171c}
+  .lockstrip .horiz b{font-weight:800}
+  .lockcap{font-family:'Space Mono',monospace;font-size:10px;color:#8a8c95;margin-left:auto}
+  @media(max-width:680px){.lockcap{margin-left:0}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="nav">
+    <a href="logo-concepts-5.html">05 · Product-native</a>
+    <a class="on" href="logo-concepts-6.html">06 · Conceptual</a>
+    <a href="logo-concepts-4.html">04 · Map (parked)</a>
+    <a href="logo-concepts-1.html">01 · Foundations</a>
+  </div>
+  <div class="eyebrow">Brand exploration · v6 · the conceptual round</div>
+  <h1>Three marks, built like a pro <em>/</em> not primitives</h1>
+  <p class="lede">The last round was clean but one-layer — a star is a star, a grid is a grid. A professional mark has a <b>second read you see before you read the caption</b>, and it's built on a system, not eyeballed. These three each fuse two ideas into one shape, are designed in black first, and survive the reduction test. The Gantt direction you liked leads — upgraded from "bars" to "bars that point forward."</p>
+
+  <div class="gates">
+    <div><h4>Mono first</h4><p>Designed flat black. If it's not strong without color, color won't save it.</p></div>
+    <div><h4>Dual read</h4><p>You should catch the second meaning before any explanation. One-layer literals are out.</p></div>
+    <div><h4>Built on a system</h4><p>Each is constructed on a real grid / circle geometry — shown, not faked.</p></div>
+    <div><h4>Reduction test</h4><p>Remove any element; if the idea survives it was decoration. Nothing here is spare.</p></div>
+  </div>
+
+  <div id="deck"></div>
+</div>
+
+<script>
+const NS='http://www.w3.org/2000/svg';
+
+/* ============================================================
+   Each builder draws into a 0 0 120 120 viewBox.
+   o = { fg, accent, bg, two, grid, reveal }
+   - fg     : primary mark color
+   - accent : second colour (two-tone / reveal)
+   - bg     : background (for knockouts & gaps)
+   - two    : apply the two-tone treatment
+   - grid   : show the construction guides actually used
+   - reveal : surface the hidden second-read
+   ============================================================ */
+
+const MARKS = {
+  /* 1 — FORWARD : left-aligned roadmap bars whose right tips resolve into a ► */
+  forward(o){
+    const x0=26, bh=12.5, pitch=18, cy=60;
+    const ys=[cy-2*pitch,cy-pitch,cy,cy+pitch,cy+2*pitch];
+    const tips=[60,80,100,80,60];            // symmetric peak -> arrowhead
+    let s='';
+    if(o.grid){
+      s+=`<rect x="26" y="20" width="80" height="80" fill="none" stroke="#bdb9ad" stroke-width="0.6"/>`;
+      s+=`<line x1="26" y1="60" x2="106" y2="60" stroke="#bdb9ad" stroke-width="0.6"/>`;
+      ys.forEach(y=>{s+=`<line x1="20" y1="${y}" x2="110" y2="${y}" stroke="#d8d4c8" stroke-width="0.6"/>`;});
+      s+=`<line x1="26" y1="20" x2="26" y2="100" stroke="#bdb9ad" stroke-width="0.6"/>`;
+      s+=`<polyline points="60,17 100,60 60,103" fill="none" stroke="#c9462f" stroke-width="0.8" stroke-dasharray="2 2"/>`;
+    }
+    if(o.reveal){
+      s+=`<polygon points="26,18 102,60 26,102" fill="${o.accent}" opacity="0.16"/>`;
+      s+=`<polyline points="26,18 102,60 26,102" fill="none" stroke="${o.accent}" stroke-width="1.4" stroke-dasharray="3 3" opacity=".9"/>`;
+    }
+    ys.forEach((y,i)=>{
+      const fill = (o.two && i===2) ? o.accent : o.fg;
+      s+=`<rect x="${x0}" y="${y-bh/2}" width="${tips[i]-x0}" height="${bh}" rx="${bh/2}" fill="${fill}"/>`;
+    });
+    return s;
+  },
+
+  /* 2 — NORTH STAR : four blades; the star is the space they leave */
+  northstar(o){
+    const N=[60,10], E=[104,60], S=[60,104], W=[16,60];   // north reaches higher = "this way"
+    const NE=[76,44], SE=[76,76], SW=[44,76], NW=[44,44];
+    const tri=(a,b,c,fill)=>`<polygon points="${a[0]},${a[1]} ${b[0]},${b[1]} ${c[0]},${c[1]}" fill="${fill}"/>`;
+    let s='';
+    if(o.grid){
+      s+=`<circle cx="60" cy="60" r="45" fill="none" stroke="#bdb9ad" stroke-width="0.6"/>`;
+      s+=`<circle cx="60" cy="60" r="23" fill="none" stroke="#d8d4c8" stroke-width="0.6"/>`;
+      s+=`<line x1="60" y1="12" x2="60" y2="108" stroke="#bdb9ad" stroke-width="0.6"/>`;
+      s+=`<line x1="12" y1="60" x2="108" y2="60" stroke="#bdb9ad" stroke-width="0.6"/>`;
+      s+=`<line x1="26" y1="26" x2="94" y2="94" stroke="#d8d4c8" stroke-width="0.6"/>`;
+      s+=`<line x1="94" y1="26" x2="26" y2="94" stroke="#d8d4c8" stroke-width="0.6"/>`;
+    }
+    // reveal / two-tone : the accent star sits *behind* and shows through the gap
+    if(o.reveal || o.two){
+      const star=`${N[0]},${N[1]} ${NE[0]},${NE[1]} ${E[0]},${E[1]} ${SE[0]},${SE[1]} ${S[0]},${S[1]} ${SW[0]},${SW[1]} ${W[0]},${W[1]} ${NW[0]},${NW[1]}`;
+      s+=`<polygon points="${star}" fill="${o.accent}"/>`;
+    }
+    s+=tri(N,NE,E,o.fg)+tri(E,SE,S,o.fg)+tri(S,SW,W,o.fg)+tri(W,NW,N,o.fg);
+    if(o.reveal){
+      const star=`${N[0]},${N[1]} ${NE[0]},${NE[1]} ${E[0]},${E[1]} ${SE[0]},${SE[1]} ${S[0]},${S[1]} ${SW[0]},${SW[1]} ${W[0]},${W[1]} ${NW[0]},${NW[1]}`;
+      s+=`<polygon points="${star}" fill="none" stroke="${o.accent}" stroke-width="1.4" stroke-dasharray="3 3"/>`;
+    }
+    return s;
+  },
+
+  /* 3 — FLAGSHIP : a P drawn as a forward-pointing pennant on a pole */
+  flagship(o){
+    let s='';
+    if(o.grid){
+      s+=`<rect x="38" y="16" width="74" height="88" fill="none" stroke="#d8d4c8" stroke-width="0.6"/>`;
+      s+=`<line x1="43.5" y1="16" x2="43.5" y2="104" stroke="#bdb9ad" stroke-width="0.6"/>`;
+      s+=`<line x1="38" y1="22" x2="100" y2="22" stroke="#d8d4c8" stroke-width="0.6"/>`;
+      s+=`<line x1="38" y1="58" x2="100" y2="58" stroke="#d8d4c8" stroke-width="0.6"/>`;
+      s+=`<polyline points="86,22 98,40 86,58" fill="none" stroke="#c9462f" stroke-width="0.8" stroke-dasharray="2 2"/>`;
+    }
+    // pole
+    s+=`<rect x="38" y="18" width="11" height="86" rx="5.5" fill="${o.fg}"/>`;
+    // base node (the milestone you plant)
+    s+=`<circle cx="43.5" cy="104" r="0" fill="${o.fg}"/>`;
+    // pennant pointing forward
+    const flagFill = o.two ? o.accent : o.fg;
+    s+=`<path d="M49 22 L86 22 L98 40 L86 58 L49 58 Z" fill="${flagFill}"/>`;
+    if(o.reveal){
+      s+=`<polyline points="86,22 98,40 86,58" fill="none" stroke="${o.accent}" stroke-width="2" />`;
+      s+=`<polygon points="86,22 98,40 86,58" fill="${o.accent}" opacity=".2"/>`;
+    }
+    return s;
+  },
+};
+
+function svg(mark,o){
+  return `<svg viewBox="0 0 120 120" xmlns="${NS}">${MARKS[mark](o)}</svg>`;
+}
+
+const PAPER='#f6f5f1', COAL='#16171c', WHITE='#ffffff';
+
+const CONCEPTS=[
+  {
+    id:'forward', mark:'forward', name:'Forward', tag:'A roadmap that points to what\'s next.',
+    accent:'#4f46e5',
+    concept:'Left-aligned timeline bars — unmistakably a Gantt — but their right tips are tuned so the whole silhouette becomes a <b>right-pointing arrow</b>. The plan and its direction are the same object. The centre bar (the tip) is the live "next" item.',
+    craft:[
+      '<b>Dual read:</b> horizontal bars = roadmap; the peak profile = ►. You see the arrow before you\'re told.',
+      '<b>Optical tuning:</b> bar lengths step 60·80·100·80·60 so the point lands dead-centre, not metrically — the eye reads a true arrowhead.',
+      '<b>Pill caps</b> at exactly half-height keep the tips crisp at the point but soft on the back edge — premium, not sharp.',
+      '<b>Reduction:</b> remove a bar and both the arrow and the timeline collapse. Every bar is structural.'
+    ],
+  },
+  {
+    id:'northstar', mark:'northstar', name:'North Star', tag:'Alignment, drawn as the space it creates.',
+    accent:'#e0a526',
+    concept:'Four blades converge on the centre. The <b>star isn\'t drawn — it\'s the negative space</b> the aligned blades leave behind. The meaning is the construction: when the work points the same way, the guiding star appears. The north point is subtly elongated.',
+    craft:[
+      '<b>Dual read:</b> four converging blades (teams / workstreams) + an emergent four-point star (the shared goal) in the void.',
+      '<b>Negative space does the work</b> — the hero shape is the part you didn\'t draw. That\'s the conceptual move v5\'s literal star was missing.',
+      '<b>Built on a circle</b> (r45) with inner radius 23 setting the star\'s waist — a real ratio, shown in the construction panel.',
+      '<b>North asymmetry:</b> the top point reaches higher than the other three — a deliberate tension that says "this way."'
+    ],
+  },
+  {
+    id:'flagship', mark:'flagship', name:'Flagship', tag:'Plant it on what ships next.',
+    accent:'#ef5b3c',
+    concept:'A <b>P</b> rendered as a flag on a pole — and the flag is a <b>pennant pointing forward</b>. Three meanings in one stroke: the letter, the milestone you plant, and the forward motion of the swallowtail tip. The most "brand-mark" of the three — a clean monogram with an idea inside.',
+    craft:[
+      '<b>Triple read:</b> letter P · a planted flag (milestone / launch) · a forward arrow in the pennant\'s point.',
+      '<b>Shared geometry:</b> pole and flag align to one baseline grid; the pennant\'s point sits on the pole\'s optical centre line.',
+      '<b>One radius system:</b> the pole\'s cap radius = half its width, echoed nowhere else so the flag stays sharp and the pole stays soft.',
+      '<b>Reduction:</b> drop the pole and it\'s just a flag; drop the point and it\'s just a P. Together they\'re the concept.'
+    ],
+  },
+];
+
+function panelSet(cf){
+  const A=cf.accent;
+  const P=(mark,o,cap,dark)=>`<div class="panel${dark?' dark':''}"><div class="pv">${svg(mark,o)}</div><div class="cap">${cap}</div></div>`;
+  return `
+    ${P(cf.mark,{fg:COAL,bg:PAPER,grid:true}, 'CONSTRUCTION')}
+    ${P(cf.mark,{fg:COAL,bg:PAPER,accent:A,reveal:true}, 'THE IDEA')}
+    ${P(cf.mark,{fg:COAL,bg:PAPER,accent:A,two:true}, 'PRIMARY')}
+    ${P(cf.mark,{fg:PAPER,bg:COAL,accent:A,two:true}, 'REVERSED', true)}
+    ${appicon(cf)}
+    ${P(cf.mark,{fg:COAL,bg:PAPER}, 'MONO · 16PX')}
+  `;
+}
+function appicon(cf){
+  // mark knocked white out of an accent squircle
+  return `<div class="panel"><div class="pv" style="padding:0">
+    <div style="width:100%;height:100%;border-radius:22%;background:${cf.accent};display:flex;align-items:center;justify-content:center">
+      <div style="width:74%;height:74%">${svg(cf.mark,{fg:'#ffffff',bg:cf.accent})}</div>
+    </div></div><div class="cap">APP ICON</div></div>`;
+}
+
+const deck=document.getElementById('deck');
+CONCEPTS.forEach((cf,i)=>{
+  const n=String(i+1).padStart(2,'0');
+  const sec=document.createElement('section');sec.className='slide';
+  sec.innerHTML=`
+    <div class="slidehead"><span class="n">${n}</span><h2>${cf.name}</h2><span class="tag">${cf.tag}</span></div>
+    <div class="body">
+      <div class="heroPane">${svg(cf.mark,{fg:COAL,bg:PAPER})}</div>
+      <div class="info">
+        <div class="panels">${panelSet(cf)}</div>
+        <div class="concept"><span class="lbl">Concept</span><p>${cf.concept}</p></div>
+        <ul class="craft">${cf.craft.map(c=>`<li>${c}</li>`).join('')}</ul>
+      </div>
+    </div>
+    <div class="lockstrip">
+      <div class="lk">${svg(cf.mark,{fg:COAL,bg:PAPER,accent:cf.accent,two:true})}
+        <div class="wm"><span class="t1">Product</span><span class="t2">Map</span></div></div>
+      <div class="rule"></div>
+      <div class="lk">${svg(cf.mark,{fg:COAL,bg:PAPER,accent:cf.accent,two:true})}
+        <div class="horiz">Product&nbsp;<b>Map</b></div></div>
+      <span class="lockcap">stacked + horizontal lockup</span>
+    </div>`;
+  deck.appendChild(sec);
+});
+</script>
+</body>
+</html>
