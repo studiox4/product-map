@@ -15,7 +15,7 @@ const TECH_SPEC_TITLE = 'Rich markdown editor — Tech spec';
 const BRIEF_TITLE = 'Gantt roadmap — Feature brief';
 
 // From @productmap/shared DOC_TYPE_COLORS / DOC_STATUS_COLORS.
-const PRD_CHIP_BG = 'rgb(220, 235, 255)'; // #dcebff
+const PRD_CHIP_BG = 'rgb(236, 234, 251)'; // #eceafb (brand indigo action-soft)
 const TECH_SPEC_CHIP_BG = 'rgb(239, 227, 251)'; // #efe3fb
 const BRIEF_CHIP_BG = 'rgb(228, 240, 228)'; // #e4f0e4
 const DRAFT_CHIP_BG = 'rgb(237, 241, 247)'; // var(--pm-wash) light value #edf1f7 (theme sweep)
