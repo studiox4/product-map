@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Product Map — Logo Concepts 7 · Ten Forms</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  :root{--bg:#0b0c10;--ink:#eceef2;--muted:#80828c;--hair:rgba(255,255,255,.08);--paper:#f6f5f1;--coal:#16171c}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  body{font-family:'Hanken Grotesk',sans-serif;color:var(--ink);
+    background:radial-gradient(1100px 540px at 8% -10%,rgba(79,70,229,.10),transparent 60%),radial-gradient(900px 480px at 100% 0%,rgba(16,185,129,.06),transparent 55%),var(--bg);
+    min-height:100vh;padding:58px 30px 130px}
+  .wrap{max-width:1180px;margin:0 auto}
+  .nav{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
+  .nav a{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.06em;color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:999px;border:1px solid var(--hair)}
+  .nav a.on{color:#0b0c10;background:#eceef2;border-color:#eceef2}
+  .eyebrow{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);margin-bottom:18px;display:flex;gap:14px;align-items:center}
+  .eyebrow::after{content:"";height:1px;flex:1;background:var(--hair)}
+  h1{font-family:'Sora',sans-serif;font-weight:800;letter-spacing:-.03em;font-size:clamp(32px,4.6vw,56px);line-height:1.02;margin-bottom:16px}
+  h1 em{font-style:normal;color:#9aa0ff}
+  .lede{max-width:74ch;color:#b6b8c0;font-size:15.5px;line-height:1.62}
+  .lede b{color:#dfe1e8;font-weight:600}
+
+  /* the wall */
+  .wallhead{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin:46px 0 16px;display:flex;gap:14px;align-items:center}
+  .wallhead::after{content:"";height:1px;flex:1;background:var(--hair)}
+  .wall{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px}
+  @media(max-width:900px){.wall{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:560px){.wall{grid-template-columns:repeat(2,1fr)}}
+  .wc{border:1px solid var(--hair);border-radius:14px;overflow:hidden;background:var(--paper);cursor:pointer;text-decoration:none;display:block}
+  .wc .pv{aspect-ratio:1/.84;display:flex;align-items:center;justify-content:center;padding:20px}
+  .wc .pv svg{width:84px;height:84px}
+  .wc .cap{display:flex;justify-content:space-between;padding:8px 11px;border-top:1px solid var(--hair);background:#fff;font-size:12px}
+  .wc .cap .nm{font-weight:700;color:#16171c;letter-spacing:-.01em}
+  .wc .cap .no{font-family:'Space Mono',monospace;color:#9a9ca6;font-size:11px}
+
+  .slide{border:1px solid var(--hair);border-radius:24px;overflow:hidden;margin-bottom:26px;background:#0e0f14;scroll-margin-top:20px}
+  .slidehead{display:flex;align-items:baseline;gap:16px;padding:24px 30px 0}
+  .slidehead .n{font-family:'Space Mono',monospace;font-size:13px;color:#9aa0ff}
+  .slidehead h2{font-family:'Sora',sans-serif;font-weight:800;font-size:25px;letter-spacing:-.02em}
+  .slidehead .tag{color:var(--muted);font-size:14px;margin-left:auto}
+  @media(max-width:680px){.slidehead{flex-wrap:wrap}.slidehead .tag{margin-left:0;width:100%}}
+
+  .body{display:grid;grid-template-columns:1.05fr .95fr;gap:0}
+  @media(max-width:860px){.body{grid-template-columns:1fr}}
+  .heroPane{padding:26px;display:flex;align-items:center;justify-content:center;background:var(--paper);min-height:300px}
+  .heroPane svg{width:200px;height:200px;display:block}
+  .info{padding:26px 30px;display:flex;flex-direction:column;gap:16px}
+  .panels{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .panel{border:1px solid var(--hair);border-radius:11px;overflow:hidden;background:var(--paper)}
+  .panel .pv{aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;padding:13px}
+  .panel .pv svg{width:100%;height:100%}
+  .panel .cap{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.04em;color:#6c6e78;padding:6px 8px;border-top:1px solid var(--hair);background:#fff}
+  .panel.dark .pv{background:var(--coal)}
+  .panel.dark .cap{background:#1b1c22;color:#9a9ca6;border-top-color:rgba(255,255,255,.08)}
+
+  .concept{display:flex;flex-direction:column;gap:8px}
+  .concept .lbl{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#9aa0ff}
+  .concept p{font-size:13px;line-height:1.55;color:#c3c5cd}
+  .concept p b{color:#eceef2;font-weight:600}
+  .craft{list-style:none;display:flex;flex-direction:column;gap:6px}
+  .craft li{font-size:12px;line-height:1.45;color:#a9abb4;padding-left:15px;position:relative}
+  .craft li::before{content:"›";position:absolute;left:0;color:#9aa0ff;font-weight:700}
+  .craft li b{color:#dfe1e8;font-weight:600}
+
+  .variants{border-top:1px solid var(--hair);background:var(--paper);padding:16px 30px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .variants .vh{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#9aa0ff}
+  .variants .vrow{display:flex;gap:12px;flex-wrap:wrap}
+  .variants .vi{display:flex;flex-direction:column;align-items:center;gap:5px}
+  .variants .vi svg{width:48px;height:48px}
+  .variants .vi span{font-family:'Space Mono',monospace;font-size:9px;color:#8a8c95}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="nav">
+    <a href="logo-concepts-6.html">06 · Conceptual</a>
+    <a class="on" href="logo-concepts-7.html">07 · Ten Forms</a>
+    <a href="logo-concepts-5.html">05 · Product-native</a>
+    <a href="logo-concepts-1.html">01 · Foundations</a>
+  </div>
+  <div class="eyebrow">Brand exploration · v7 · ten forms to choose from</div>
+  <h1>Ten marks, one bar <em>/</em> pick the form</h1>
+  <p class="lede">Same standard as the last round — <b>designed in black, a second read before the caption, built on real geometry</b> — now across ten distinct forms so there's a genuine field to choose from: bars, blades, a monogram, a route, chevrons, a check, a fold, brackets, a letter from arrows, a coordinate. Every mark is <b>parametric</b>, so the lead options show how the same idea flexes into variations. Scan the wall, then dig into the ones that pull you.</p>
+
+  <div class="wallhead">The wall · all ten in black</div>
+  <div class="wall" id="wall"></div>
+
+  <div id="deck"></div>
+</div>
+
+<script>
+const NS='http://www.w3.org/2000/svg';
+const PAPER='#f6f5f1', COAL='#16171c';
+const f2=n=>n.toFixed(1);
+
+/* ===== mark builders — viewBox 0 0 120 120 ; o={fg,accent,bg,two,grid,reveal,...form params} ===== */
+const MARKS={
+  /* 1 FORWARD — roadmap bars whose tips form ► (param: bars, sharp) */
+  forward(o){
+    const k=o.bars||5, bh=12.5, gap=5.5, x0=26, pitch=bh+gap;
+    const totalH=k*bh+(k-1)*gap, y0=60-totalH/2, mid=(k-1)/2, maxL=76, minL=34;
+    let s='';
+    if(o.grid){s+=`<rect x="26" y="${f2(y0)}" width="80" height="${f2(totalH)}" fill="none" stroke="#bdb9ad" stroke-width=".6"/><line x1="26" y1="60" x2="106" y2="60" stroke="#bdb9ad" stroke-width=".6"/><polyline points="26,${f2(y0)} ${f2(26+maxL)},60 26,${f2(y0+totalH)}" fill="none" stroke="#c9462f" stroke-width=".8" stroke-dasharray="2 2"/>`;}
+    if(o.reveal){s+=`<polygon points="26,${f2(y0)} ${f2(26+maxL)},60 26,${f2(y0+totalH)}" fill="${o.accent}" opacity=".15"/><polyline points="26,${f2(y0)} ${f2(26+maxL)},60 26,${f2(y0+totalH)}" fill="none" stroke="${o.accent}" stroke-width="1.3" stroke-dasharray="3 3"/>`;}
+    for(let i=0;i<k;i++){const d=1-Math.abs(i-mid)/(mid||1);const len=minL+(maxL-minL)*d;const y=y0+i*pitch;
+      const fill=(o.two&&i===Math.round(mid))?o.accent:o.fg;const rx=o.sharp?2:bh/2;
+      s+=`<rect x="${x0}" y="${f2(y)}" width="${f2(len)}" height="${bh}" rx="${rx}" fill="${fill}"/>`;}
+    return s;
+  },
+  /* 2 NORTH STAR — converging blades, negative-space star (param: points, fat) */
+  northstar(o){
+    const k=o.points||4, R=46, r=o.fat?31:24, cx=60, cy=60;
+    const pt=(a,rad)=>[cx+rad*Math.cos(a),cy+rad*Math.sin(a)];
+    const tips=[],inn=[];
+    for(let i=0;i<k;i++){const a=-Math.PI/2+i*2*Math.PI/k;tips.push(pt(a,i===0?R*1.07:R));inn.push(pt(a+Math.PI/k,r));}
+    const P=p=>`${f2(p[0])},${f2(p[1])}`;
+    let s='';
+    if(o.grid){s+=`<circle cx="60" cy="60" r="${R}" fill="none" stroke="#bdb9ad" stroke-width=".6"/><circle cx="60" cy="60" r="${r}" fill="none" stroke="#d8d4c8" stroke-width=".6"/><line x1="60" y1="12" x2="60" y2="108" stroke="#d8d4c8" stroke-width=".6"/><line x1="12" y1="60" x2="108" y2="60" stroke="#d8d4c8" stroke-width=".6"/>`;}
+    let star='';for(let i=0;i<k;i++){star+=P(tips[i])+' '+P(inn[i])+' ';}
+    if(o.reveal||o.two)s+=`<polygon points="${star}" fill="${o.accent}"/>`;
+    for(let i=0;i<k;i++)s+=`<polygon points="${P(tips[i])} ${P(inn[i])} ${P(tips[(i+1)%k])}" fill="${o.fg}"/>`;
+    if(o.reveal)s+=`<polygon points="${star}" fill="none" stroke="${o.accent}" stroke-width="1.3" stroke-dasharray="3 3"/>`;
+    return s;
+  },
+  /* 3 FLAGSHIP — P as forward pennant on a pole (param: tail, nopole) */
+  flagship(o){
+    let s='';
+    if(o.grid)s+=`<rect x="38" y="16" width="74" height="88" fill="none" stroke="#d8d4c8" stroke-width=".6"/><line x1="43.5" y1="16" x2="43.5" y2="104" stroke="#bdb9ad" stroke-width=".6"/>`;
+    if(!o.nopole)s+=`<rect x="38" y="18" width="11" height="86" rx="5.5" fill="${o.fg}"/>`;
+    const fl=o.two?o.accent:o.fg, x=o.nopole?34:49;
+    const flag = o.tail==='swallow'
+      ? `M${x} 22 L92 22 L82 40 L92 58 L${x} 58 Z`
+      : `M${x} 22 L86 22 L98 40 L86 58 L${x} 58 Z`;
+    s+=`<path d="${flag}" fill="${fl}"/>`;
+    if(o.reveal)s+=`<polygon points="86,22 98,40 86,58" fill="${o.accent}" opacity=".22"/><polyline points="86,22 98,40 86,58" fill="none" stroke="${o.accent}" stroke-width="2"/>`;
+    return s;
+  },
+  /* 4 THROUGHLINE — one route through nodes, ending forward */
+  throughline(o){
+    const pts=[[16,90],[42,44],[64,72],[94,28]];
+    const d=`M${pts.map(p=>p.join(' ')).join(' L')}`;
+    let s='';
+    if(o.grid)s+=`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="#d8d4c8" stroke-width=".6"/>`;
+    s+=`<path d="${d}" fill="none" stroke="${o.fg}" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>`;
+    // arrowhead at end
+    s+=`<path d="M82 24 L96 26 L92 40" fill="none" stroke="${o.two?o.accent:o.fg}" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>`;
+    pts.slice(0,3).forEach(p=>{s+=`<circle cx="${p[0]}" cy="${p[1]}" r="6" fill="${o.two?o.accent:o.fg}" stroke="${o.bg}" stroke-width="3"/>`;});
+    if(o.reveal)s+=`<path d="M82 24 L96 26 L92 40" fill="none" stroke="${o.accent}" stroke-width="2"/>`;
+    return s;
+  },
+  /* 5 ASCEND — stacked chevrons climbing to an arrowhead */
+  ascend(o){
+    const apex=[ [60,80],[60,62],[60,44] ];
+    let s='';
+    const chev=(x,y,fill)=>`<path d="M${x-20} ${y+12} L${x} ${y-4} L${x+20} ${y+12}" fill="none" stroke="${fill}" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>`;
+    if(o.grid)s+=`<line x1="60" y1="24" x2="60" y2="92" stroke="#d8d4c8" stroke-width=".6"/>`;
+    s+=chev(60,80,o.fg)+chev(60,62,o.fg);
+    s+=chev(60,44,o.two?o.accent:o.fg);
+    // crowning arrowhead
+    s+=`<path d="M44 36 L60 22 L76 36" fill="none" stroke="${o.two?o.accent:o.fg}" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>`;
+    if(o.reveal)s+=`<path d="M44 36 L60 22 L76 36" fill="none" stroke="${o.accent}" stroke-width="2"/>`;
+    return s;
+  },
+  /* 6 CHECKPOINT — a climb that completes into a ✓ then keeps going up */
+  checkpoint(o){
+    let s='';
+    if(o.grid)s+=`<polyline points="38,54 54,72 98,22" fill="none" stroke="#d8d4c8" stroke-width=".6"/>`;
+    // ghost prior steps
+    s+=`<circle cx="20" cy="64" r="4" fill="${o.fg}" opacity=".25"/><circle cx="30" cy="62" r="4" fill="${o.fg}" opacity=".25"/>`;
+    s+=`<path d="M40 54 L54 72 L96 22" fill="none" stroke="${o.fg}" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>`;
+    // forward tip
+    s+=`<path d="M84 24 L97 21 L95 34" fill="none" stroke="${o.two?o.accent:o.fg}" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>`;
+    s+=`<circle cx="54" cy="72" r="6.5" fill="${o.two?o.accent:o.fg}" stroke="${o.bg}" stroke-width="3"/>`;
+    if(o.reveal)s+=`<path d="M40 54 L54 72 L96 22" fill="none" stroke="${o.accent}" stroke-width="2" stroke-dasharray="3 3"/>`;
+    return s;
+  },
+  /* 7 PIVOT — a folded plane turning the corner */
+  pivot(o){
+    let s='';
+    if(o.grid)s+=`<line x1="60" y1="22" x2="60" y2="98" stroke="#bdb9ad" stroke-width=".6"/><rect x="24" y="28" width="72" height="64" fill="none" stroke="#d8d4c8" stroke-width=".6"/>`;
+    // left face (front), right face (turned)
+    s+=`<path d="M26 40 L60 28 L60 84 L26 96 Z" fill="${o.fg}"/>`;
+    s+=`<path d="M60 28 L94 40 L94 96 L60 84 Z" fill="${o.two?o.accent:o.fg}" ${o.two?'':'opacity=".72"'}/>`;
+    // crease
+    s+=`<line x1="60" y1="28" x2="60" y2="84" stroke="${o.bg}" stroke-width="2.4"/>`;
+    if(o.reveal)s+=`<polyline points="60,28 84,38 60,52" fill="none" stroke="${o.accent}" stroke-width="2" stroke-dasharray="3 3"/>`;
+    return s;
+  },
+  /* 8 SCOPE — brackets framing the milestone */
+  scope(o){
+    let s='';
+    if(o.grid)s+=`<rect x="28" y="28" width="64" height="64" fill="none" stroke="#d8d4c8" stroke-width=".6"/>`;
+    s+=`<path d="M46 28 L30 28 L30 92 L46 92" fill="none" stroke="${o.fg}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>`;
+    s+=`<path d="M74 28 L90 28 L90 92 L74 92" fill="none" stroke="${o.fg}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>`;
+    s+=`<rect x="47" y="50" width="26" height="9" rx="4.5" fill="${o.fg}"/>`;
+    s+=`<rect x="47" y="64" width="18" height="9" rx="4.5" fill="${o.two?o.accent:o.fg}"/>`;
+    if(o.reveal)s+=`<rect x="44" y="46" width="32" height="32" fill="none" stroke="${o.accent}" stroke-width="1.6" stroke-dasharray="3 3" rx="4"/>`;
+    return s;
+  },
+  /* 9 PEAKS — the letter M as two rising trend-arrows */
+  peaks(o){
+    let s='';
+    if(o.grid)s+=`<rect x="26" y="32" width="68" height="62" fill="none" stroke="#d8d4c8" stroke-width=".6"/>`;
+    s+=`<polyline points="26,94 26,36 60,66 94,36 94,94" fill="none" stroke="${o.fg}" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>`;
+    // up-arrow tips on the two peaks
+    const tip=(x,fill)=>`<path d="M${x-9} 45 L${x} 34 L${x+9} 45" fill="none" stroke="${fill}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>`;
+    s+=tip(26,o.two?o.accent:o.fg)+tip(94,o.two?o.accent:o.fg);
+    if(o.reveal){s+=tip(26,o.accent)+tip(94,o.accent);}
+    return s;
+  },
+  /* 10 PLOT — a measured point with forward momentum */
+  plot(o){
+    let s='';
+    if(o.grid)s+=`<line x1="28" y1="24" x2="28" y2="94" stroke="#d8d4c8" stroke-width=".6"/><line x1="28" y1="94" x2="98" y2="94" stroke="#d8d4c8" stroke-width=".6"/>`;
+    // axes
+    s+=`<path d="M28 24 L28 92 L96 92" fill="none" stroke="${o.fg}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`;
+    // trail of prior readings
+    [[42,78],[56,66]].forEach(p=>{s+=`<circle cx="${p[0]}" cy="${p[1]}" r="4.5" fill="${o.fg}" opacity=".3"/>`;});
+    // the bet
+    s+=`<circle cx="74" cy="48" r="11" fill="${o.two?o.accent:o.fg}"/>`;
+    // momentum
+    s+=`<path d="M80 40 L92 30 M92 30 L80 30 M92 30 L92 42" fill="none" stroke="${o.fg}" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+    if(o.reveal)s+=`<path d="M62 60 L88 34" fill="none" stroke="${o.accent}" stroke-width="2" stroke-dasharray="3 3"/>`;
+    return s;
+  },
+};
+
+function svg(mark,o){return `<svg viewBox="0 0 120 120" xmlns="${NS}">${MARKS[mark]({bg:o.bg||PAPER,...o})}</svg>`;}
+
+const CONCEPTS=[
+  {id:'forward',mark:'forward',name:'Forward',tag:'A roadmap that points to next.',accent:'#4f46e5',
+   concept:'Left-aligned Gantt bars tuned so the silhouette is a <b>► arrow</b>. Plan and direction, one shape. Center bar = the live next item.',
+   craft:['<b>Dual read:</b> timeline bars + a forward arrowhead.','<b>Optical</b> 34→76→34 stepping puts the point dead-centre.','<b>Reduction:</b> remove a bar, both reads break.'],
+   variants:[{l:'4 bars',o:{bars:4}},{l:'6 bars',o:{bars:6}},{l:'sharp',o:{bars:5,sharp:true}}]},
+  {id:'northstar',mark:'northstar',name:'North Star',tag:'Alignment, as the space it makes.',accent:'#e0a526',
+   concept:'Blades converge; the <b>star is the negative space</b> they leave. When the work points one way, the goal appears. North reaches higher.',
+   craft:['<b>Dual read:</b> converging blades + emergent star.','<b>Negative space</b> is the hero — the part not drawn.','<b>Built on r46 / r24</b>, a real ratio.'],
+   variants:[{l:'4-point',o:{points:4}},{l:'6-point',o:{points:6}},{l:'8-point',o:{points:8}}]},
+  {id:'flagship',mark:'flagship',name:'Flagship',tag:'Plant it on what ships next.',accent:'#ef5b3c',
+   concept:'A <b>P</b> as a flag whose pennant <b>points forward</b>. Three reads: letter, planted milestone, forward motion.',
+   craft:['<b>Triple read:</b> P · milestone flag · forward arrow.','<b>One radius system</b> — soft pole, sharp flag.','<b>Reduction:</b> pole alone = flag; flag alone = P.'],
+   variants:[{l:'point',o:{tail:'point'}},{l:'swallowtail',o:{tail:'swallow'}},{l:'flag only',o:{nopole:true}}]},
+  {id:'throughline',mark:'throughline',name:'Throughline',tag:'One plan, idea to outcome.',accent:'#0ea5e9',
+   concept:'A single unbroken stroke threads three milestones and <b>ends pointing up-and-forward</b>. Everything connected, traceable, moving.',
+   craft:['<b>Dual read:</b> a route through nodes + a rising arrow.','<b>One continuous gesture</b> — no lifts, one plan.','Nodes knock out of the line so it reads at small size.']},
+  {id:'ascend',mark:'ascend',name:'Ascend',tag:'Phased growth, going up.',accent:'#10b981',
+   concept:'Three chevrons stacked into an <b>upward arrow</b> — momentum built from sequenced phases, crowned by the head.',
+   craft:['<b>Dual read:</b> up-arrow (value) + three phases.','Even chevron rhythm = a controlled climb, not a spike.','Top chevron accented = where you’re headed.']},
+  {id:'checkpoint',mark:'checkpoint',name:'Checkpoint',tag:'Done — and still moving.',accent:'#7c3aed',
+   concept:'A climb that resolves into a <b>checkmark</b>, then a forward tip. The universal "done," reframed as progress that keeps going.',
+   craft:['<b>Dual read:</b> a ✓ (shipped) + a rising trajectory.','Ghost steps on the left = the backlog behind you.','The long arm overshoots into an arrow — never finished.']},
+  {id:'pivot',mark:'pivot',name:'Pivot',tag:'Around the next corner.',accent:'#2563eb',
+   concept:'A flat plan-sheet <b>folded at a crease</b>, one face turned toward you. Depth, phases, and the idiom of "turning the corner."',
+   craft:['<b>Dual read:</b> a folded sheet + a forward chevron in the fold.','Two faces, one hue — light/turned, no gradients.','The crease is a knockout, so it reads in mono.']},
+  {id:'scope',mark:'scope',name:'Scope',tag:'Define the slice you ship.',accent:'#e8484f',
+   concept:'Two <b>brackets</b> frame the work in scope — the dev-native symbol for "this, precisely." The framed bars are the milestone.',
+   craft:['<b>Dual read:</b> code/scope brackets + a framed roadmap.','Bracket weight = the bars’ weight: one system.','Lower bar accented = the in-scope commitment.']},
+  {id:'peaks',mark:'peaks',name:'Peaks',tag:'The M, as two rising trends.',accent:'#f0533b',
+   concept:'The letter <b>M</b> built from straight strokes, its two peaks capped with <b>up-arrows</b>. On-name (Map) and on-message (growth).',
+   craft:['<b>Dual read:</b> letter M + double upward trend.','All straight strokes — sharp at any size, no curve risk.','Arrow caps turn a letter into a statement.']},
+  {id:'plot',mark:'plot',name:'Plot',tag:'The measured bet, with momentum.',accent:'#0d9488',
+   concept:'A point <b>plotted on two axes</b> with a trail behind and a vector ahead. Value, measured — and where it’s heading next.',
+   craft:['<b>Dual read:</b> a data point + a momentum arrow.','Faint trail = prior readings; bold node = the bet.','Reads as a chart and a decision at once.']},
+];
+
+/* ---------- the wall ---------- */
+const wall=document.getElementById('wall');
+CONCEPTS.forEach((cf,i)=>{
+  const a=document.createElement('a');a.className='wc';a.href='#c'+cf.id;
+  a.innerHTML=`<div class="pv">${svg(cf.mark,{fg:COAL})}</div>
+    <div class="cap"><span class="nm">${cf.name}</span><span class="no">${String(i+1).padStart(2,'0')}</span></div>`;
+  wall.appendChild(a);
+});
+
+/* ---------- detail slides ---------- */
+function appicon(cf){return `<div class="panel"><div class="pv" style="padding:0">
+  <div style="width:100%;height:100%;border-radius:22%;background:${cf.accent};display:flex;align-items:center;justify-content:center">
+    <div style="width:74%;height:74%">${svg(cf.mark,{fg:'#fff',bg:cf.accent})}</div></div></div><div class="cap">APP ICON</div></div>`;}
+function panel(mark,o,cap,dark){return `<div class="panel${dark?' dark':''}"><div class="pv">${svg(mark,o)}</div><div class="cap">${cap}</div></div>`;}
+
+const deck=document.getElementById('deck');
+CONCEPTS.forEach((cf,i)=>{
+  const A=cf.accent,n=String(i+1).padStart(2,'0');
+  const sec=document.createElement('section');sec.className='slide';sec.id='c'+cf.id;
+  const variants = cf.variants ? `<div class="variants"><span class="vh">Variations</span><div class="vrow">${
+     cf.variants.map(v=>`<div class="vi">${svg(cf.mark,{fg:COAL,...v.o})}<span>${v.l}</span></div>`).join('')}</div></div>`:'';
+  sec.innerHTML=`
+    <div class="slidehead"><span class="n">${n}</span><h2>${cf.name}</h2><span class="tag">${cf.tag}</span></div>
+    <div class="body">
+      <div class="heroPane">${svg(cf.mark,{fg:COAL})}</div>
+      <div class="info">
+        <div class="panels">
+          ${panel(cf.mark,{fg:COAL,grid:true},'CONSTRUCTION')}
+          ${panel(cf.mark,{fg:COAL,accent:A,reveal:true},'THE IDEA')}
+          ${panel(cf.mark,{fg:COAL,accent:A,two:true},'PRIMARY')}
+          ${panel(cf.mark,{fg:PAPER,bg:COAL,accent:A,two:true},'REVERSED',true)}
+          ${appicon(cf)}
+          ${panel(cf.mark,{fg:COAL},'MONO · 16PX')}
+        </div>
+        <div class="concept"><span class="lbl">Concept</span><p>${cf.concept}</p></div>
+        <ul class="craft">${cf.craft.map(c=>`<li>${c}</li>`).join('')}</ul>
+      </div>
+    </div>
+    ${variants}`;
+  deck.appendChild(sec);
+});
+</script>
+</body>
+</html>

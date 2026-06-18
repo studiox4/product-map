@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Product Map — Logo Concepts 5 · Product-native</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root{--bg:#0c0d11;--ink:#eceef2;--muted:#83858f;--hair:rgba(255,255,255,.08)}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  body{
+    font-family:'Hanken Grotesk',sans-serif;color:var(--ink);
+    background:
+      radial-gradient(1100px 540px at 8% -10%, rgba(79,70,229,.12), transparent 60%),
+      radial-gradient(900px 480px at 100% 0%, rgba(16,185,129,.08), transparent 55%),
+      var(--bg);
+    min-height:100vh;padding:58px 30px 130px;
+  }
+  .head{max-width:1180px;margin:0 auto 30px}
+  .nav{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
+  .nav a{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.06em;color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:999px;border:1px solid var(--hair)}
+  .nav a.on{color:#0c0d11;background:#eceef2;border-color:#eceef2}
+  .eyebrow{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);margin-bottom:18px;display:flex;gap:14px;align-items:center}
+  .eyebrow::after{content:"";height:1px;flex:1;background:var(--hair)}
+  h1{font-family:'Sora',sans-serif;font-weight:800;letter-spacing:-.03em;font-size:clamp(32px,4.6vw,56px);line-height:1.02;margin-bottom:16px}
+  h1 em{font-style:normal;color:#9aa0ff}
+  .head p{max-width:72ch;color:#b6b8c0;font-size:15.5px;line-height:1.62}
+  .head p b{color:#dfe1e8;font-weight:600}
+  .strat{max-width:1180px;margin:24px auto 44px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:780px){.strat{grid-template-columns:1fr}}
+  .strat div{border:1px solid var(--hair);border-radius:14px;padding:16px 18px;background:rgba(255,255,255,.02)}
+  .strat h4{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#9aa0ff;margin-bottom:7px}
+  .strat p{color:#a9abb4;font-size:13px;line-height:1.5}
+
+  .deck{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+  .concept{border:1px solid var(--hair);border-radius:22px;overflow:hidden;display:grid;grid-template-columns:1.15fr 1fr}
+  @media(max-width:860px){.concept{grid-template-columns:1fr}}
+  .canvas{position:relative;display:flex;flex-direction:column;gap:26px;align-items:center;justify-content:center;padding:48px 40px;min-height:330px}
+  .canvas .hero{width:120px;height:120px;display:block}
+  .lock{display:flex;align-items:center;gap:16px}
+  .lock .li{width:44px;height:44px;flex:none}
+  .lock .wm{line-height:1;white-space:nowrap}
+  .proof{display:flex;align-items:center;gap:18px;opacity:.9}
+  .proof .ps{display:flex;align-items:center;gap:7px}
+  .proof span.lbl{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)}
+  .badge{position:absolute;top:16px;left:18px;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--muted)}
+
+  .pitch{padding:34px 34px;border-left:1px solid var(--hair);display:flex;flex-direction:column;gap:14px;background:#0e0f14}
+  @media(max-width:860px){.pitch{border-left:none;border-top:1px solid var(--hair)}}
+  .pitch .pname{font-family:'Sora',sans-serif;font-weight:800;font-size:23px;letter-spacing:-.02em}
+  .pitch .ptag{color:#9aa0ff;font-size:13.5px;font-weight:600;margin-top:-6px}
+  .pitch .row{display:flex;gap:10px;font-size:13.5px;line-height:1.5}
+  .pitch .row .k{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);min-width:78px;padding-top:2px;flex:none}
+  .pitch .row .v{color:#c3c5cd}
+  .pitch .row .v b{color:#eceef2;font-weight:600}
+  .chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:4px}
+  .chips i{width:22px;height:22px;border-radius:6px;border:1px solid rgba(255,255,255,.14);display:block}
+</style>
+</head>
+<body>
+  <header class="head">
+    <div class="nav">
+      <a href="logo-concepts-1.html">01 · Foundations</a>
+      <a href="logo-concepts-2.html">02 · Color</a>
+      <a href="logo-concepts-3.html">03 · Designer</a>
+      <a href="logo-concepts-4.html">04 · Map (parked)</a>
+      <a class="on" href="logo-concepts-5.html">05 · Product-native</a>
+    </div>
+    <div class="eyebrow">Brand exploration · v5 · repositioned</div>
+    <h1>Not a map company <em>/</em> a planning tool</h1>
+    <p>Reset. Product Map isn't about geography — it's where teams <b>design projects, stay aligned, document decisions, see what's next, and organize their own roadmaps and Gantt charts</b>. So these marks drop the location-pin and speak the real language: sequencing, priority, alignment, progress, the system of work. Concept 01 brings back your original Gantt-of-PM idea — refined — because for this product it's the most honest.</p>
+  </header>
+
+  <div class="strat">
+    <div><h4>The job to be done</h4><p>Make the messy plan legible: what we're building, in what order, why it matters, and whether we agree. The logo should feel like clarity, not coordinates.</p></div>
+    <div><h4>Visual vocabulary</h4><p>Bars, lanes, nodes, axes, checkpoints, a north star. Structure and sequence — the shapes of planning — not pins and terrain.</p></div>
+    <div><h4>How to choose</h4><p>Which single idea do you want to own? <b style="color:#cdd0d8">Roadmap</b> (sequence), <b style="color:#cdd0d8">North Star</b> (alignment), or <b style="color:#cdd0d8">Value Map</b> (priority) are the three strongest bets.</p></div>
+  </div>
+
+  <main class="deck" id="deck"></main>
+
+<script>
+const NS='http://www.w3.org/2000/svg';
+
+const MARKS = {
+  /* 1 — ROADMAP: staggered Gantt timeline bars (the original PM-as-Gantt idea, cleaned up) */
+  roadmap(p){return `
+    <rect x="14" y="20" width="58" height="13" rx="6.5" fill="${p.c}"/>
+    <rect x="30" y="38" width="42" height="13" rx="6.5" fill="${p.c2}"/>
+    <rect x="14" y="56" width="34" height="13" rx="6.5" fill="${p.c}"/>
+    <rect x="40" y="74" width="46" height="13" rx="6.5" fill="${p.c2}"/>`;},
+
+  /* 2 — NOW/NEXT/LATER: progress lanes with a "now" line */
+  lanes(p){const rows=[[24,40],[47,58],[70,24]];let s='';
+    rows.forEach(([y,fw])=>{s+=`<rect x="14" y="${y}" width="72" height="13" rx="6.5" fill="${p.track}"/>
+      <rect x="14" y="${y}" width="${fw}" height="13" rx="6.5" fill="${p.c}"/>`;});
+    return s+`<line x1="46" y1="16" x2="46" y2="91" stroke="${p.ink}" stroke-width="2.6" stroke-dasharray="2.5 4.5" stroke-linecap="round"/>`;},
+
+  /* 3 — VALUE MAP: a 2x2 priority grid with the high-value bet plotted */
+  valuemap(p){return `
+    <rect x="15" y="15" width="70" height="70" rx="11" fill="none" stroke="${p.ink}" stroke-width="3"/>
+    <line x1="50" y1="17" x2="50" y2="83" stroke="${p.ink}" stroke-width="1.8" opacity=".45"/>
+    <line x1="17" y1="50" x2="83" y2="50" stroke="${p.ink}" stroke-width="1.8" opacity=".45"/>
+    <circle cx="65" cy="34" r="9" fill="${p.c}"/>
+    <circle cx="37" cy="62" r="3.6" fill="${p.ink}" opacity=".3"/>
+    <circle cx="60" cy="66" r="3.6" fill="${p.ink}" opacity=".3"/>
+    <circle cx="34" cy="38" r="3.6" fill="${p.ink}" opacity=".3"/>`;},
+
+  /* 4 — NORTH STAR: the aligning star / guiding metric */
+  star(p){return `
+    <path d="M50 12 L57.5 42.5 L88 50 L57.5 57.5 L50 88 L42.5 57.5 L12 50 L42.5 42.5 Z" fill="${p.c}"/>
+    <circle cx="50" cy="50" r="4.5" fill="${p.bg}"/>`;},
+
+  /* 5 — CONVERGE: separate streams aligning to one outcome */
+  converge(p){return `
+    <line x1="13" y1="24" x2="68" y2="50" stroke="${p.c2}" stroke-width="5.5" stroke-linecap="round"/>
+    <line x1="13" y1="50" x2="68" y2="50" stroke="${p.c2}" stroke-width="5.5" stroke-linecap="round"/>
+    <line x1="13" y1="76" x2="68" y2="50" stroke="${p.c2}" stroke-width="5.5" stroke-linecap="round"/>
+    <circle cx="73" cy="50" r="11" fill="${p.c}"/>`;},
+
+  /* 6 — CONSTELLATION: the connected system of features & docs */
+  graph(p){
+    const N={a:[24,30],b:[50,18],c:[72,40],d:[40,60],e:[68,74]};
+    const E=[['a','b'],['b','c'],['a','d'],['c','d'],['c','e'],['d','e']];
+    let s=E.map(([x,y])=>`<line x1="${N[x][0]}" y1="${N[x][1]}" x2="${N[y][0]}" y2="${N[y][1]}" stroke="${p.c2}" stroke-width="2.4"/>`).join('');
+    s+=`<circle cx="24" cy="30" r="6" fill="${p.node}"/>`;
+    s+=`<circle cx="50" cy="18" r="6" fill="${p.node}"/>`;
+    s+=`<circle cx="40" cy="60" r="6" fill="${p.node}"/>`;
+    s+=`<circle cx="68" cy="74" r="6" fill="${p.node}"/>`;
+    s+=`<circle cx="72" cy="40" r="10" fill="${p.c}"/>`;
+    return s;},
+
+  /* 7 — ASCEND: the value curve climbing */
+  ascend(p){return `
+    <rect x="15" y="60" width="13" height="25" rx="3" fill="${p.c2}"/>
+    <rect x="33" y="48" width="13" height="37" rx="3" fill="${p.c2}"/>
+    <rect x="51" y="35" width="13" height="50" rx="3" fill="${p.c2}"/>
+    <rect x="69" y="21" width="13" height="64" rx="3" fill="${p.c2}"/>
+    <path d="M18 55 L40 44 L58 31 L80 17" fill="none" stroke="${p.c}" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M80 17 L69 17 M80 17 L80 28" fill="none" stroke="${p.c}" stroke-width="4.5" stroke-linecap="round"/>`;},
+
+  /* 8 — CHECKPOINTS: done / now / next on a single track */
+  checkpoints(p){return `
+    <line x1="18" y1="58" x2="82" y2="58" stroke="${p.track}" stroke-width="6" stroke-linecap="round"/>
+    <line x1="18" y1="58" x2="50" y2="58" stroke="${p.c}" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="18" cy="58" r="7" fill="${p.c}"/>
+    <circle cx="50" cy="58" r="8.5" fill="${p.bg}" stroke="${p.c}" stroke-width="4"/>
+    <circle cx="82" cy="58" r="6" fill="${p.track}"/>
+    <rect x="80.5" y="28" width="3" height="24" rx="1.5" fill="${p.ink}"/>
+    <path d="M83.5 29 L97 33.5 L83.5 38 Z" fill="${p.c2}"/>`;},
+};
+
+const CONCEPTS = [
+  {
+    id:'roadmap', mark:'roadmap', name:'Roadmap', tag:'Your original idea — done right.',
+    stageBg:'linear-gradient(180deg,#f7f7fd,#eef0fa)', ink:'#1a1b29',
+    pal:{c:'#4f46e5', c2:'#818cf8', ink:'#1a1b29'},
+    wm:{font:"'Sora',sans-serif",w:800,size:30,sp:'-.03em',P:'#4f46e5',M:'#4f46e5'},
+    idea:'Staggered timeline bars — the Gantt chart itself, abstracted. The eye reads "P then M" while also reading "a plan laid out over time."',
+    why:'It IS the product. No metaphor to decode — anyone who has ever run a roadmap recognizes it instantly. Tiles cleanly into an app icon and animates beautifully (bars sliding into place on load).',
+    color:'One indigo, two weights — confident SaaS, easy to theme, prints in a single ink. The lighter bars read as "planned / upcoming."',
+    use:'Primary mark · app icon · loaders',
+    chips:['#4f46e5','#818cf8','#1a1b29']
+  },
+  {
+    id:'lanes', mark:'lanes', name:'Now / Next / Later', tag:'The whole roadmap in one glyph.',
+    stageBg:'linear-gradient(180deg,#f4faf7,#e9f3ee)', ink:'#10241d',
+    pal:{c:'#0ea371', c2:'#0ea371', track:'#cfe6dd', ink:'#10241d'},
+    wm:{font:"'Sora',sans-serif",w:800,size:30,sp:'-.03em',P:'#0ea371',M:'#10241d'},
+    idea:'Three progress lanes at different completion, sliced by a dashed "now" line. The exact mental model of Now / Next / Later planning.',
+    why:'Directly answers "what\'s next?" — the question your product exists to answer. The now-line is a memorable, ownable detail and a natural live element in-product (it can actually move).',
+    color:'Emerald progress on a muted track = momentum without alarm. Green reads "on track," which is the feeling you\'re selling.',
+    use:'Roadmap views · status · marketing',
+    chips:['#0ea371','#cfe6dd','#10241d']
+  },
+  {
+    id:'valuemap', mark:'valuemap', name:'Value Map', tag:'Priority, plotted.',
+    stageBg:'linear-gradient(180deg,#f6f7fa,#eceef4)', ink:'#12182a',
+    pal:{c:'#2563eb', ink:'#12182a'},
+    wm:{font:"'DM Sans',sans-serif",w:700,size:30,sp:'-.035em',P:'#2563eb',M:'#12182a'},
+    idea:'A 2×2 prioritization grid — value vs effort — with the high-value bet plotted bold and the rest of the backlog faded. Literally "mapping" the product.',
+    why:'This is the OTHER honest reading of "map": the strategy matrix every PM lives in. Smart, a little insider, and instantly says "we help you decide what matters" — not just track tasks.',
+    color:'Graphite frame for rigor, one electric-blue dot for the decision. The single bright point is where the eye lands — exactly the bet you should ship.',
+    use:'Strategy / prioritization brand',
+    chips:['#12182a','#2563eb','#9aa6bd']
+  },
+  {
+    id:'star', mark:'star', name:'North Star', tag:'One thing the team points at.',
+    stageBg:'radial-gradient(120% 130% at 50% 20%, #182142, #0a0e1f 70%)', ink:'#e9ecf7', dark:true,
+    pal:{c:'#f6b417', bg:'#0a0e1f', ink:'#e9ecf7'},
+    wm:{font:"'Sora',sans-serif",w:800,size:30,sp:'-.03em',P:'#f6b417',M:'#e9ecf7'},
+    idea:'A clean four-point star — the north-star metric / guiding outcome that keeps a team aligned. Simple enough to sit beside the wordmark forever.',
+    why:'"Alignment" and "what matters" are abstract — a north star makes them a single, optimistic symbol. Reads as ambition and focus, the emotional core of planning software. Ages slowly.',
+    color:'Warm gold on deep night sky — the literal north-star palette. The dark default makes it premium and lets it glow in product chrome.',
+    use:'Aspirational brand · dark UI · splash',
+    chips:['#f6b417','#0a0e1f','#e9ecf7']
+  },
+  {
+    id:'converge', mark:'converge', name:'Converge', tag:'Many people, one outcome.',
+    stageBg:'linear-gradient(180deg,#f6f4fc,#ece8f8)', ink:'#181527',
+    pal:{c:'#6d28d9', c2:'#a78bfa', ink:'#181527'},
+    wm:{font:"'Sora',sans-serif",w:800,size:30,sp:'-.03em',P:'#6d28d9',M:'#181527'},
+    idea:'Three separate streams resolving into one node. Teams, threads, and docs aligning on a single agreed point.',
+    why:'Names the hardest part of the job — getting everyone pointed the same way. The motion is built in (streams flowing to a hub), so it animates and signals "alignment" without a single word.',
+    color:'Deep violet anchor, soft lilac streams — the streams are clearly secondary, the agreement is the hero. Distinct from the blue/green crowd.',
+    use:'Collaboration / alignment story',
+    chips:['#6d28d9','#a78bfa','#181527']
+  },
+  {
+    id:'graph', mark:'graph', name:'Constellation', tag:'The product as a connected system.',
+    stageBg:'radial-gradient(120% 130% at 60% 20%, #10202b, #0a0f15 70%)', ink:'#e8f1f6', dark:true,
+    pal:{c:'#22d3ee', c2:'#2c4a5a', node:'#5fd0e6', bg:'#0a0f15', ink:'#e8f1f6'},
+    wm:{font:"'DM Sans',sans-serif",w:700,size:30,sp:'-.035em',P:'#22d3ee',M:'#e8f1f6'},
+    idea:'A node graph — features, docs, and decisions linked, with one focal node lit. The map is a network, not a place.',
+    why:'Captures the "everything connected, traceable" promise: a decision links to a doc links to a feature. Feels technical and modern (Linear / graph-DB energy) and scales to an animated hero.',
+    color:'Cyan focal node on near-black with dim edges — the lit node is the thing you\'re looking at now; the dim web is context. Reads as "intelligent."',
+    use:'Technical / data brand · dark UI',
+    chips:['#22d3ee','#0a0f15','#e8f1f6']
+  },
+  {
+    id:'ascend', mark:'ascend', name:'Ascend', tag:'The value, going up and to the right.',
+    stageBg:'linear-gradient(180deg,#f2f9f8,#e6f2ef)', ink:'#0e1f29',
+    pal:{c:'#0ea5e9', c2:'#7fe3cb', ink:'#0e1f29'},
+    wm:{font:"'Sora',sans-serif",w:800,size:30,sp:'-.03em',P:'#0ea5e9',M:'#0e1f29'},
+    idea:'A value curve climbing over its phases — bars as the work, the line as the outcome it compounds into, capped with an upward arrow.',
+    why:'Answers "what\'s the value of it?" head-on. Optimistic, universally legible as growth, and ties the planning (bars) to the payoff (line) in one picture — the argument for the product, drawn.',
+    color:'Mint bars (the effort) under a sky-blue rising line (the result) — cool, calm, credible. The arrow is the only thing pointing, so the eye follows it up.',
+    use:'Outcome / ROI messaging · decks',
+    chips:['#0ea5e9','#7fe3cb','#0e1f29']
+  },
+  {
+    id:'checkpoints', mark:'checkpoints', name:'Checkpoints', tag:'Done, now, next — at a glance.',
+    stageBg:'linear-gradient(180deg,#faf7ff,#f1ecfb)', ink:'#1d1530',
+    pal:{c:'#7c3aed', c2:'#b6e018', track:'#e6def5', ink:'#1d1530'},
+    wm:{font:"'Sora',sans-serif",w:800,size:30,sp:'-.03em',P:'#7c3aed',M:'#1d1530'},
+    idea:'A single track with three states — a filled "done," a ringed "now," and a flagged "next." Milestones and momentum in one line.',
+    why:'The simplest possible answer to "where are we and what\'s next?" Linear, friendly, and obvious at a glance. The flag gives it a forward lean — there\'s always a next thing.',
+    color:'Violet progress with a lime flag for "next" — the one acid pop pulls the eye to the future, which is where you want planners looking.',
+    use:'Progress / status · changelog · app',
+    chips:['#7c3aed','#b6e018','#1d1530']
+  },
+];
+
+function svgEl(markName,pal){
+  return `<svg viewBox="0 0 100 100" width="100%" height="100%" xmlns="${NS}">${MARKS[markName](pal)}</svg>`;
+}
+function wordmark(cf){
+  const w=cf.wm;
+  const style=`font-family:${w.font};font-weight:${w.w};font-size:${w.size}px;letter-spacing:${w.sp};line-height:1`;
+  return `<div class="wm" style="${style}">
+     <span style="color:${w.P}">P</span><span style="color:${cf.ink}">roduct&nbsp;</span><span style="color:${w.M}">M</span><span style="color:${cf.ink}">ap</span></div>`;
+}
+
+const deck=document.getElementById('deck');
+CONCEPTS.forEach((cf,i)=>{
+  const sec=document.createElement('section');sec.className='concept';
+  const num=String(i+1).padStart(2,'0');
+  const sizes=[[30,'30'],[20,'20'],[14,'14 · favicon']];
+  sec.innerHTML=`
+    <div class="canvas" style="background:${cf.stageBg}">
+      <span class="badge">${num} / ${cf.name.toUpperCase()}</span>
+      <div class="hero">${svgEl(cf.mark,cf.pal)}</div>
+      <div class="lock"><div class="li">${svgEl(cf.mark,cf.pal)}</div>${wordmark(cf)}</div>
+      <div class="proof">
+        ${sizes.map(([px,lbl])=>`<div class="ps"><span style="width:${px}px;height:${px}px;display:inline-block">${svgEl(cf.mark,cf.pal)}</span><span class="lbl">${lbl}</span></div>`).join('')}
+      </div>
+    </div>
+    <div class="pitch">
+      <div class="pname">${cf.name}</div>
+      <div class="ptag">${cf.tag}</div>
+      <div class="row"><span class="k">Idea</span><span class="v">${cf.idea}</span></div>
+      <div class="row"><span class="k">Why smart</span><span class="v">${cf.why}</span></div>
+      <div class="row"><span class="k">Color</span><span class="v">${cf.color}</span></div>
+      <div class="row"><span class="k">Best for</span><span class="v"><b>${cf.use}</b></span></div>
+      <div class="chips">${cf.chips.map(h=>`<i style="background:${h}"></i>`).join('')}</div>
+    </div>`;
+  deck.appendChild(sec);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Product Map — Logo Concepts 3 · Designer Takes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Sora:wght@600;700;800&family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root{--bg:#0d0e12;--ink:#e9e9ea;--muted:#83858f;--hair:rgba(255,255,255,.08)}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-font-smoothing:antialiased}
+  body{
+    font-family:'Hanken Grotesk',sans-serif;color:var(--ink);
+    background:
+      radial-gradient(1100px 540px at 8% -10%, rgba(99,102,241,.10), transparent 60%),
+      radial-gradient(900px 480px at 100% 0%, rgba(45,212,191,.07), transparent 55%),
+      var(--bg);
+    min-height:100vh;padding:60px 30px 120px;
+  }
+  .head{max-width:1240px;margin:0 auto 46px}
+  .nav{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
+  .nav a{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.06em;color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:999px;border:1px solid var(--hair)}
+  .nav a.on{color:#0d0e12;background:#e9e9ea;border-color:#e9e9ea}
+  .eyebrow{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);margin-bottom:18px;display:flex;gap:14px;align-items:center}
+  .eyebrow::after{content:"";height:1px;flex:1;background:var(--hair)}
+  h1{font-family:'Sora',sans-serif;font-weight:800;letter-spacing:-.03em;font-size:clamp(30px,4.4vw,52px);line-height:1.02;margin-bottom:14px}
+  h1 em{font-style:normal;color:#9aa0ff}
+  .head p{max-width:66ch;color:#b6b8c0;font-size:15.5px;line-height:1.6}
+
+  .grid{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:repeat(2,1fr);gap:22px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+
+  .dcard{border-radius:20px;overflow:hidden;border:1px solid var(--hair);display:flex;flex-direction:column;min-height:430px}
+  .dstage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;padding:46px 36px;position:relative}
+  .dstage .mark{width:100px;height:100px}
+  .dlock{display:flex;align-items:center;gap:14px}
+  .dlock .wm{line-height:1;white-space:nowrap}
+  .dmeta{padding:18px 22px 20px;border-top:1px solid rgba(128,128,128,.18)}
+  .dwho{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px}
+  .dwho .who{font-weight:800;font-size:15px;letter-spacing:-.01em}
+  .dwho .era{font-family:'Space Mono',monospace;font-size:11px;color:#9aa0ad}
+  .dphil{font-size:13px;line-height:1.55;color:#aeb0ba}
+  .dphil b{color:#dfe1e8;font-weight:600}
+</style>
+</head>
+<body>
+  <header class="head">
+    <div class="nav">
+      <a href="logo-concepts-1.html">01 · Foundations</a>
+      <a href="logo-concepts-2.html">02 · Color Variants</a>
+      <a class="on" href="logo-concepts-3.html">03 · Designer Takes</a>
+    </div>
+    <div class="eyebrow">Brand exploration · v3</div>
+    <h1>If they designed it <em>/</em> eight master takes</h1>
+    <p>Same brief — <b style="color:#cfd2da">P + M as a Gantt chart</b> — run through eight legendary design minds. Each keeps the bar-monogram idea but bends it to that designer's philosophy: Rand's primary-color wit, Bass's cut-paper warmth, Vignelli's rational grid, Leader's hidden arrow, Draplin's heavy build, Scher's typographic shout, Bierut's single smart idea, Janoff's friendly notch.</p>
+  </header>
+
+  <main class="grid" id="grid"></main>
+
+<script>
+const P=[[1,1,1,0],[1,0,0,1],[1,1,1,1],[1,0,0,0],[1,0,0,0],[1,0,0,0],[1,0,0,0]];
+const M=[[1,0,0,0,1],[1,1,0,1,1],[1,0,1,0,1],[1,0,1,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1]];
+const CELL=12,GAPV=2,GAP_LETTERS=1.4;
+function runs(r){const o=[];let i=0;while(i<r.length){if(r[i]){let s=i;while(i<r.length&&r[i])i++;o.push([s,i-s]);}else i++;}return o;}
+const NS='http://www.w3.org/2000/svg';
+function rect(x,y,w,h,rx,fill,extra){const r=document.createElementNS(NS,'rect');r.setAttribute('x',x);r.setAttribute('y',y);r.setAttribute('width',w);r.setAttribute('height',h);r.setAttribute('rx',rx);r.setAttribute('fill',fill);if(extra)for(const k in extra)r.setAttribute(k,extra[k]);return r;}
+
+function buildMark(svg,cfg){
+  const pCols=P[0].length,rows=P.length;
+  const totalCols=pCols+GAP_LETTERS+M[0].length;
+  const W=totalCols*CELL,H=rows*CELL;
+  const pad=cfg.tile?CELL*1.1:(cfg.badge?CELL*0.7:0);
+  const VBW=W+pad*2,VBH=H+pad*2;
+  svg.setAttribute('viewBox',`0 0 ${VBW} ${VBH}`);svg.innerHTML='';
+  let uid='u'+cfg.id;
+
+  // glow filter (optional)
+  if(cfg.glow){
+    const defs=document.createElementNS(NS,'defs');
+    const f=document.createElementNS(NS,'filter');f.id=uid+'g';
+    f.setAttribute('x','-40%');f.setAttribute('y','-40%');f.setAttribute('width','180%');f.setAttribute('height','180%');
+    const b=document.createElementNS(NS,'feGaussianBlur');b.setAttribute('stdDeviation','1.1');b.setAttribute('result','b');
+    const m=document.createElementNS(NS,'feMerge');['b','SourceGraphic'].forEach(n=>{const mn=document.createElementNS(NS,'feMergeNode');mn.setAttribute('in',n);m.appendChild(mn);});
+    f.appendChild(b);f.appendChild(m);defs.appendChild(f);svg.appendChild(defs);
+  }
+
+  // background tile / badge
+  if(cfg.tile)svg.appendChild(rect(0,0,VBW,VBH,VBW*(cfg.tileRound??0.2),cfg.tile,cfg.tileStroke?{stroke:cfg.tileStroke,'stroke-width':3}:null));
+  if(cfg.badge){const c=document.createElementNS(NS,'circle');c.setAttribute('cx',VBW/2);c.setAttribute('cy',VBH/2);c.setAttribute('r',Math.min(VBW,VBH)/2-1);c.setAttribute('fill',cfg.badge);svg.appendChild(c);}
+
+  const gap = cfg.thick?0.5:GAPV;
+  const barH=CELL-gap;
+  const radius = cfg.corner==='square'?1.5 : cfg.corner==='soft'?barH*0.3 : barH/2;
+  let runIdx=0;
+  function draw(matrix,off,solid){
+    matrix.forEach((row,ri)=>runs(row).forEach(([s,l])=>{
+      let color = solid;
+      if(cfg.colors){color=cfg.colors[runIdx%cfg.colors.length];}
+      runIdx++;
+      const r=rect(pad+(off+s)*CELL, pad+ri*CELL+gap/2, l*CELL-gap, barH, radius, color,
+        cfg.outline?{stroke:cfg.outline,'stroke-width':2.2}:null);
+      if(cfg.glow)r.setAttribute('filter',`url(#${uid}g)`);
+      svg.appendChild(r);
+    }));
+  }
+  draw(P,0,cfg.p);
+  draw(M,pCols+GAP_LETTERS,cfg.m);
+
+  // Bierut: single red "today" marker line through the chart
+  if(cfg.marker){
+    const mx=pad+(pCols+GAP_LETTERS-0.7)*CELL;
+    svg.appendChild(rect(mx,pad-CELL*0.3,CELL*0.42,H+CELL*0.6,CELL*0.21,cfg.marker));
+  }
+  // Janoff: circular notch bitten from the top-right bar
+  if(cfg.notch){
+    const c=document.createElementNS(NS,'circle');
+    c.setAttribute('cx',pad+(pCols-0.15)*CELL);c.setAttribute('cy',pad+CELL*0.5+gap/2);
+    c.setAttribute('r',CELL*0.62);c.setAttribute('fill',cfg.notch);svg.appendChild(c);
+  }
+  // Leader (FedEx): negative-space arrow tucked into the M's right side
+  if(cfg.arrow){
+    const ax=pad+(pCols+GAP_LETTERS+M[0].length-0.2)*CELL;
+    const ay=pad+H*0.5;const s=CELL*1.5;
+    const tri=document.createElementNS(NS,'polygon');
+    tri.setAttribute('points',`${ax-s},${ay-s} ${ax+s*0.5},${ay} ${ax-s},${ay+s}`);
+    tri.setAttribute('fill',cfg.arrow);svg.appendChild(tri);
+  }
+}
+
+function card(cfg){
+  const el=document.createElement('section');el.className='dcard';
+  const wmStyle=`font-family:${cfg.wmFont};font-weight:${cfg.wmWeight||800};font-size:${cfg.wmSize||30}px;letter-spacing:${cfg.wmSpacing||'-.03em'};${cfg.wmTransform?`text-transform:${cfg.wmTransform};`:''}`;
+  el.innerHTML=`
+    <div class="dstage" style="background:${cfg.bg}">
+      <svg class="mark"></svg>
+      <div class="dlock"><div class="wm" style="${wmStyle}">
+        <span style="color:${cfg.wmP||cfg.p}">P</span><span style="color:${cfg.ink}">roduct&nbsp;</span><span style="color:${cfg.wmM||cfg.m}">M</span><span style="color:${cfg.ink}">ap</span>
+      </div></div>
+    </div>
+    <div class="dmeta">
+      <div class="dwho"><span class="who">${cfg.who}</span><span class="era">${cfg.era}</span></div>
+      <div class="dphil">${cfg.phil}</div>
+    </div>`;
+  buildMark(el.querySelector('.mark'),cfg);
+  return el;
+}
+
+const TAKES=[
+  {
+    id:'rand',who:'Paul Rand',era:'IBM · UPS · ABC',
+    bg:'#f4f1e6',ink:'#16140f',p:'#16140f',m:'#16140f',
+    colors:['#e3120b','#16140f','#ffd400','#16140f','#1f5fff','#16140f','#16140f','#e3120b','#16140f','#1f5fff','#16140f','#16140f','#16140f','#16140f'],
+    wmFont:"'DM Sans',sans-serif",wmWeight:700,wmP:'#e3120b',wmM:'#1f5fff',
+    phil:'<b>Reduce, then add wit.</b> Bauhaus primaries — red, yellow, blue, black — turn the timeline into a playful, geometric game. Simple enough to survive being shrunk to a fax.'
+  },
+  {
+    id:'bass',who:'Saul Bass',era:'AT&T · Continental · Kleenex',
+    bg:'#ece3cf',ink:'#241f1a',p:'#f4ecda',m:'#f4ecda',tile:'#d1431f',tileRound:0.42,
+    colors:['#f4ecda'],corner:'pill',
+    wmFont:"'Hanken Grotesk',sans-serif",wmWeight:800,wmP:'#d1431f',wmM:'#2f7d6b',
+    phil:'<b>Cut-paper warmth, one bold container.</b> The bars become light knocked out of a hand-cut disc — mid-century, human, instantly a stamp. The circle does the holding so the mark stays calm.'
+  },
+  {
+    id:'vignelli',who:'Massimo Vignelli',era:'Knoll · American Airlines · MTA',
+    bg:'#f3f3f1',ink:'#111111',p:'#d51f26',m:'#111111',corner:'square',
+    wmFont:"'Hanken Grotesk',sans-serif",wmWeight:800,wmTransform:'uppercase',wmSpacing:'-.01em',wmP:'#d51f26',wmM:'#111111',
+    phil:'<b>If you can design one thing well, you can design anything.</b> Two colors, square corners, rigid grid — no decoration survives. Red P, black M, pure rational timeline.'
+  },
+  {
+    id:'leader',who:'Lindon Leader',era:'FedEx',
+    bg:'#ffffff',ink:'#2a0a4a',p:'#4d148c',m:'#4d148c',arrow:'#ff6600',
+    wmFont:"'Sora',sans-serif",wmWeight:800,wmP:'#4d148c',wmM:'#ff6600',
+    phil:'<b>Hide the idea in the negative space.</b> Forward motion is the product — so an arrow is tucked into the bars on the right. You feel "progress" before you consciously spot it.'
+  },
+  {
+    id:'draplin',who:'Aaron Draplin',era:'Field Notes · DDC',
+    bg:'#13262f',ink:'#f3ead2',p:'#f3ead2',m:'#f3ead2',tile:'#0e1d24',tileRound:0.16,
+    colors:['#ff5a1f','#f3ead2','#f3ead2','#ff5a1f','#f3ead2','#f3ead2','#f3ead2','#ff5a1f','#f3ead2','#f3ead2','#f3ead2','#f3ead2','#f3ead2','#f3ead2'],
+    thick:true,corner:'soft',
+    wmFont:"'Archivo Black',sans-serif",wmWeight:400,wmSpacing:'-.02em',wmSize:28,wmP:'#ff5a1f',wmM:'#f3ead2',
+    phil:'<b>Build it like a tank.</b> Thick bars, no daylight between them, packed into a workwear badge. Heavy, honest, reads from across the parking lot. Burnt orange does the talking.'
+  },
+  {
+    id:'scher',who:'Paula Scher',era:'Citi · Public Theater · Windows',
+    bg:'#111111',ink:'#f5f000',p:'#f5f000',m:'#21d07a',
+    colors:['#f5f000','#f5f000','#f5f000','#f5f000','#f5f000','#f5f000','#f5f000','#21d07a','#21d07a','#21d07a','#21d07a','#21d07a','#21d07a','#21d07a'],
+    glow:false,corner:'pill',
+    wmFont:"'Archivo Black',sans-serif",wmWeight:400,wmSize:30,wmSpacing:'-.03em',wmP:'#f5f000',wmM:'#21d07a',
+    phil:'<b>Type is the image — make it loud.</b> The bars stop whispering and shout in acid yellow and electric green on black. The monogram IS the poster; no quiet mode.'
+  },
+  {
+    id:'bierut',who:'Michael Bierut',era:'Pentagram · Mastercard · Hillary',
+    bg:'#fbfbf9',ink:'#101114',p:'#101114',m:'#101114',marker:'#e8482b',corner:'pill',
+    wmFont:"'Sora',sans-serif",wmWeight:700,wmP:'#101114',wmM:'#101114',
+    phil:'<b>One idea, told plainly.</b> The whole thing is monochrome except a single red "today" line slicing the timeline — the one moment that matters on any roadmap. Restraint is the concept.'
+  },
+  {
+    id:'janoff',who:'Rob Janoff',era:'Apple',
+    bg:'#f4f4f6',ink:'#1d1d1f',p:'#5b6470',m:'#5b6470',notch:'#f4f4f6',corner:'pill',
+    wmFont:"'DM Sans',sans-serif",wmWeight:700,wmSpacing:'-.04em',wmP:'#1d1d1f',wmM:'#1d1d1f',
+    phil:'<b>Friendly, with a bite.</b> Soft graphite bars, fully rounded, and a single circular notch nipped from the top bar — the human, approachable detail that makes a tech mark feel kind.'
+  },
+];
+
+const grid=document.getElementById('grid');
+TAKES.forEach(c=>grid.appendChild(card(c)));
+</script>
+</body>
+</html>

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Product Map — Logo Concepts 12 · PM from bars</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  :root{--bg:#0b0c10;--ink:#eceef2;--muted:#80828c;--hair:rgba(255,255,255,.08);--paper:#f6f5f1;--coal:#16171c}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  body{font-family:'Hanken Grotesk',sans-serif;color:var(--ink);
+    background:radial-gradient(1100px 540px at 8% -10%,rgba(79,70,229,.11),transparent 60%),radial-gradient(900px 480px at 100% 0%,rgba(129,140,248,.07),transparent 55%),var(--bg);
+    min-height:100vh;padding:58px 30px 130px}
+  .wrap{max-width:1140px;margin:0 auto}
+  .nav{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
+  .nav a{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.06em;color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:999px;border:1px solid var(--hair)}
+  .nav a.on{color:#0b0c10;background:#eceef2;border-color:#eceef2}
+  .eyebrow{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);margin-bottom:18px;display:flex;gap:14px;align-items:center}
+  .eyebrow::after{content:"";height:1px;flex:1;background:var(--hair)}
+  h1{font-family:'Sora',sans-serif;font-weight:800;letter-spacing:-.03em;font-size:clamp(32px,4.6vw,56px);line-height:1.02;margin-bottom:16px}
+  h1 em{font-style:normal;color:#9aa0ff}
+  .lede{max-width:74ch;color:#b6b8c0;font-size:15.5px;line-height:1.62}
+  .lede b{color:#dfe1e8;font-weight:600}
+
+  .sh{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin:46px 0 16px;display:flex;gap:14px;align-items:center}
+  .sh b{color:#9aa0ff;font-weight:400}
+  .sh::after{content:"";height:1px;flex:1;background:var(--hair)}
+
+  .slide{border:1px solid var(--hair);border-radius:22px;overflow:hidden;margin-bottom:22px;background:#0e0f14}
+  .slidehead{display:flex;align-items:baseline;gap:14px;padding:22px 28px 0}
+  .slidehead h2{font-family:'Sora',sans-serif;font-weight:800;font-size:23px;letter-spacing:-.02em}
+  .slidehead .tag{color:var(--muted);font-size:13.5px;margin-left:auto}
+  @media(max-width:680px){.slidehead{flex-wrap:wrap}.slidehead .tag{margin-left:0;width:100%}}
+  .body{display:grid;grid-template-columns:1.1fr .9fr;gap:0}
+  @media(max-width:860px){.body{grid-template-columns:1fr}}
+  .heroPane{padding:34px;display:flex;align-items:center;justify-content:center;background:var(--paper);min-height:230px}
+  .heroPane svg{height:130px;width:auto;max-width:90%}
+  .info{padding:24px 28px;display:flex;flex-direction:column;gap:14px}
+
+  .sizes{display:flex;align-items:center;gap:22px;flex-wrap:wrap;background:#fff;border:1px solid var(--hair);border-radius:12px;padding:16px 18px}
+  .sizes .si{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .sizes .si svg{display:block;width:auto}
+  .sizes .si span{font-family:'Space Mono',monospace;font-size:9px;color:#8a8c95}
+  .sizes .verdict{margin-left:auto;font-size:12px;font-weight:700;padding:5px 10px;border-radius:7px}
+  .ok{background:#dcfce7;color:#15803d}.meh{background:#fef9c3;color:#a16207}.bad{background:#fee2e2;color:#b91c1c}
+
+  .panels{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .panel{border:1px solid var(--hair);border-radius:11px;overflow:hidden;background:var(--paper)}
+  .panel .pv{min-height:84px;display:flex;align-items:center;justify-content:center;padding:13px}
+  .panel .pv svg{max-width:100%;max-height:74px}
+  .panel .cap{font-family:'Space Mono',monospace;font-size:9px;color:#6c6e78;padding:6px 8px;border-top:1px solid var(--hair);background:#fff}
+  .panel.dark .pv{background:var(--coal)}.panel.dark .cap{background:#1b1c22;color:#9a9ca6}
+
+  .concept{font-size:13px;line-height:1.55;color:#c3c5cd}.concept b{color:#eceef2}
+  .craft{list-style:none;display:flex;flex-direction:column;gap:6px}
+  .craft li{font-size:12px;line-height:1.45;color:#a9abb4;padding-left:15px;position:relative}
+  .craft li::before{content:"›";position:absolute;left:0;color:#9aa0ff;font-weight:700}
+  .craft li b{color:#dfe1e8}
+  .ref{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  .ref .card{border:1px solid var(--hair);border-radius:14px;overflow:hidden;background:var(--paper)}
+  .ref .pv{min-height:120px;display:flex;align-items:center;justify-content:center;padding:20px}
+  .ref .pv svg{height:74px}
+  .ref .cap{font-family:'Space Mono',monospace;font-size:9px;color:#6c6e78;padding:7px 10px;border-top:1px solid var(--hair);background:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="nav">
+    <a href="logo-concepts-11.html">11 · Roadmap takes</a>
+    <a class="on" href="logo-concepts-12.html">12 · PM from bars</a>
+    <a href="logo-concepts-1.html">01 · Origin</a>
+    <a href="index.html">Index</a>
+  </div>
+  <div class="eyebrow">Brand exploration · v12 · the original dream, tested</div>
+  <h1>Can the bars spell <em>PM?</em></h1>
+  <p class="lede">The original idea: <b>P and M built from gantt bars</b>. The catch — a real gantt is horizontal-only, but P and M need uprights, so pure-horizontal letters go pixel-y (that's why v1 felt cheap). Below, three honest attempts, each <b>tested at 32 and 20px</b> — because a monogram that only works big is no good as a favicon. If none beat it, the no-letter <b>Stagger / Now</b> still wins; both are shown at the bottom for the call.</p>
+
+  <div id="deck"></div>
+
+  <div class="sh">For comparison · the no-letter finalists <b>(v11)</b></div>
+  <div class="ref" id="ref"></div>
+</div>
+
+<script>
+const NS='http://www.w3.org/2000/svg';
+const PAPER='#f6f5f1', COAL='#16171c', SHADOW='#3b35b3', LIT='#6d63f0';
+const f2=n=>(Math.round(n*10)/10);
+const rect=(x,y,w,h,r,fill)=>`<rect x="${f2(x)}" y="${f2(y)}" width="${f2(w)}" height="${f2(h)}" rx="${r}" fill="${fill}"/>`;
+const dline=(x1,y1,x2,y2,w,fill)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${fill}" stroke-width="${w}" stroke-linecap="round"/>`;
+function runs(row){const o=[];let i=0;while(i<row.length){if(row[i]){let s=i;while(i<row.length&&row[i])i++;o.push([s,i-s]);}else i++;}return o;}
+
+/* ---------- T1: pure-horizontal block PM (gantt-pure, the literal answer) ---------- */
+const Pm=[[1,1,1,1],[1,0,0,1],[1,1,1,1],[1,0,0,0],[1,0,0,0],[1,0,0,0],[1,0,0,0]];
+const Mm=[[1,0,0,0,1],[1,1,0,1,1],[1,0,1,0,1],[1,0,1,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1]];
+function blockPM(o){
+  const cell=12, gv=1.6, bh=cell-gv, x0=10, gapL=1.3;
+  const draw=(m,off,fill)=>{let s='';m.forEach((row,ri)=>runs(row).forEach(([st,l])=>{
+    const single=(l===1);
+    s+=rect(x0+(off+st)*cell, 8+ri*cell+gv/2, l*cell-gv, bh, single?2:bh/2, fill);}));return s;};
+  return draw(Pm,0,o.p)+draw(Mm,Pm[0].length+gapL,o.m);
+}
+
+/* ---------- T2: orthogonal bar-monogram PM (verticals + diagonals; most legible) ---------- */
+function barPM(o){
+  const W=11, R=W/2;
+  let s='';
+  // P  (x 14..66)
+  s+=rect(14,16,W,86,R,o.p);            // spine
+  s+=rect(14,16,52,W,R,o.p);            // top arm
+  s+=rect(55,16,W,42,R,o.p);            // bowl right
+  s+=rect(14,47,52,W,R,o.p);            // mid arm
+  // M  (x 84..160)
+  s+=rect(84,16,W,86,R,o.m);            // left spine
+  s+=rect(149,16,W,86,R,o.m);           // right spine
+  s+=dline(90,24,123,66,W,o.m);         // left diagonal
+  s+=dline(154,24,123,66,W,o.m);        // right diagonal
+  return s;
+}
+/* T2 single M (square, for the app icon) */
+function barM(o){
+  const W=13,R=W/2;let s='';
+  s+=rect(20,22,W,76,R,o.m);
+  s+=rect(87,22,W,76,R,o.m);
+  s+=dline(27,30,60,74,W,o.m);
+  s+=dline(93,30,60,74,W,o.m);
+  return s;
+}
+
+/* ---------- v11 references ---------- */
+function stagger(o){const ys=[22,44,66,88];return [[18,66,o.fg],[34,48,o.ac],[18,38,o.fg],[44,52,o.ac]]
+  .map(([x,w,f],i)=>rect(x,ys[i],w,14,7,f)).join('');}
+function now(o){const ys=[26,57,88],x0=18,track=86,fills=[52,34,16];let s='';
+  ys.forEach((y,i)=>{s+=rect(x0,y,track,15,7.5,'#cbd0ee');s+=rect(x0,y,fills[i],15,7.5,o.fg);});
+  s+=dline(60,18,60,108,2.6,o.ac);return s;}
+
+const SVG=(inner,w,h)=>`<svg viewBox="0 0 ${w} ${h}" xmlns="${NS}">${inner}</svg>`;
+const PMV=(inner)=>SVG(inner,180,120);
+const SQ=(inner)=>SVG(inner,120,120);
+
+const TAKES=[
+  {name:'Bar-PM', tag:'Orthogonal monogram — most legible',
+   hero:PMV(barPM({p:SHADOW,m:LIT})),
+   panels:[
+     ['PM · mono',PMV(barPM({p:COAL,m:COAL}))],
+     ['M · app icon',`<div style="width:74px;height:74px;border-radius:22%;background:linear-gradient(150deg,#6d63f0,#3b35b3);display:flex;align-items:center;justify-content:center"><div style="width:64%">${SQ(barM({m:'#fff'}))}</div></div>`],
+     ['reversed',PMV(barPM({p:'#fff',m:'#9aa0ff'}))],
+   ],
+   sizes:[64,32,20], sizeMark:c=>PMV(barPM({p:c,m:c})), verdict:['ok','Holds to ~20px'],
+   concept:'P and M built from rounded <b>bars</b> — uprights + two diagonals for the M\'s valley. Not pure-horizontal, but unmistakably "made of bars," and it actually reads as <b>PM</b>. Shadow P (Product) + lit M (Map) — the same two tones as the wordmark.',
+   craft:['<b>Read:</b> a clean PM monogram with a bar/track texture.','P = shadow, M = lit → ties straight to the Product / Map wordmark.','The <b>M alone</b> is square and crisp — that\'s your app icon; PM is the lockup.']},
+
+  {name:'Gantt-PM', tag:'Pure horizontal bars — the literal idea',
+   hero:PMV(blockPM({p:SHADOW,m:LIT})),
+   panels:[
+     ['PM · mono',PMV(blockPM({p:COAL,m:COAL}))],
+     ['the gantt read',PMV(blockPM({p:SHADOW,m:LIT}))],
+     ['reversed',PMV(blockPM({p:'#fff',m:'#9aa0ff'}))],
+   ],
+   sizes:[64,32,20], sizeMark:c=>PMV(blockPM({p:c,m:c})), verdict:['meh','Soft below ~32px'],
+   concept:'The <b>purest</b> answer: only horizontal bars, letters formed by stacked rows — a literal little gantt chart that spells PM. Honest to the brief, but the M\'s uprights become short stacked bars, so it goes <b>blocky / pixel-y at small sizes</b>.',
+   craft:['<b>Read:</b> a real gantt whose solid mass is P then M.','100% horizontal bars — most faithful to "from gantt bars."','Trade-off: legibility drops as a favicon — the cost of staying pure.']},
+];
+
+const deck=document.getElementById('deck');
+TAKES.forEach((t,i)=>{
+  const sec=document.createElement('section');sec.className='slide';
+  const sz=t.sizes.map(px=>`<div class="si"><div style="height:${px}px">${t.sizeMark(COAL).replace('<svg ',`<svg height="${px}" `)}</div><span>${px}px</span></div>`).join('');
+  sec.innerHTML=`
+    <div class="slidehead"><span style="font-family:'Space Mono';color:#9aa0ff;font-size:13px">0${i+1}</span><h2>${t.name}</h2><span class="tag">${t.tag}</span></div>
+    <div class="body">
+      <div class="heroPane">${t.hero}</div>
+      <div class="info">
+        <div class="panels">${t.panels.map(([c,h])=>`<div class="panel"><div class="pv">${h}</div><div class="cap">${c}</div></div>`).join('')}</div>
+        <div class="sizes">${sz}<span class="verdict ${t.verdict[0]}">${t.verdict[1]}</span></div>
+        <div class="concept">${t.concept}</div>
+        <ul class="craft">${t.craft.map(c=>`<li>${c}</li>`).join('')}</ul>
+      </div>
+    </div>`;
+  deck.appendChild(sec);
+});
+
+const ref=document.getElementById('ref');
+ref.innerHTML=`
+  <div class="card"><div class="pv">${SQ(stagger({fg:COAL,ac:'#4f46e5'}))}</div><div class="cap">STAGGER · no letters, timeless</div></div>
+  <div class="card"><div class="pv">${SQ(now({fg:COAL,ac:'#4f46e5'}))}</div><div class="cap">NOW · no letters, live status</div></div>`;
+</script>
+</body>
+</html>

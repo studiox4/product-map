@@ -42,7 +42,7 @@ test('AC4: boost, un-vote and flip from the feature page; state survives reload'
   await expect(boost).toHaveAttribute('aria-pressed', 'true');
   await expect(boost).toContainText('1');
   await expect(score).toHaveText('+1');
-  await expect(boost).toHaveCSS('background-color', 'rgb(220, 235, 255)'); // #dcebff
+  await expect(boost).toHaveCSS('background-color', 'rgb(236, 234, 251)'); // #eceafb (brand indigo action-soft)
 
   // Persists across reload.
   await page.reload();

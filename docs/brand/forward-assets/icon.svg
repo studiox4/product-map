@@ -1,0 +1,9 @@
+<svg width="512" height="512" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <title>Product Map — Forward icon</title>
+  <!-- roadmap bars; lengths peak at the centre so the silhouette reads as a ► -->
+  <rect x="26" y="17.8" width="34" height="12.5" rx="6.25" fill="#4338CA"/>
+  <rect x="26" y="35.8" width="55" height="12.5" rx="6.25" fill="#4338CA"/>
+  <rect x="26" y="53.8" width="76" height="12.5" rx="6.25" fill="#6D63F0"/>
+  <rect x="26" y="71.8" width="55" height="12.5" rx="6.25" fill="#4338CA"/>
+  <rect x="26" y="89.8" width="34" height="12.5" rx="6.25" fill="#4338CA"/>
+</svg>

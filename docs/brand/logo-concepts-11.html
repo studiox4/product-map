@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Product Map — Logo Concepts 11 · Roadmap, Four Takes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  :root{--bg:#0b0c10;--ink:#eceef2;--muted:#80828c;--hair:rgba(255,255,255,.08);--paper:#f6f5f1;--coal:#16171c}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  body{font-family:'Hanken Grotesk',sans-serif;color:var(--ink);
+    background:radial-gradient(1100px 540px at 8% -10%,rgba(79,70,229,.11),transparent 60%),radial-gradient(900px 480px at 100% 0%,rgba(129,140,248,.07),transparent 55%),var(--bg);
+    min-height:100vh;padding:58px 30px 130px}
+  .wrap{max-width:1140px;margin:0 auto}
+  .nav{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
+  .nav a{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.06em;color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:999px;border:1px solid var(--hair)}
+  .nav a.on{color:#0b0c10;background:#eceef2;border-color:#eceef2}
+  .eyebrow{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);margin-bottom:18px;display:flex;gap:14px;align-items:center}
+  .eyebrow::after{content:"";height:1px;flex:1;background:var(--hair)}
+  h1{font-family:'Sora',sans-serif;font-weight:800;letter-spacing:-.03em;font-size:clamp(32px,4.6vw,56px);line-height:1.02;margin-bottom:16px}
+  h1 em{font-style:normal;color:#9aa0ff}
+  .lede{max-width:74ch;color:#b6b8c0;font-size:15.5px;line-height:1.62}
+  .lede b{color:#dfe1e8;font-weight:600}
+
+  .wallhead{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin:44px 0 16px;display:flex;gap:14px;align-items:center}
+  .wallhead::after{content:"";height:1px;flex:1;background:var(--hair)}
+  .wall{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+  @media(max-width:760px){.wall{grid-template-columns:repeat(2,1fr)}}
+  .wc{border:1px solid var(--hair);border-radius:14px;overflow:hidden;background:var(--paper);text-decoration:none;display:block}
+  .wc .pv{aspect-ratio:1/.86;display:flex;align-items:center;justify-content:center;padding:22px}
+  .wc .pv svg{width:92px;height:92px}
+  .wc .cap{display:flex;justify-content:space-between;padding:8px 11px;border-top:1px solid var(--hair);background:#fff;font-size:12px}
+  .wc .cap .nm{font-weight:700;color:#16171c;letter-spacing:-.01em}
+  .wc .cap .no{font-family:'Space Mono',monospace;color:#9a9ca6;font-size:11px}
+
+  .slide{border:1px solid var(--hair);border-radius:24px;overflow:hidden;margin-bottom:26px;background:#0e0f14;scroll-margin-top:20px}
+  .slidehead{display:flex;align-items:baseline;gap:16px;padding:24px 30px 0}
+  .slidehead .n{font-family:'Space Mono',monospace;font-size:13px;color:#9aa0ff}
+  .slidehead h2{font-family:'Sora',sans-serif;font-weight:800;font-size:25px;letter-spacing:-.02em}
+  .slidehead .tag{color:var(--muted);font-size:14px;margin-left:auto}
+  @media(max-width:680px){.slidehead{flex-wrap:wrap}.slidehead .tag{margin-left:0;width:100%}}
+  .body{display:grid;grid-template-columns:1.05fr .95fr;gap:0}
+  @media(max-width:860px){.body{grid-template-columns:1fr}}
+  .heroPane{padding:26px;display:flex;align-items:center;justify-content:center;background:var(--paper);min-height:300px}
+  .heroPane svg{width:210px;height:210px;display:block}
+  .info{padding:26px 30px;display:flex;flex-direction:column;gap:16px}
+  .panels{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .panel{border:1px solid var(--hair);border-radius:11px;overflow:hidden;background:var(--paper)}
+  .panel .pv{aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;padding:13px}
+  .panel .pv svg{width:100%;height:100%}
+  .panel .cap{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.04em;color:#6c6e78;padding:6px 8px;border-top:1px solid var(--hair);background:#fff}
+  .panel.dark .pv{background:var(--coal)}
+  .panel.dark .cap{background:#1b1c22;color:#9a9ca6;border-top-color:rgba(255,255,255,.08)}
+  .concept{display:flex;flex-direction:column;gap:8px}
+  .concept .lbl{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#9aa0ff}
+  .concept p{font-size:13px;line-height:1.55;color:#c3c5cd}
+  .concept p b{color:#eceef2;font-weight:600}
+  .craft{list-style:none;display:flex;flex-direction:column;gap:6px}
+  .craft li{font-size:12px;line-height:1.45;color:#a9abb4;padding-left:15px;position:relative}
+  .craft li::before{content:"›";position:absolute;left:0;color:#9aa0ff;font-weight:700}
+  .craft li b{color:#dfe1e8;font-weight:600}
+  .variants{border-top:1px solid var(--hair);background:var(--paper);padding:16px 30px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .variants .vh{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#9aa0ff}
+  .variants .vrow{display:flex;gap:14px;flex-wrap:wrap}
+  .variants .vi{display:flex;flex-direction:column;align-items:center;gap:5px}
+  .variants .vi svg{width:46px;height:46px}
+  .variants .vi span{font-family:'Space Mono',monospace;font-size:9px;color:#8a8c95}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="nav">
+    <a href="logo-concepts-9.html">09 · Pivot</a>
+    <a href="logo-concepts-10.html">10 · Forward</a>
+    <a class="on" href="logo-concepts-11.html">11 · Roadmap · 4 takes</a>
+    <a href="logo-concepts-5.html">05 · Origin</a>
+  </div>
+  <div class="eyebrow">Brand exploration · v11 · back to the honest one</div>
+  <h1>Roadmap <em>/</em> four takes before we finalize</h1>
+  <p class="lede">Circling back to the mark we were closest with — the <b>staggered gantt bars</b> from v5, which is really your <b>original P-and-M-as-a-Gantt idea</b> in its cleanest form. Before locking a full system, four takes on the same DNA: a literal timeline, a cascade from one origin, a live "now" view, and a dependency chain. Same horizontal-bar language, four different stories. Pick the take and we build it out like Pivot and Forward.</p>
+
+  <div class="wallhead">The four takes · in black</div>
+  <div class="wall" id="wall"></div>
+
+  <div id="deck"></div>
+</div>
+
+<script>
+const NS='http://www.w3.org/2000/svg';
+const PAPER='#f6f5f1', COAL='#16171c', C='#4f46e5', C2='#818cf8';
+const f2=n=>(Math.round(n*10)/10);
+const rect=(x,y,w,h,r,fill,ex)=>`<rect x="${f2(x)}" y="${f2(y)}" width="${f2(w)}" height="${f2(h)}" rx="${r}" fill="${fill}"${ex||''}/>`;
+const line=(x1,y1,x2,y2,st,sw,da)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${st}" stroke-width="${sw}"${da?` stroke-dasharray="${da}"`:''} stroke-linecap="round"/>`;
+
+const MARKS={
+  /* 1 STAGGER — free-positioned bars, different start times */
+  stagger(o){
+    const h=o.sharp?14:14, r=o.sharp?2:7;
+    const bars=[[18,66,0],[34,48,1],[18,38,0],[44,52,1]];
+    const ys=[22,44,66,88];
+    let s='';
+    if(o.tile)s+=rect(6,6,108,108,24,o.fg,' opacity=".07"');
+    if(o.grid){s+=line(18,16,18,100,'#bdb9ad',.7);[22,44,66,88].forEach(y=>s+=line(14,y+7,106,y+7,'#e0dccf',.6));
+      s+=`<rect x="18" y="22" width="78" height="80" fill="none" stroke="#d8d4c8" stroke-width=".6"/>`;}
+    if(o.reveal){s+=line(18,108,98,108,o.accent,1.4);bars.forEach(([x],i)=>s+=line(x,ys[i]+7,x,108,o.accent,1.2,'2 3'));}
+    bars.forEach(([x,w,t],i)=>{const fill=(o.mono)?o.fg:(t?o.accent:o.fg);s+=rect(x,ys[i],w,h,r,fill);});
+    return s;
+  },
+  /* 2 CASCADE — left-aligned from one origin, stepping down */
+  cascade(o){
+    const r=o.sharp?2:7, lens=[74,58,42,26], ys=[22,44,66,88];
+    let s='';
+    if(o.tile)s+=rect(6,6,108,108,24,o.fg,' opacity=".07"');
+    if(o.grid){s+=line(18,16,18,100,'#bdb9ad',.7);ys.forEach(y=>s+=line(14,y+7,100,y+7,'#e0dccf',.6));}
+    if(o.reveal){let pts=lens.map((l,i)=>`${18+l},${ys[i]+7}`).join(' ');s+=`<polyline points="${pts}" fill="none" stroke="${o.accent}" stroke-width="1.6" stroke-dasharray="3 3"/>`;}
+    lens.forEach((l,i)=>{const fill=o.mono?o.fg:(i%2?o.accent:o.fg);s+=rect(18,ys[i],l,14,r,fill);});
+    return s;
+  },
+  /* 3 NOW — progress fill + a now-line */
+  now(o){
+    const r=o.sharp?2:7.5, ys=[26,57,88], track=86, x0=18;
+    const fills=[52,34,16];
+    let s='';
+    if(o.grid){ys.forEach(y=>s+=line(x0,y+7.5,x0+track,y+7.5,'#e0dccf',.6));s+=line(60,18,60,108,'#bdb9ad',.7,'3 3');}
+    if(o.reveal){s+=line(60,16,60,110,o.accent,1.6,'2 3');ys.forEach((y,i)=>s+=rect(x0+fills[i],y,track-fills[i],15,r,o.accent,' opacity=".18"'));}
+    ys.forEach((y,i)=>{
+      s+=rect(x0,y,track,15,r,o.mono?o.fg:'#cbd0ee',o.mono?' opacity=".26"':'');   // track
+      s+=rect(x0,y,fills[i],15,r,o.fg);                                              // done
+    });
+    s+=line(60,18,60,108,o.mono?o.fg:o.accent,2.6,'2.5 4');                          // now line
+    return s;
+  },
+  /* 4 LINKED — dependent tasks chained */
+  linked(o){
+    const r=o.sharp?2:7;
+    const bars=[[18,32,26],[46,30,50],[70,30,74]];   // x,w,y
+    let s='';
+    if(o.grid){bars.forEach(([x,w,y])=>s+=line(14,y+7,104,y+7,'#e0dccf',.6));}
+    // dependency connectors (parent end -> child start)
+    const conn=(px,py,cx,cy,col)=>line(px,py,px,cy,col,2,'')+line(px,cy,cx,cy,col,2,'');
+    const ccol=o.mono?o.fg:o.accent;
+    if(!o.nolink){
+      s+=conn(18+32,26+7,46,50+7,ccol);   // bar0 end -> bar1 start
+      s+=conn(46+30,50+7,70,74+7,ccol);   // bar1 end -> bar2 start
+    }
+    if(o.reveal){s+=conn(18+32,26+7,46,50+7,o.accent).replace(/stroke-width="2"/g,'stroke-width="3"');
+                 s+=conn(46+30,50+7,70,74+7,o.accent).replace(/stroke-width="2"/g,'stroke-width="3"');}
+    bars.forEach(([x,w,y],i)=>{const fill=o.mono?o.fg:(i===1?o.accent:o.fg);s+=rect(x,y,w,14,r,fill);});
+    return s;
+  },
+};
+const svg=(m,o)=>`<svg viewBox="0 0 120 120" xmlns="${NS}">${MARKS[m]({fg:o.fg||COAL, accent:o.accent, ...o})}</svg>`;
+
+const TAKES=[
+  {id:'stagger',mark:'stagger',name:'Stagger',tag:'The plan, laid out over time.',accent:C,
+   concept:'Bars at <b>different start positions and lengths</b> — the literal gantt: tasks beginning at different times, overlapping. The truest read of "roadmap," and the cleanest form of your original P-and-M-in-bars idea.',
+   craft:['<b>Read:</b> a timeline of overlapping work — no decoding needed.','Two tones = two phases / streams, not decoration.','Stagger is engineered, not random — it balances optically around the centre.'],
+   variants:[{l:'pill'},{l:'sharp',o:{sharp:true}},{l:'in tile',o:{tile:true}}]},
+  {id:'cascade',mark:'cascade',name:'Cascade',tag:'Epic, broken into tasks.',accent:C,
+   concept:'All bars share a <b>left origin</b> and step down in length — a work-breakdown waterfall from the big thing to its pieces. More contained and icon-ready than free stagger.',
+   craft:['<b>Read:</b> one initiative decomposed into ordered tasks.','Shared left edge = a strong anchor; great as an app tile.','The stepped right contour is the signature line (see “the idea”).'],
+   variants:[{l:'pill'},{l:'sharp',o:{sharp:true}},{l:'in tile',o:{tile:true}}]},
+  {id:'now',mark:'now',name:'Now',tag:'Where we are. What\'s next.',accent:C,
+   concept:'Staggered tracks with a <b>filled portion</b> (done) and a dashed <b>"now" line</b> slicing the plan. The roadmap as a living status, not a static chart — answers the question the product exists for.',
+   craft:['<b>Dual read:</b> a gantt + a progress/now indicator.','The now-line can actually move in product — a built-in live element.','Ghost track vs solid fill = remaining vs done at a glance.'],
+   variants:[{l:'default'},{l:'sharp',o:{sharp:true}},{l:'mono',o:{mono:true,fg:COAL}}]},
+  {id:'linked',mark:'linked',name:'Linked',tag:'Tasks and their dependencies.',accent:C,
+   concept:'A short chain of bars joined by <b>dependency connectors</b> — the structure of a real plan, where one thing unblocks the next. The most "we understand how work actually flows" of the four.',
+   craft:['<b>Dual read:</b> gantt bars + a dependency flow.','Connectors are elbow links — the language of project tools.','Descending chain reads as forward motion through the plan.'],
+   variants:[{l:'linked'},{l:'sharp',o:{sharp:true}},{l:'no links',o:{nolink:true}}]},
+];
+
+/* wall */
+const wall=document.getElementById('wall');
+TAKES.forEach((t,i)=>{const a=document.createElement('a');a.className='wc';a.href='#t'+t.id;
+  a.innerHTML=`<div class="pv">${svg(t.mark,{fg:COAL})}</div><div class="cap"><span class="nm">${t.name}</span><span class="no">0${i+1}</span></div>`;
+  wall.appendChild(a);});
+
+/* slides */
+function appicon(t){return `<div class="panel"><div class="pv" style="padding:0">
+  <div style="width:100%;height:100%;border-radius:22%;background:linear-gradient(150deg,#6366f1,#4338ca);display:flex;align-items:center;justify-content:center">
+    <div style="width:74%;height:74%">${svg(t.mark,{fg:'#fff'})}</div></div></div><div class="cap">APP ICON</div></div>`;}
+const panel=(m,o,cap,dark)=>`<div class="panel${dark?' dark':''}"><div class="pv">${svg(m,o)}</div><div class="cap">${cap}</div></div>`;
+
+const deck=document.getElementById('deck');
+TAKES.forEach((t,i)=>{
+  const A=t.accent,n='0'+(i+1);
+  const sec=document.createElement('section');sec.className='slide';sec.id='t'+t.id;
+  const variants=`<div class="variants"><span class="vh">Variations</span><div class="vrow">${
+    t.variants.map(v=>`<div class="vi">${svg(t.mark,{fg:COAL,accent:A,...(v.o||{})})}<span>${v.l}</span></div>`).join('')}</div></div>`;
+  sec.innerHTML=`
+    <div class="slidehead"><span class="n">${n}</span><h2>${t.name}</h2><span class="tag">${t.tag}</span></div>
+    <div class="body">
+      <div class="heroPane">${svg(t.mark,{fg:COAL,accent:A})}</div>
+      <div class="info">
+        <div class="panels">
+          ${panel(t.mark,{fg:COAL,grid:true},'CONSTRUCTION')}
+          ${panel(t.mark,{fg:COAL,accent:A,reveal:true},'THE IDEA')}
+          ${panel(t.mark,{fg:COAL,accent:A},'PRIMARY')}
+          ${panel(t.mark,{fg:PAPER,accent:'#9aa0ff'},'REVERSED',true)}
+          ${appicon(t)}
+          ${panel(t.mark,{fg:COAL,mono:true},'MONO · 16PX')}
+        </div>
+        <div class="concept"><span class="lbl">Concept</span><p>${t.concept}</p></div>
+        <ul class="craft">${t.craft.map(c=>`<li>${c}</li>`).join('')}</ul>
+      </div>
+    </div>
+    ${variants}`;
+  deck.appendChild(sec);
+});
+</script>
+</body>
+</html>

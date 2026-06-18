@@ -8,8 +8,8 @@
     --pm-ink: #22303f;
     --pm-body: #46556a;
     --pm-muted: #7c8794;
-    --pm-action: #2b557e;
-    --pm-action-soft: #dcebff;
+    --pm-action: #4338ca;
+    --pm-action-soft: #eceafb;
     --pm-sage: #3c6b46;
     --pm-sage-soft: #e4f0e4;
     --pm-warm: #9a6428;
@@ -57,10 +57,10 @@
     --card-foreground: 211 30% 19%;
     --popover: 0 0% 100%;
     --popover-foreground: 211 30% 19%;
-    --primary: 210 49% 33%; /* #2b557e */
+    --primary: 245 58% 51%; /* #4338ca */
     --primary-foreground: 0 0% 100%;
     --secondary: 216 38% 95%; /* #edf1f7 */
-    --secondary-foreground: 210 49% 33%;
+    --secondary-foreground: 245 58% 51%;
     --muted: 216 38% 95%;
     --muted-foreground: 213 10% 53%; /* #7c8794 */
     --accent: 216 38% 95%; /* ghost hover #edf1f7 */
@@ -69,7 +69,7 @@
     --destructive-foreground: 0 0% 100%;
     --border: 214 26% 95%; /* #eef1f5 hairline */
     --input: 214 20% 89%;
-    --ring: 210 49% 33%;
+    --ring: 245 58% 51%;
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
@@ -83,8 +83,8 @@
     --pm-ink: #e6ebf2;
     --pm-body: #a9b4c2;
     --pm-muted: #67737f;
-    --pm-action: #7aa7d9;
-    --pm-action-soft: #16283c;
+    --pm-action: #8b83f5;
+    --pm-action-soft: #201c3c;
     --pm-sage: #93c7a1;
     --pm-sage-soft: #14271a;
     --pm-warm: #d8a96a;
@@ -132,10 +132,10 @@
     --card-foreground: 215 32% 92%;
     --popover: 215 21% 11%;
     --popover-foreground: 215 32% 92%;
-    --primary: 212 56% 66%; /* #7aa7d9 */
-    --primary-foreground: 213 37% 16%; /* #1a2940 */
+    --primary: 245 85% 74%; /* #8b83f5 */
+    --primary-foreground: 244 40% 14%; /* #19173a */
     --secondary: 214 23% 15%; /* #1d242e */
-    --secondary-foreground: 212 56% 66%;
+    --secondary-foreground: 245 85% 74%;
     --muted: 214 23% 15%;
     --muted-foreground: 210 10% 45%; /* #67737f */
     --accent: 214 23% 15%;
@@ -144,7 +144,7 @@
     --destructive-foreground: 215 32% 92%;
     --border: 213 21% 17%; /* #232b36 hairline */
     --input: 213 19% 22%;
-    --ring: 212 56% 66%;
+    --ring: 245 85% 74%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;

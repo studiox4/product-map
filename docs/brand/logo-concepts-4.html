@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Product Map — Logo Concepts 4 · Reconcept</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root{--bg:#0c0d11;--ink:#eceef2;--muted:#83858f;--hair:rgba(255,255,255,.08)}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  body{
+    font-family:'Hanken Grotesk',sans-serif;color:var(--ink);
+    background:
+      radial-gradient(1100px 540px at 8% -10%, rgba(79,70,229,.12), transparent 60%),
+      radial-gradient(900px 480px at 100% 0%, rgba(20,184,166,.08), transparent 55%),
+      var(--bg);
+    min-height:100vh;padding:58px 30px 130px;
+  }
+  .head{max-width:1180px;margin:0 auto 30px}
+  .nav{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
+  .nav a{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.06em;color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:999px;border:1px solid var(--hair)}
+  .nav a.on{color:#0c0d11;background:#eceef2;border-color:#eceef2}
+  .eyebrow{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);margin-bottom:18px;display:flex;gap:14px;align-items:center}
+  .eyebrow::after{content:"";height:1px;flex:1;background:var(--hair)}
+  h1{font-family:'Sora',sans-serif;font-weight:800;letter-spacing:-.03em;font-size:clamp(32px,4.6vw,56px);line-height:1.02;margin-bottom:16px}
+  h1 em{font-style:normal;color:#9aa0ff}
+  .head p{max-width:70ch;color:#b6b8c0;font-size:15.5px;line-height:1.62}
+  .head p b{color:#dfe1e8;font-weight:600}
+  .strat{max-width:1180px;margin:24px auto 44px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:780px){.strat{grid-template-columns:1fr}}
+  .strat div{border:1px solid var(--hair);border-radius:14px;padding:16px 18px;background:rgba(255,255,255,.02)}
+  .strat h4{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#9aa0ff;margin-bottom:7px}
+  .strat p{color:#a9abb4;font-size:13px;line-height:1.5}
+
+  .deck{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+  .concept{
+    border:1px solid var(--hair);border-radius:22px;overflow:hidden;
+    display:grid;grid-template-columns:1.15fr 1fr;
+  }
+  @media(max-width:860px){.concept{grid-template-columns:1fr}}
+
+  .canvas{position:relative;display:flex;flex-direction:column;gap:26px;align-items:center;justify-content:center;padding:48px 40px;min-height:340px}
+  .canvas .hero{width:128px;height:128px;display:block}
+  .lock{display:flex;align-items:center;gap:16px}
+  .lock .li{width:46px;height:46px;flex:none}
+  .lock .wm{line-height:1;white-space:nowrap}
+  .proof{display:flex;align-items:center;gap:18px;opacity:.9}
+  .proof .ps{display:flex;align-items:center;gap:7px}
+  .proof svg{display:block}
+  .proof span{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)}
+  .badge{position:absolute;top:16px;left:18px;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--muted)}
+
+  .pitch{padding:34px 34px;border-left:1px solid var(--hair);display:flex;flex-direction:column;gap:14px;background:#0e0f14}
+  @media(max-width:860px){.pitch{border-left:none;border-top:1px solid var(--hair)}}
+  .pitch .pname{font-family:'Sora',sans-serif;font-weight:800;font-size:23px;letter-spacing:-.02em}
+  .pitch .ptag{color:#9aa0ff;font-size:13.5px;font-weight:600;margin-top:-6px}
+  .pitch .row{display:flex;gap:10px;font-size:13.5px;line-height:1.5}
+  .pitch .row .k{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);min-width:78px;padding-top:2px;flex:none}
+  .pitch .row .v{color:#c3c5cd}
+  .pitch .row .v b{color:#eceef2;font-weight:600}
+  .chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:4px}
+  .chips i{width:22px;height:22px;border-radius:6px;border:1px solid rgba(255,255,255,.14);display:flex}
+  .chips i span{font-family:'Space Mono',monospace;font-size:9px;color:#fff;mix-blend-mode:difference;margin:auto}
+</style>
+</head>
+<body>
+  <header class="head">
+    <div class="nav">
+      <a href="logo-concepts-1.html">01 · Foundations</a>
+      <a href="logo-concepts-2.html">02 · Color Variants</a>
+      <a href="logo-concepts-3.html">03 · Designer Takes</a>
+      <a class="on" href="logo-concepts-4.html">04 · Reconcept</a>
+    </div>
+    <div class="eyebrow">Brand exploration · v4 · reconcept</div>
+    <h1>Eight real directions <em>/</em> not recolors</h1>
+    <p>The brief is two ideas fighting for the logo: <b>Product</b> (a roadmap, a system, phases) and <b>Map</b> (a place, a route, coordinates). Each concept below picks a <b>different visual strategy</b> to resolve that — pin, route, contour, isometric stack, emblem, UI-glyph, folded paper, logotype. Distinct shapes, distinct construction, distinct color logic. Pick the strategy first; color and type are tunable after.</p>
+  </header>
+
+  <div class="strat">
+    <div><h4>What changed</h4><p>v3 was one bar-generator recolored eight times. Same shape ≠ eight ideas. Every mark here is built from scratch with its own geometry.</p></div>
+    <div><h4>How to read it</h4><p>Judge the <b style="color:#cdd0d8">icon at small size</b> first (the favicon strip proves it). A logo that survives 16px wins. Color is the last decision, not the first.</p></div>
+    <div><h4>The throughline</h4><p>Location + system. Most marks fuse a <b style="color:#cdd0d8">map signal</b> (pin / route / coordinate) with a <b style="color:#cdd0d8">product signal</b> (phases / nodes / structure).</p></div>
+  </div>
+
+  <main class="deck" id="deck"></main>
+
+<script>
+const NS='http://www.w3.org/2000/svg';
+
+/* ---------- 8 mark builders. Each returns an SVG markup string for a 0 0 100 100 viewBox.
+   `c` = primary, `c2` = secondary, `ink`, `bg` passed in so the same geometry rescales for
+   hero / lockup / favicon without redrawing. ---------- */
+
+const MARKS = {
+  /* 1 — WAYPOINT: map pin with knockout hole + dashed route trailing in */
+  waypoint(p){return `
+    <path d="M30 92 C 14 64 12 58 14 70" fill="none" stroke="${p.c2}" stroke-width="5" stroke-linecap="round" stroke-dasharray="1 11" opacity="0"/>
+    <path d="M22 50 q 14 18 28 6" fill="none" stroke="${p.c2}" stroke-width="5" stroke-linecap="round" stroke-dasharray="0.5 10"/>
+    <path d="M50 90 C 32 66 26 56 26 42 a24 24 0 1 1 48 0 C 74 56 68 66 50 90 Z" fill="${p.c}"/>
+    <circle cx="50" cy="40" r="11" fill="${p.bg}"/>
+    <circle cx="50" cy="40" r="4.5" fill="${p.c}"/>`;},
+
+  /* 2 — THE ROUTE: single monoline that draws an M, waypoint dots, start ring + end pin */
+  route(p){return `
+    <defs><linearGradient id="rg" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="${p.c2}"/><stop offset="1" stop-color="${p.c}"/></linearGradient></defs>
+    <polyline points="20,78 20,30 40,58 60,30 60,78" fill="none" stroke="url(#rg)"
+      stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="40" cy="58" r="5.5" fill="${p.bg}" stroke="${p.c}" stroke-width="4"/>
+    <circle cx="20" cy="30" r="6" fill="${p.bg}" stroke="${p.c2}" stroke-width="4"/>
+    <path d="M60 78 l -7 -12 a 8 8 0 1 1 14 0 Z" fill="${p.c}"/>
+    <circle cx="60" cy="59" r="3" fill="${p.bg}"/>`;},
+
+  /* 3 — TOPO: nested offset contour ellipses building to a summit dot */
+  topo(p){return `
+    <ellipse cx="50" cy="62" rx="35" ry="19" fill="none" stroke="${p.ink}" stroke-width="3"/>
+    <ellipse cx="50" cy="54" rx="26" ry="14" fill="none" stroke="${p.ink}" stroke-width="3"/>
+    <ellipse cx="50" cy="46" rx="17" ry="9.5" fill="none" stroke="${p.ink}" stroke-width="3"/>
+    <ellipse cx="50" cy="39" rx="8.5" ry="5" fill="none" stroke="${p.ink}" stroke-width="3"/>
+    <circle cx="50" cy="36" r="5.2" fill="${p.c}"/>`;},
+
+  /* 4 — LAYERS: isometric roadmap stack with a flag on top */
+  layers(p){
+    function slab(cy,fill,side){return `
+      <polygon points="50,${cy} 82,${cy+15} 50,${cy+30} 18,${cy+15}" fill="${fill}"/>
+      <polygon points="18,${cy+15} 50,${cy+30} 50,${cy+38} 18,${cy+23}" fill="${side}"/>
+      <polygon points="82,${cy+15} 50,${cy+30} 50,${cy+38} 82,${cy+23}" fill="${side}" opacity=".82"/>`;}
+    return `
+    ${slab(54,p.c2,p.c2d)}
+    ${slab(38,p.cmid,p.cmidd)}
+    ${slab(22,p.c,p.cd)}
+    <rect x="49" y="6" width="3" height="22" rx="1.5" fill="${p.ink}"/>
+    <path d="M52 7 l 14 4 -14 4 Z" fill="${p.flag}"/>`;},
+
+  /* 5 — EMBLEM: circular stamp, text on ring, central pin+route */
+  emblem(p){return `
+    <circle cx="50" cy="50" r="46" fill="none" stroke="${p.ink}" stroke-width="2"/>
+    <circle cx="50" cy="50" r="40" fill="none" stroke="${p.ink}" stroke-width="1"/>
+    <defs><path id="ring" d="M50 12 a38 38 0 1 1 -0.1 0" fill="none"/></defs>
+    <text font-family="'Space Mono',monospace" font-size="8.4" letter-spacing="3.2" fill="${p.ink}">
+      <textPath href="#ring" startOffset="2%">PRODUCT&#160;MAP&#160;&#183;&#160;EST&#160;2026&#160;&#183;&#160;</textPath></text>
+    <path d="M50 70 C 40 55 36 50 36 42 a14 14 0 1 1 28 0 C 64 50 60 55 50 70 Z" fill="${p.c}"/>
+    <circle cx="50" cy="41" r="5.5" fill="${p.bg}"/>`;},
+
+  /* 6 — LOCATE: GPS crosshair, four ticks, center pin-dot */
+  locate(p){return `
+    <circle cx="50" cy="50" r="26" fill="none" stroke="${p.ink}" stroke-width="6"/>
+    <line x1="50" y1="10" x2="50" y2="24" stroke="${p.ink}" stroke-width="6" stroke-linecap="round"/>
+    <line x1="50" y1="76" x2="50" y2="90" stroke="${p.ink}" stroke-width="6" stroke-linecap="round"/>
+    <line x1="10" y1="50" x2="24" y2="50" stroke="${p.ink}" stroke-width="6" stroke-linecap="round"/>
+    <line x1="76" y1="50" x2="90" y2="50" stroke="${p.ink}" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="50" cy="50" r="9" fill="${p.c}"/>`;},
+
+  /* 7 — FOLD: accordion-folded paper map = M silhouette, pin dropped on top */
+  fold(p){return `
+    <polygon points="14,72 32,40 32,76 14,80" fill="${p.paper}"/>
+    <polygon points="32,40 50,64 50,80 32,76" fill="${p.shadow}"/>
+    <polygon points="50,64 68,40 68,76 50,80" fill="${p.paper}"/>
+    <polygon points="68,40 86,72 86,80 68,76" fill="${p.shadow}"/>
+    <path d="M14 72 L32 40 50 64 68 40 86 72" fill="none" stroke="${p.ink}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M58 40 C 50 27 46 23 46 17 a10 10 0 1 1 20 0 C 66 23 62 27 58 40 Z" fill="${p.c}"/>
+    <circle cx="56" cy="16.5" r="4" fill="${p.bg}"/>`;},
+
+  /* 8 — PIN-O: logotype mark = the location-pin "o", used standalone too */
+  pino(p){return `
+    <path d="M50 88 C 30 60 24 52 24 38 a26 26 0 1 1 52 0 C 76 52 70 60 50 88 Z" fill="none" stroke="${p.c}" stroke-width="9"/>
+    <circle cx="50" cy="38" r="9" fill="${p.c}"/>`;},
+};
+
+/* per-concept palette + content */
+const CONCEPTS = [
+  {
+    id:'waypoint', mark:'waypoint', name:'Waypoint', tag:'Product Map is a place you go.',
+    bg:'#f4f6fb', stageBg:'linear-gradient(180deg,#f8f9fd,#eef1f8)', ink:'#1a1d29',
+    pal:{c:'#4338ca', c2:'#a5b4fc', bg:'#f8f9fd', ink:'#1a1d29'},
+    wm:{font:"'Sora',sans-serif",w:800,size:30,sp:'-.03em',P:'#4338ca',M:'#4338ca'},
+    idea:'A single map pin — the most universally understood "location" glyph — with a dashed route easing into it. The knockout hole keeps it light at any size.',
+    why:'Instant category read (maps / location) with zero explanation. Pin shape is trademark-ownable and works as an app icon, a favicon, and a pulsing "live" cursor in-product.',
+    color:'Deep indigo = trust + software. Periwinkle dashes = the path, never competing with the pin.',
+    use:'Primary app icon · cursor · empty-states',
+    chips:['#4338ca','#a5b4fc','#1a1d29']
+  },
+  {
+    id:'route', mark:'route', name:'The Route', tag:'The M is the journey.',
+    bg:'#f2f7f6', stageBg:'linear-gradient(180deg,#f6faf9,#eaf2f0)', ink:'#0f1a19',
+    pal:{c:'#4f46e5', c2:'#14b8a6', bg:'#f6faf9', ink:'#0f1a19'},
+    wm:{font:"'Sora',sans-serif",w:800,size:30,sp:'-.03em',P:'#0f1a19',M:'#4f46e5'},
+    idea:'One continuous monoline literally traces an M — but read as a route between waypoints. Hollow ring = start, flag-pin = destination, node = a milestone.',
+    why:'Encodes the actual product: planning a path through stops. The gradient implies direction (teal → indigo = movement). Letter and metaphor are the same stroke — that\'s the clever part.',
+    color:'Teal-to-indigo gradient gives motion + depth without a second shape. Nodes punch out in the background color so it stays crisp.',
+    use:'Wordmark lead-in · loading · progress',
+    chips:['#4f46e5','#14b8a6','#0f1a19']
+  },
+  {
+    id:'topo', mark:'topo', name:'Topo', tag:'Elevation lines. You are here.',
+    bg:'#efe9dc', stageBg:'linear-gradient(180deg,#f3eee2,#e9e1cf)', ink:'#1b1b18',
+    pal:{c:'#e2483d', c2:'#1b1b18', bg:'#efe9dc', ink:'#1b1b18'},
+    wm:{font:"'Fraunces',serif",w:900,size:30,sp:'-.02em',P:'#1b1b18',M:'#e2483d'},
+    idea:'Topographic contour rings — the texture of every real map — stacked into a summit, with a single red "you are here" dot at the peak.',
+    why:'The most map-native visual language there is, and almost nobody in SaaS uses it. Premium, editorial, instantly differentiated. Scales down to a clean target dot.',
+    color:'Ink contours on warm paper = cartographic heritage. One hot red dot is the entire accent budget — restraint reads as confidence.',
+    use:'Editorial brand · print · marketing',
+    chips:['#1b1b18','#e2483d','#efe9dc']
+  },
+  {
+    id:'layers', mark:'layers', name:'Layers', tag:'Terrain you build in phases.',
+    bg:'#f2f5fb', stageBg:'linear-gradient(180deg,#f6f8fc,#eaf0fa)', ink:'#13203a',
+    pal:{c:'#2563eb',cd:'#1d4ed8', cmid:'#3b82f6',cmidd:'#2563eb', c2:'#93c5fd',c2d:'#60a5fa', flag:'#f59e0b', ink:'#13203a', bg:'#f6f8fc'},
+    wm:{font:"'Sora',sans-serif",w:800,size:30,sp:'-.03em',P:'#2563eb',M:'#13203a'},
+    idea:'An isometric stack — three slabs reading simultaneously as map terrain layers and as roadmap phases, planted with a flag (the goal).',
+    why:'Fuses both meanings in one object: "map" (terrain) and "product roadmap" (stacked phases). The 3D gives it presence at large sizes for decks and hero art.',
+    color:'A single blue stepped through three tints = depth from one hue (cheap to print, easy to theme). Amber flag is the lone warm pop = the objective.',
+    use:'Hero illustration · pitch decks',
+    chips:['#2563eb','#3b82f6','#f59e0b']
+  },
+  {
+    id:'emblem', mark:'emblem', name:'Emblem', tag:'A surveyor\'s seal.',
+    bg:'#f5f3ee', stageBg:'linear-gradient(180deg,#f8f6f1,#efece4)', ink:'#141414',
+    pal:{c:'#c8102e', c2:'#141414', bg:'#f8f6f1', ink:'#141414'},
+    wm:{font:"'Space Mono',monospace",w:700,size:24,sp:'.04em',P:'#c8102e',M:'#141414',upper:true},
+    idea:'A circular stamp — text wrapped on the ring, a pin at the core. A different LAYOUT entirely: the lockup IS the logo, no separate wordmark needed.',
+    why:'Badges signal authority, craft, and permanence — great for a tool people trust with their plans. Stands apart from the flat-icon crowd and looks superb foil-stamped or on a hat.',
+    color:'Near-black + one survey-red. Monochrome by default so it works embossed, etched, or single-color.',
+    use:'Seal · merch · footer · about page',
+    chips:['#141414','#c8102e','#f5f3ee']
+  },
+  {
+    id:'locate', mark:'locate', name:'Locate', tag:'The smallest logo that still works.',
+    bg:'#eafcff', stageBg:'linear-gradient(180deg,#f0fdff,#dff7fb)', ink:'#0e2a33',
+    pal:{c:'#06b6d4', c2:'#0e2a33', bg:'#f0fdff', ink:'#0e2a33'},
+    wm:{font:"'DM Sans',sans-serif",w:700,size:30,sp:'-.04em',P:'#06b6d4',M:'#0e2a33'},
+    idea:'The GPS "locate me" crosshair, borrowed straight from interface language. Center dot in brand cyan = the live position.',
+    why:'Born for small sizes — it\'s already a UI glyph, so it never muddies at 16px. Feels native to software, doubles as your actual "find me" button. Maximum utility, minimum ink.',
+    color:'Ink ring for structure, electric cyan dot for the live signal. Two colors, total clarity.',
+    use:'Favicon · app icon · in-product button',
+    chips:['#0e2a33','#06b6d4','#eafcff']
+  },
+  {
+    id:'fold', mark:'fold', name:'Fold', tag:'The paper map, refolded into an M.',
+    bg:'#fbf8f1', stageBg:'linear-gradient(180deg,#fdfbf5,#f5efe2)', ink:'#23201a',
+    pal:{c:'#e03e2f', paper:'#efe7d6', shadow:'#cdbf9f', ink:'#23201a', bg:'#fdfbf5'},
+    wm:{font:"'Fraunces',serif",w:700,size:30,sp:'-.02em',P:'#23201a',M:'#e03e2f'},
+    idea:'An accordion-folded paper map whose zigzag silhouette spells M, with a pin dropped on the top fold. Light/shadow faces give it real dimensionality.',
+    why:'Nostalgic and tactile — the glovebox map — modernized. The M is hidden in the folds (the discover-it-later detail), and the pin ties it to "where." Warm and human, not another flat tech icon.',
+    color:'Two paper tones for the folds (the whole illusion is the shading) + one red pin. Duotone, print-friendly.',
+    use:'Warm brand moments · onboarding · stickers',
+    chips:['#efe7d6','#cdbf9f','#e03e2f']
+  },
+  {
+    id:'pino', mark:'pino', name:'Pin-O', tag:'No icon. The word is the logo.',
+    bg:'#fafaf8', stageBg:'linear-gradient(180deg,#fdfdfb,#f3f3ef)', ink:'#16181d',
+    pal:{c:'#ff5a3c', bg:'#fdfdfb', ink:'#16181d'},
+    wm:{font:"'Sora',sans-serif",w:800,size:30,sp:'-.03em',pino:true,P:'#16181d',M:'#16181d'},
+    idea:'A pure logotype move: the "o" in Prₒduct becomes a location pin / target. The mark and the name are the same object — and the pin lifts out as a standalone icon.',
+    why:'Most efficient possible system: one drawing serves wordmark AND app icon. The swap is witty but legible, and it forces the eye to read "Product" as a place. Cheapest to deploy, hardest to forget.',
+    color:'Monochrome word + one coral pin. The color only ever lands on the pin, so the brand color = "location" everywhere it appears.',
+    use:'Master logotype · the system\'s backbone',
+    chips:['#16181d','#ff5a3c','#fafaf8']
+  },
+];
+
+function svgEl(markName,pal,size){
+  return `<svg class="${size}" viewBox="0 0 100 100" width="100%" height="100%" xmlns="${NS}">${MARKS[markName](pal)}</svg>`;
+}
+
+/* wordmark builder — handles the Pin-O letterswap concept specially */
+function wordmark(cf,fontSize){
+  const w=cf.wm; const fs=fontSize||w.size;
+  const style=`font-family:${w.font};font-weight:${w.w};font-size:${fs}px;letter-spacing:${w.sp};${w.upper?'text-transform:uppercase;':''}line-height:1`;
+  if(w.pino){
+    // Product → Pr[●]duct where ● is a small pin glyph; Map normal
+    const pin=`<span style="display:inline-block;width:.62em;height:.62em;position:relative;transform:translateY(.06em)">
+        <svg viewBox="0 0 100 100" width="100%" height="100%">${MARKS.pino(cf.pal)}</svg></span>`;
+    return `<div class="wm" style="${style};color:${w.P}">Pr${pin}duct&nbsp;Map</div>`;
+  }
+  return `<div class="wm" style="${style}">
+     <span style="color:${w.P}">P</span><span style="color:${cf.ink}">roduct&nbsp;</span><span style="color:${w.M}">M</span><span style="color:${cf.ink}">ap</span></div>`;
+}
+
+const deck=document.getElementById('deck');
+CONCEPTS.forEach((cf,i)=>{
+  const sec=document.createElement('section');sec.className='concept';
+  const num=String(i+1).padStart(2,'0');
+  sec.innerHTML=`
+    <div class="canvas" style="background:${cf.stageBg}">
+      <span class="badge">${num} / ${cf.name.toUpperCase()}</span>
+      <div class="hero">${svgEl(cf.mark,cf.pal)}</div>
+      <div class="lock"><div class="li">${svgEl(cf.mark,cf.pal)}</div>${cf.wm.pino?'':wordmark(cf)}</div>
+      ${cf.wm.pino?`<div style="margin-top:-10px">${wordmark(cf)}</div>`:''}
+      <div class="proof">
+        <div class="ps"><span style="width:30px;height:30px;display:inline-block">${svgEl(cf.mark,cf.pal)}</span><span>30</span></div>
+        <div class="ps"><span style="width:20px;height:20px;display:inline-block">${svgEl(cf.mark,cf.pal)}</span><span>20</span></div>
+        <div class="ps"><span style="width:14px;height:14px;display:inline-block">${svgEl(cf.mark,cf.pal)}</span><span>14 · favicon</span></div>
+      </div>
+    </div>
+    <div class="pitch">
+      <div class="pname">${cf.name}</div>
+      <div class="ptag">${cf.tag}</div>
+      <div class="row"><span class="k">Idea</span><span class="v">${cf.idea}</span></div>
+      <div class="row"><span class="k">Why smart</span><span class="v">${cf.why}</span></div>
+      <div class="row"><span class="k">Color</span><span class="v">${cf.color}</span></div>
+      <div class="row"><span class="k">Best for</span><span class="v"><b>${cf.use}</b></span></div>
+      <div class="chips">${cf.chips.map(h=>`<i style="background:${h}"><span>${h.replace('#','')}</span></i>`).join('')}</div>
+    </div>`;
+  deck.appendChild(sec);
+});
+</script>
+</body>
+</html>

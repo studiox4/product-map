@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Product Map — Logo Concepts 2 · Color Variants</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Sora:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  :root{--bg:#0d0e12;--ink:#e9e9ea;--muted:#83858f;--hair:rgba(255,255,255,.08)}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-font-smoothing:antialiased}
+  body{
+    font-family:'Hanken Grotesk',sans-serif;color:var(--ink);
+    background:
+      radial-gradient(1100px 540px at 8% -10%, rgba(99,102,241,.10), transparent 60%),
+      radial-gradient(900px 480px at 100% 0%, rgba(45,212,191,.07), transparent 55%),
+      var(--bg);
+    min-height:100vh;padding:60px 30px 120px;
+  }
+  .head{max-width:1240px;margin:0 auto 44px}
+  .nav{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
+  .nav a{
+    font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.06em;
+    color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:999px;border:1px solid var(--hair);
+  }
+  .nav a.on{color:#0d0e12;background:#e9e9ea;border-color:#e9e9ea}
+  .eyebrow{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);margin-bottom:18px;display:flex;gap:14px;align-items:center}
+  .eyebrow::after{content:"";height:1px;flex:1;background:var(--hair)}
+  h1{font-family:'Sora',sans-serif;font-weight:800;letter-spacing:-.03em;font-size:clamp(30px,4.4vw,52px);line-height:1.02;margin-bottom:14px}
+  h1 em{font-style:normal;color:#9aa0ff}
+  .head p{max-width:64ch;color:#b6b8c0;font-size:15.5px;line-height:1.6}
+
+  .grid{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+  @media(max-width:1080px){.grid{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:820px){.grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:520px){.grid{grid-template-columns:1fr}}
+
+  .vcard{border-radius:18px;overflow:hidden;border:1px solid var(--hair);display:flex;flex-direction:column}
+  .vstage{aspect-ratio:1/.86;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:26px 18px}
+  .vstage .mark{width:64px;height:64px}
+  .vlock{display:flex;align-items:center;gap:8px}
+  .vlock .wm{font-weight:800;letter-spacing:-.03em;font-size:20px;white-space:nowrap;font-family:'Hanken Grotesk',sans-serif}
+  .vmeta{padding:12px 14px 14px;border-top:1px solid rgba(128,128,128,.18);display:flex;flex-direction:column;gap:8px}
+  .vname{font-weight:700;font-size:13.5px;letter-spacing:-.01em}
+  .vhex{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .vhex i{width:13px;height:13px;border-radius:4px;display:block;border:1px solid rgba(128,128,128,.25)}
+  .vhex span{font-family:'Space Mono',monospace;font-size:10px;color:#9aa0ad;letter-spacing:.02em}
+  .secthead{max-width:1240px;margin:40px auto 16px;font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);display:flex;gap:14px;align-items:center}
+  .secthead::after{content:"";height:1px;flex:1;background:var(--hair)}
+</style>
+</head>
+<body>
+  <header class="head">
+    <div class="nav">
+      <a href="logo-concepts-1.html">01 · Foundations</a>
+      <a class="on" href="logo-concepts-2.html">02 · Color Variants</a>
+      <a href="logo-concepts-3.html">03 · Designer Takes</a>
+    </div>
+    <div class="eyebrow">Brand exploration · v2</div>
+    <h1>Color variants <em>/</em> same mark, many moods</h1>
+    <p>Identical Gantt-bar <b style="color:#cfd2da">PM</b> monogram and lockup — spun across light and dark palettes. Each tile = one candidate brand color. Two-tone pairs use a distinct hue for the P vs the M; mono pairs share one. Scan for the one that feels like Product Map.</p>
+  </header>
+
+  <div class="secthead">Light</div>
+  <main class="grid" id="grid-light"></main>
+
+  <div class="secthead">Dark</div>
+  <main class="grid" id="grid-dark"></main>
+
+<script>
+const P=[[1,1,1,0],[1,0,0,1],[1,1,1,1],[1,0,0,0],[1,0,0,0],[1,0,0,0],[1,0,0,0]];
+const M=[[1,0,0,0,1],[1,1,0,1,1],[1,0,1,0,1],[1,0,1,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1]];
+const CELL=12,GAPV=2,GAP_LETTERS=1.4;
+function runs(r){const o=[];let i=0;while(i<r.length){if(r[i]){let s=i;while(i<r.length&&r[i])i++;o.push([s,i-s]);}else i++;}return o;}
+
+function buildMark(svg,cfg){
+  const NS='http://www.w3.org/2000/svg';
+  const pCols=P[0].length,mCols=M[0].length,rows=P.length;
+  const totalCols=pCols+GAP_LETTERS+mCols;
+  const W=totalCols*CELL,H=rows*CELL;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.innerHTML='';
+  if(cfg.glow){
+    const defs=document.createElementNS(NS,'defs');
+    const f=document.createElementNS(NS,'filter');f.id='g'+(cfg.name.replace(/\W/g,''));
+    f.setAttribute('x','-40%');f.setAttribute('y','-40%');f.setAttribute('width','180%');f.setAttribute('height','180%');
+    const b=document.createElementNS(NS,'feGaussianBlur');b.setAttribute('stdDeviation','1.1');b.setAttribute('result','b');
+    const m=document.createElementNS(NS,'feMerge');['b','SourceGraphic'].forEach(n=>{const mn=document.createElementNS(NS,'feMergeNode');mn.setAttribute('in',n);m.appendChild(mn);});
+    f.appendChild(b);f.appendChild(m);defs.appendChild(f);svg.appendChild(defs);cfg._fid=f.id;
+  }
+  const barH=CELL-GAPV;
+  const radius=cfg.round==='soft'?barH*0.3:barH/2;
+  function draw(matrix,off,color){
+    matrix.forEach((row,ri)=>runs(row).forEach(([s,l])=>{
+      const r=document.createElementNS(NS,'rect');
+      r.setAttribute('x',(off+s)*CELL);r.setAttribute('y',ri*CELL+GAPV/2);
+      r.setAttribute('width',l*CELL-GAPV);r.setAttribute('height',barH);r.setAttribute('rx',radius);
+      r.setAttribute('fill',color);
+      if(cfg.glow)r.setAttribute('filter',`url(#${cfg._fid})`);
+      svg.appendChild(r);
+    }));
+  }
+  draw(P,0,cfg.p);draw(M,pCols+GAP_LETTERS,cfg.m);
+}
+
+function card(cfg){
+  const el=document.createElement('section');el.className='vcard';
+  el.innerHTML=`
+    <div class="vstage" style="background:${cfg.bg}">
+      <svg class="mark"></svg>
+      <div class="vlock"><div class="wm">
+        <span style="color:${cfg.p}">P</span><span style="color:${cfg.ink}">roduct&nbsp;</span><span style="color:${cfg.m}">M</span><span style="color:${cfg.ink}">ap</span>
+      </div></div>
+    </div>
+    <div class="vmeta" style="background:${cfg.metaBg||'transparent'}">
+      <div class="vname" style="color:${cfg.metaInk||'var(--ink)'}">${cfg.name}</div>
+      <div class="vhex">${cfg.hexes.map(h=>`<i style="background:${h}"></i>`).join('')}<span>${cfg.hexes.join(' · ')}</span></div>
+    </div>`;
+  buildMark(el.querySelector('.mark'),cfg);
+  return el;
+}
+
+const LIGHT=[
+  {name:'Cobalt',bg:'#f6f7f9',ink:'#10131a',p:'#1f5fff',m:'#1f5fff',hexes:['#1f5fff','#10131a']},
+  {name:'Indigo Duo',bg:'#f6f6f2',ink:'#15171d',p:'#3b51e0',m:'#6a7bff',hexes:['#3b51e0','#6a7bff']},
+  {name:'Evergreen',bg:'#f2f6f2',ink:'#11140f',p:'#1f7a4d',m:'#2fa564',hexes:['#1f7a4d','#2fa564']},
+  {name:'Teal / Navy',bg:'#edf4f4',ink:'#0e1a1a',p:'#0e8c98',m:'#123c5a',hexes:['#0e8c98','#123c5a']},
+  {name:'Crimson',bg:'#faf6f4',ink:'#1a0f0e',p:'#e23b3b',m:'#9b1c1c',hexes:['#e23b3b','#9b1c1c']},
+  {name:'Tangerine',bg:'#fdf7ef',ink:'#1c1408',p:'#ff7a1a',m:'#ffae3d',round:'soft',hexes:['#ff7a1a','#ffae3d']},
+  {name:'Sky / Ink',bg:'#eef6ff',ink:'#0b1b2b',p:'#0ea5e9',m:'#0b3a5a',hexes:['#0ea5e9','#0b3a5a']},
+  {name:'Slate Mono',bg:'#eef0f2',ink:'#1b1f27',p:'#3a4250',m:'#3a4250',hexes:['#3a4250','#1b1f27']},
+  {name:'Ink / Cream',bg:'#f3ecdb',ink:'#1d1b16',p:'#1d1b16',m:'#df3f1f',round:'soft',hexes:['#1d1b16','#df3f1f']},
+  {name:'Plum',bg:'#f6f2f8',ink:'#1a121d',p:'#7b2ff7',m:'#b14dff',hexes:['#7b2ff7','#b14dff']},
+  {name:'Rose / Graphite',bg:'#fbf3f4',ink:'#1a1416',p:'#e84d6e',m:'#2b2730',hexes:['#e84d6e','#2b2730']},
+  {name:'Olive',bg:'#f5f4ea',ink:'#15160d',p:'#6b7a1f',m:'#9aa83a',round:'soft',hexes:['#6b7a1f','#9aa83a']},
+];
+
+const DARK=[
+  {name:'Neon Lime',bg:'#0a0d0b',ink:'#eef2ee',p:'#c7f94a',m:'#00e6a8',glow:true,metaBg:'#0e1210',metaInk:'#cfd6cf',hexes:['#c7f94a','#00e6a8']},
+  {name:'Cyan',bg:'#07101a',ink:'#e8f6ff',p:'#22d3ee',m:'#3b82f6',glow:true,metaBg:'#0a141f',metaInk:'#cfe2ef',hexes:['#22d3ee','#3b82f6']},
+  {name:'Magenta',bg:'#120a18',ink:'#f6eefb',p:'#ff4d9d',m:'#b14dff',glow:true,metaBg:'#160d1d',metaInk:'#e6d6ef',hexes:['#ff4d9d','#b14dff']},
+  {name:'Amber',bg:'#140f06',ink:'#fdf3e0',p:'#ffb020',m:'#ff7a1a',metaBg:'#19130a',metaInk:'#efe2cf',hexes:['#ffb020','#ff7a1a']},
+  {name:'Mint Mono',bg:'#07120e',ink:'#dfeee6',p:'#34e3a0',m:'#34e3a0',glow:true,metaBg:'#0b1813',metaInk:'#cfe6db',hexes:['#34e3a0','#07120e']},
+  {name:'Paper White',bg:'#0d0e12',ink:'#e9e9ea',p:'#ffffff',m:'#ffffff',metaBg:'#111319',metaInk:'#cfd0d8',hexes:['#ffffff','#0d0e12']},
+  {name:'Coral',bg:'#16100e',ink:'#ffeee8',p:'#ff6a4d',m:'#ff9d2e',metaBg:'#1c1512',metaInk:'#efd9cf',hexes:['#ff6a4d','#ff9d2e']},
+  {name:'Electric',bg:'#0a0e1a',ink:'#eaf0ff',p:'#4f7bff',m:'#7c5cff',glow:true,metaBg:'#0e1322',metaInk:'#d6dcef',hexes:['#4f7bff','#7c5cff']},
+];
+
+const gl=document.getElementById('grid-light'),gd=document.getElementById('grid-dark');
+LIGHT.forEach(c=>gl.appendChild(card(c)));
+DARK.forEach(c=>gd.appendChild(card(c)));
+</script>
+</body>
+</html>

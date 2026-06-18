@@ -44,7 +44,7 @@ export const ACTIVITY_KINDS = [
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 
 export const DOC_TYPE_COLORS: Record<DocType, { chip: string; edge: string }> = {
-  prd:           { chip: 'bg-action-soft text-action', edge: '#2b557e' },
+  prd:           { chip: 'bg-action-soft text-action', edge: '#4338ca' },
   tech_spec:     { chip: 'bg-[var(--pm-grape-soft)] text-[var(--pm-grape)]', edge: '#6d3f9e' },
   brd:           { chip: 'bg-cool-soft text-cool', edge: '#0e7490' },
   feature_brief: { chip: 'bg-sage-soft text-sage', edge: '#3c6b46' },
