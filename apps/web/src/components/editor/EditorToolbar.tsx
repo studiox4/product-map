@@ -48,7 +48,8 @@ export interface EditorToolbarProps {
   status: DocStatus;
   onStatusChange: (status: DocStatus) => void;
   saveState: AutosaveState;
-  exportHref: string;
+  /** Markdown export URL. Omit to hide the Export button (e.g. in demo). */
+  exportHref?: string;
   /** Unresolved comment thread count for the badge (comments pill renders when onToggleComments is set). */
   commentCount?: number;
   onToggleComments?: () => void;
@@ -182,12 +183,14 @@ export function EditorToolbar({
             ) : null}
           </Button>
         ) : null}
-        <Button asChild variant="ghost" size="sm" className="shrink-0 text-body-ink">
-          <a href={exportHref} download>
-            <Download className="mr-1 h-4 w-4" aria-hidden />
-            Export .md
-          </a>
-        </Button>
+        {exportHref ? (
+          <Button asChild variant="ghost" size="sm" className="shrink-0 text-body-ink">
+            <a href={exportHref} download>
+              <Download className="mr-1 h-4 w-4" aria-hidden />
+              Export .md
+            </a>
+          </Button>
+        ) : null}
         {readerHref || onCoverChange || onAiReview ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

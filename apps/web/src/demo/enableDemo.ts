@@ -4,6 +4,7 @@
 // `demoFetch` that drives the real `app.fetch` — so the demo answers requests
 // with the exact production route logic, just against an in-page database.
 //
+import type { User } from '@productmap/shared';
 import { setActiveFetch } from '../lib/api';
 import { app } from '../../../../apps/api/src/app';
 import { configureDb } from '../../../../apps/api/src/db';
@@ -13,24 +14,29 @@ import { projects } from '../../../../packages/db/src/schema';
 import type { Db } from '../../../../packages/db/src/index';
 import { createDemoDb } from './demoDb';
 import { mintDemoCookie, DEMO_USER_ID } from './demoSession';
+import { demoReady, getDemoProjectId, setDemoEnabled } from './demoState';
 
-export { app, DEMO_USER_ID };
+// Re-export the lightweight state helpers so existing importers (and tests)
+// that reach for them via this module keep working. New synchronous callers in
+// the render path MUST import from './demoState' directly so the heavy graph
+// above never lands in their chunk.
+export { app, DEMO_USER_ID, demoReady, getDemoProjectId };
 
 let _enabled = false;
 let _cookie: string | null = null;
-let _projectId: string | null = null;
 
-/** Reactively-checkable flag: is the demo runtime live? */
-export function demoReady(): boolean {
-  return _enabled;
-}
-
-/** The seeded demo project id (available after enableDemo resolves). */
-export function getDemoProjectId(): string {
-  if (_projectId == null) {
-    throw new Error('Demo not enabled — call enableDemo() first');
-  }
-  return _projectId;
+/**
+ * The demo user, shaped like the app's `User` type (what `useMe()` returns).
+ * Mirrors the seeded demo user in packages/db/src/seed-data so the avatar
+ * colour and name match the data the demo backend serves.
+ */
+export function getDemoUser(): User {
+  return {
+    id: DEMO_USER_ID,
+    name: 'Corban',
+    color: '#2b557e',
+    role: 'admin',
+  };
 }
 
 /** Query the seeded project id from the demo database (single seeded project). */
@@ -54,8 +60,9 @@ export async function enableDemo(): Promise<void> {
   await seedDemo(db, markdownToTiptap, async () => 'demo-no-login');
 
   _cookie = await mintDemoCookie();
-  _projectId = await loadSeededProjectId(db);
+  const projectId = await loadSeededProjectId(db);
   _enabled = true;
+  setDemoEnabled(projectId);
 
   // Route all of api.ts's I/O through the in-page demo backend.
   setActiveFetch(demoFetch);

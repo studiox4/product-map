@@ -12,6 +12,7 @@ import {
   useUpdateDocument,
 } from '@/lib/api';
 import { useProjectId } from '@/lib/project';
+import { demoReady } from '@/demo/demoState';
 import { appRoutes } from '@/lib/routes';
 import { docBackLink } from './doc-back-link';
 import { DocTypeChip } from '@/components/DocTypeChip';
@@ -208,7 +209,7 @@ export default function DocPage() {
         status={doc.status}
         onStatusChange={handleStatusChange}
         saveState={autosave.state}
-        exportHref={apiPath(pid, 'documents', doc.id, 'export.md')}
+        exportHref={demoReady() ? undefined : apiPath(pid, 'documents', doc.id, 'export.md')}
         commentCount={unresolvedCount}
         onToggleComments={() => setCommentsOpen((open) => !open)}
         titleTransitionName={morphName('doc-title', doc.id)}

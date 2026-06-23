@@ -37,6 +37,9 @@ const ReleasesPage = lazy(() => import('@/routes/Releases'));
 const ReleaseDetailPage = lazy(() => import('@/components/releases/ReleaseDetail'));
 const OutcomesPage = lazy(() => import('@/routes/Outcomes'));
 const Marketing = lazy(() => import('@/routes/Marketing'));
+// Demo boot route. Lazy so the heavy PGlite/demo graph it dynamically imports
+// never enters the main or landing chunk — it loads only when /demo is visited.
+const DemoEntry = lazy(() => import('@/demo/DemoEntry'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -92,6 +95,15 @@ export default function App() {
             {/* Public routes — no auth required. */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            {/* Demo boot — public; spins up the in-page demo then redirects to /app. */}
+            <Route
+              path="/demo"
+              element={
+                <Suspense fallback={null}>
+                  <DemoEntry />
+                </Suspense>
+              }
+            />
             {/* Marketing landing — presentational, no providers; prerendered for `/`. */}
             <Route
               path="/"
