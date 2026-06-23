@@ -29,6 +29,15 @@ const ROWS = [
     body: 'PRDs, tech specs, and briefs sit next to every feature in a markdown editor — versioned, exportable, and yours.',
     points: ['PRDs, specs & briefs', 'Markdown that stays yours', 'Versioned + exportable'],
   },
+  {
+    src: '/marketing/hero.png',
+    alt: 'ProductMap overview dashboard',
+    icon: Boxes,
+    eyebrow: 'Overview',
+    title: 'Everything, at a glance',
+    body: 'The dashboard pulls your board, roadmap, and docs into one overview — the same product you saw up top, real and self-hosted.',
+    points: ['Unified overview', 'Self-hosted', 'Your data'],
+  },
 ] as const;
 
 export default function ScreenshotStrip() {
