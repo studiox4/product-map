@@ -4,10 +4,7 @@
 // `demoFetch` that drives the real `app.fetch` — so the demo answers requests
 // with the exact production route logic, just against an in-page database.
 //
-// NOTE: api.ts `setActiveFetch` does not exist yet (it's a later task). This
-// module deliberately does NOT import or call it; it exports `demoFetch` and the
-// real `app` so the later api.ts wiring can consume them.
-import { eq } from 'drizzle-orm';
+import { setActiveFetch } from '../lib/api';
 import { app } from '../../../../apps/api/src/app';
 import { configureDb } from '../../../../apps/api/src/db';
 import { markdownToTiptap } from '../../../../apps/api/src/lib/markdown';
@@ -59,6 +56,9 @@ export async function enableDemo(): Promise<void> {
   _cookie = await mintDemoCookie();
   _projectId = await loadSeededProjectId(db);
   _enabled = true;
+
+  // Route all of api.ts's I/O through the in-page demo backend.
+  setActiveFetch(demoFetch);
 }
 
 /**
