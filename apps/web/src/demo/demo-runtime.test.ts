@@ -1,7 +1,9 @@
 // Proves the full demo loop against the REAL route logic: in-page PGlite +
 // real migrations + real seed + real Hono `app` + real auth cookie. Runs in the
-// node environment because PGlite instantiates WASM (jsdom's fetch/WASM path is
-// flaky for that).
+// node environment to isolate the DB/route loop; the browser/jsdom WASM path is
+// not exercised here (deferred to the Playwright e2e task). PGlite targets
+// browsers, so node-vs-jsdom here is a test-isolation choice, not a portability
+// concern.
 // @vitest-environment node
 import { describe, it, expect, beforeAll } from 'vitest';
 import { enableDemo, demoFetch, getDemoProjectId, DEMO_USER_ID } from './enableDemo';
@@ -70,13 +72,17 @@ describe('demo runtime (real app + PGlite)', () => {
   });
 
   it('never returns 401 (the demo auth cookie is accepted)', async () => {
+    const list = await demoFetch(`/api/projects/${pid}/features`);
+    const features = (await list.json()) as Array<{ id: string }>;
+    const featureId = features[0].id;
+
     const probes = await Promise.all([
       demoFetch(`/api/projects/${pid}/features`),
       demoFetch(`/api/projects/${pid}/overview`),
       demoFetch(`/api/projects/${pid}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ featureId: getDemoProjectId(), body: 'ignored' }),
+        body: JSON.stringify({ featureId, body: 'auth probe comment' }),
       }),
     ]);
     for (const res of probes) {

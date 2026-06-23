@@ -16,7 +16,9 @@ Hono `app`, and answers requests through the real route logic via `demoFetch`.
 ## Dependency added
 
 - `@electric-sql/pglite@^0.5.0` → resolved to **0.5.3** in `apps/web`.
-- `drizzle-orm` (with its `/pglite` adapter) was already present at **0.38.4** transitively; no explicit add needed.
+- `drizzle-orm@^0.38.2` added explicitly to `apps/web` (resolves to **0.38.4**). Its `/pglite`
+  adapter was already resolvable transitively, but declaring the dep is cheap insurance against a
+  clean-install CI where workspace hoisting differs (the task invited "add it explicitly if needed").
 - `pnpm add` hit a sandbox EPERM; succeeded with the sandbox disabled.
 
 ## Migration glob path that worked
@@ -97,8 +99,10 @@ Tests: 14-migration glob count, non-empty features GET, overview GET 200, POST f
 follow-up GET includes it, POST comment authored by `DEMO_USER_ID` → 201 with `authorId === DEMO_USER_ID`
 (FK resolves), and no request returns 401.
 
-- `// @vitest-environment node` is set on the test file (PGlite WASM instantiation is unreliable under
-  jsdom; node is the right env for this DB-level test).
+- `// @vitest-environment node` is set on the test file purely to isolate the DB/route loop in node.
+  The browser/jsdom WASM path is NOT exercised here (deferred to the Playwright e2e task). PGlite
+  targets browsers, so this is a test-isolation choice, not a portability concern — no jsdom failure
+  was observed.
 - `pnpm --filter @productmap/api build` (tsc): **clean**.
 - `pnpm --filter @productmap/web exec tsc --noEmit`: **clean**.
 - `pnpm --filter @productmap/web test` (the package script, which excludes `scripts/**`):
