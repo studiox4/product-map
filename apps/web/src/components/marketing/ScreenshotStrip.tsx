@@ -1,6 +1,7 @@
 import { Boxes, CalendarRange, Check, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BoardToRoadmap } from '@/components/marketing/motion/story/BoardToRoadmap';
+import { DocsType } from '@/components/marketing/motion/story/DocsType';
 
 const ROWS = [
   {
@@ -30,6 +31,7 @@ const ROWS = [
     title: 'Specs that live with the work',
     body: 'PRDs, tech specs, and briefs sit next to every feature in a markdown editor — versioned, exportable, and yours.',
     points: ['PRDs, specs & briefs', 'Markdown that stays yours', 'Versioned + exportable'],
+    accent: 'docs' as const,
   },
   {
     src: '/marketing/hero.png',
@@ -89,6 +91,7 @@ export default function ScreenshotStrip() {
                 {accent === 'board' && (
                   <BoardToRoadmap className="mb-2 h-16 w-full text-ink/70" />
                 )}
+                {accent === 'docs' && <DocsType className="mb-2 h-14 w-full text-ink/70" />}
                 <img src={src} alt={alt} className="w-full rounded-xl" loading="lazy" />
               </figure>
             </div>
