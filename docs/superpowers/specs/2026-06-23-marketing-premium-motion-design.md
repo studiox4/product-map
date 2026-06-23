@@ -59,22 +59,32 @@ structure stay; we add choreography and brand-tied graphics.
 
 ### 1. Motion infrastructure (`apps/web/src/components/marketing/motion/`)
 
-- Add `framer-motion` dependency.
+- Add `framer-motion` dependency. **Use `LazyMotion` + the `m` component with the
+  `domAnimation` feature set — NOT the full `motion` API.** This ships a tiny core
+  and lazy-loads features, keeping the same `whileInView` / hover / `pathLength`
+  vocabulary at a fraction of the initial JS. The landing page is the most
+  perf/SEO-sensitive page (currently near-zero JS), so the bundle check (see
+  Testing) must confirm the real delta, not assume the ~45kb full-API figure.
 - **`Reveal.tsx`** — single reusable scroll-reveal primitive wrapping
-  `motion.div` with `whileInView`, `viewport={{ once: true, margin }}`, and an
+  `m.div` with `whileInView`, `viewport={{ once: true, margin }}`, and an
   optional `stagger` prop for child sequencing. This is the single source of
   motion truth; sections compose it rather than hand-rolling variants.
-- **SSR/prerender safety (critical invariant):**
-  - Motion components must render their **final, visible** state during SSR —
-    never an `opacity: 0` / offset initial that would ship a blank prerender.
-    Use the framer-motion `initial={false}`-style gating, or a `mounted` flag
-    that starts `true` on the server and only enables entrance animation after
-    client mount. Net effect: JS-off prerender shows the finished layout;
-    JS-on animates in.
-  - `prerender.mjs` must continue to pass its fail-loud guards (title, root
-    marker, non-empty HTML). Add a check after implementation that the rendered
-    `marketing.html` contains the hero/section text (not just empty motion
-    wrappers).
+- **SSR/prerender safety (critical invariant + concrete mechanism):**
+  - The prerendered HTML must render complete and visible with JS disabled. The
+    naive `whileInView` pattern bakes `initial={{ opacity: 0 }}` into the static
+    HTML → blank sections for no-JS users and crawlers, defeating prerendering.
+  - **Rule that satisfies both prerender-visible AND animate-in:**
+    - **Above-the-fold (hero):** animate **on mount**. The hidden initial state
+      is applied client-side only (after mount) — SSR ships the finished layout;
+      the entrance plays once JS hydrates.
+    - **Below-the-fold (everything reached by scroll):** use `whileInView`, but
+      set the hidden state **after mount** (client-only). Because these sections
+      are off-screen at load, applying hidden-then-reveal causes no visible
+      flash, and SSR still ships them visible.
+  - `prerender.mjs` keeps its fail-loud guards (title, root marker, non-empty
+    HTML) **plus a new assertion that `marketing.html` contains the hero headline
+    and each section's text with JS off.** Per advisor: write this assertion
+    FIRST (TDD) so an `opacity: 0`-in-prerender regression cannot slip through.
 - **Reduced motion:** respect `prefers-reduced-motion` via framer-motion's
   `useReducedMotion()`; reveal/parallax/SVG sequences collapse to their static
   final frame. Complements the existing CSS reduced-motion block.
@@ -143,6 +153,23 @@ stay correct.
 - No logo/asset changes (already correct).
 - No redeploy as part of this work (separate ops step once merged).
 
+## Implementation sequencing (de-risk the subjective goal)
+
+"Premium feel" lives in motion quality, which no text spec or screenshot can
+verify — only the user's eyes on real motion. So the plan is sequenced to
+calibrate early, before building everything:
+
+1. Motion infra (`LazyMotion`/`m`, `Reveal`) + the **prerender text assertion
+   first (TDD)**.
+2. **Build the hero `HeroGraphic` SVG only**, wire it in, run the site.
+3. **Checkpoint:** user reviews the actual hero motion; calibrate the motion
+   language / pacing / intensity bar.
+4. Only then build the two remaining story SVGs, branded feature icons, and the
+   per-section choreography to the calibrated bar.
+
+This avoids building 5+ animated components and discovering the motion language
+isn't what the user pictured.
+
 ## Testing & verification
 
 - **Prerender integrity:** after build, assert `dist/marketing.html` contains the
@@ -153,8 +180,9 @@ stay correct.
 - **Reduced motion:** with `prefers-reduced-motion: reduce`, confirm all
   sections render their static final frame (no animation, no blank states).
 - **Visual check:** Playwright screenshots of each section in light and dark mode.
-- **Bundle:** confirm the framer-motion addition is within the expected ~45kb
-  gzip and lazy/code-split where it doesn't regress first paint.
+- **Bundle:** measure the real gzip delta from `LazyMotion`/`m` (expected well
+  under the ~45kb full-API figure); confirm it lazy-loads and does not regress
+  first paint on the landing page.
 
 ## Components to create / modify
 
