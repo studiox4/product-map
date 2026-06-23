@@ -15,8 +15,10 @@ export const GITHUB_API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO
  */
 export const MARKETING_SITE_URL = 'https://productmap.x4.studio';
 
-/** Shown when api.github.com is unreachable (offline / rate-limited / air-gapped). */
-export const STARS_FALLBACK = 1200;
+/** Shown when api.github.com is unreachable (offline / rate-limited / air-gapped).
+ * 0 so we never display an inflated/fake count — the real star count loads
+ * client-side from the public GitHub API. */
+export const STARS_FALLBACK = 0;
 
 export const HERO_HEADLINE = 'Your product roadmap. Self-hosted. Yours.';
 export const HERO_SUBHEAD =
