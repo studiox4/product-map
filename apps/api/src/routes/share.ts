@@ -11,7 +11,7 @@ import { Hono } from 'hono';
 import { and, eq, isNull } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { db } from '../db';
-import { projects, features, documents, releases, shareTokens, memberships } from '@productmap/db';
+import { projects, features, documents, releases, shareTokens, memberships } from '@productmap/db/schema';
 import type { AuthEnv } from '../middleware/auth';
 import type { MembershipEnv } from '../middleware/membership';
 import type { DocumentMeta, FeatureWithDocs, Horizon, ShareData } from '@productmap/shared';

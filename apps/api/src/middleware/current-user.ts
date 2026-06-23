@@ -1,4 +1,4 @@
-import type { users } from '@productmap/db';
+import type { users } from '@productmap/db/schema';
 
 export type UserRow = typeof users.$inferSelect;
 

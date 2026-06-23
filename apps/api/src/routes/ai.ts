@@ -5,7 +5,7 @@ import { and, asc, eq, gte, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { generateDoc } from '@productmap/shared';
 import { db } from '../db';
-import { activity, features, templates, users } from '@productmap/db';
+import { activity, features, templates, users } from '@productmap/db/schema';
 import { createAiModel, generateDocStream, generateDigestStream, isAiEnabled } from '../lib/ai';
 
 const generateDocBody = generateDoc.extend({

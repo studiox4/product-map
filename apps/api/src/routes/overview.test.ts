@@ -13,8 +13,8 @@ import {
 } from '../test/helpers';
 
 const { app } = await import('../app');
-const { db, pool } = await import('../db');
-const { projects, features, documents, users, comments, votes } = await import('@productmap/db');
+const { db } = await import('../db');
+const { projects, features, documents, users, comments, votes } = await import('@productmap/db/schema');
 
 let auth: Record<string, string> = {};
 let actor: { id: string; role: 'admin' | 'member'; tokenVersion?: number };

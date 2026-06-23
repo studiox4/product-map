@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { asc, eq, sql } from 'drizzle-orm';
 import { commentCreate, commentUpdate, resolveBody } from '@productmap/shared';
-import { comments, documents, features, users } from '@productmap/db';
+import { comments, documents, features, users } from '@productmap/db/schema';
 import { db } from '../db';
 import { type MembershipEnv } from '../middleware/membership';
 import { loadUser } from '../middleware/auth';

@@ -4,7 +4,7 @@ import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { nanoid } from 'nanoid';
-import { uploads } from '@productmap/db';
+import { uploads } from '@productmap/db/schema';
 import { db } from '../db';
 
 const ALLOWED_MIME: Record<string, string> = {

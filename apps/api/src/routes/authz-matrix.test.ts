@@ -32,7 +32,7 @@ import {
   comments,
   evidence,
   planEntries,
-} from '@productmap/db';
+} from '@productmap/db/schema';
 
 // ─── actors (set per-test in beforeEach) ─────────────────────────────────────
 let editorA: { id: string; role: 'admin' | 'member' };

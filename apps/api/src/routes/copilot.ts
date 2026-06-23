@@ -11,7 +11,7 @@ import { streamText } from 'ai';
 import { reviewDocBody, copilotChatBody } from '@productmap/shared';
 import type { CopilotNudge } from '@productmap/shared';
 import { db } from '../db';
-import { comments, documents, features } from '@productmap/db';
+import { comments, documents, features } from '@productmap/db/schema';
 import { createAiModel } from '../lib/ai';
 import { loadScoped } from '../lib/scope';
 import type { MembershipEnv } from '../middleware/membership';

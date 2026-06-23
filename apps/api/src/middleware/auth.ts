@@ -1,7 +1,7 @@
 import { createMiddleware } from 'hono/factory';
 import { getCookie } from 'hono/cookie';
 import { eq } from 'drizzle-orm';
-import { users } from '@productmap/db';
+import { users } from '@productmap/db/schema';
 import { db } from '../db';
 import { verifyAccess } from '../lib/auth/tokens';
 import { ACCESS_COOKIE } from '../lib/auth/cookies';

@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { getCookie } from 'hono/cookie';
 import { eq, sql } from 'drizzle-orm';
 import { registerInput, loginInput, changePasswordInput, USER_COLORS } from '@productmap/shared';
-import { users } from '@productmap/db';
+import { users } from '@productmap/db/schema';
 import { db } from '../db';
 import { config } from '../config';
 import { hashPassword, verifyPassword } from '../lib/auth/password';

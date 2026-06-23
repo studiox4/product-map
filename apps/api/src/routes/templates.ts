@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 import { templateCreate, templateUpdate, archiveBody } from '@productmap/shared';
-import { templates } from '@productmap/db';
+import { templates } from '@productmap/db/schema';
 import type { Context } from 'hono';
 import { db } from '../db';
 import { tiptapToMarkdown } from '../lib/markdown';

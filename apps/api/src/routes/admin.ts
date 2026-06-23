@@ -4,7 +4,7 @@ import { asc, eq, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { seedDemo } from '@productmap/db/seed-data';
 import { adminCreateUserInput, adminUpdateUserInput, USER_COLORS } from '@productmap/shared';
-import { users } from '@productmap/db';
+import { users } from '@productmap/db/schema';
 import { db } from '../db';
 import { hashPassword } from '../lib/auth/password';
 import { publicUser, adminUser } from '../lib/auth/serialize';

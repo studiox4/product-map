@@ -10,7 +10,7 @@ import {
   ideaPromote,
   type VoteSummary,
 } from '@productmap/shared';
-import { activity, documents, features, ideas, ideaVotes, templates, users } from '@productmap/db';
+import { activity, documents, features, ideas, ideaVotes, templates, users } from '@productmap/db/schema';
 import { db } from '../db';
 import { type MembershipEnv } from '../middleware/membership';
 import { recordActivity, addCollaborator } from '../lib/activity';

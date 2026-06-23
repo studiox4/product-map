@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import archiver from 'archiver';
 import { documentCreate, documentUpdate } from '@productmap/shared';
-import { documents, features, ideas, releases, templates } from '@productmap/db';
+import { documents, features, ideas, releases, templates } from '@productmap/db/schema';
 import type { Context } from 'hono';
 import { db } from '../db';
 import { tiptapToMarkdown } from '../lib/markdown';

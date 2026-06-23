@@ -4,7 +4,7 @@ import {
   addMembership, authCookie, createTestInvite,
 } from '../test/helpers';
 import { eq, and } from 'drizzle-orm';
-import { memberships } from '@productmap/db';
+import { memberships } from '@productmap/db/schema';
 import { app } from '../app';
 import { db } from '../db';
 

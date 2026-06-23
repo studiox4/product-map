@@ -1,6 +1,6 @@
 import { createMiddleware } from 'hono/factory';
 import { and, eq } from 'drizzle-orm';
-import { memberships } from '@productmap/db';
+import { memberships } from '@productmap/db/schema';
 import { ROLE_RANK, type MemberRole } from '@productmap/shared';
 import { db } from '../db';
 import type { AuthEnv } from './auth';

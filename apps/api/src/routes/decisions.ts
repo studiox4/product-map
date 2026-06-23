@@ -7,7 +7,7 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 const uuidSchema = z.string().uuid();
 import { decisionCreate, suggestDecisionBody } from '@productmap/shared';
-import { comments, decisions, features, users } from '@productmap/db';
+import { comments, decisions, features, users } from '@productmap/db/schema';
 import { db } from '../db';
 import { type MembershipEnv } from '../middleware/membership';
 import { loadUser } from '../middleware/auth';

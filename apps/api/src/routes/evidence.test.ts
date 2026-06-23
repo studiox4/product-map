@@ -10,7 +10,7 @@ import {
 } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { features, evidence } from '@productmap/db';
+import { features, evidence } from '@productmap/db/schema';
 import { eq } from 'drizzle-orm';
 
 let projectId: string;

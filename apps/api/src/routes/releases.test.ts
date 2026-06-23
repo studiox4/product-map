@@ -10,7 +10,7 @@ import {
 } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { features, documents, releases, activity, templates } from '@productmap/db';
+import { features, documents, releases, activity, templates } from '@productmap/db/schema';
 import { markdownToTiptap } from '../lib/markdown';
 import { asc, eq } from 'drizzle-orm';
 

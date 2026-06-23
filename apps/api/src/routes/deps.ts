@@ -4,7 +4,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { and, eq, inArray } from 'drizzle-orm';
 import { dependenciesPut } from '@productmap/shared';
-import { features, featureDependencies } from '@productmap/db';
+import { features, featureDependencies } from '@productmap/db/schema';
 import { db } from '../db';
 import { type MembershipEnv } from '../middleware/membership';
 import { loadScoped } from '../lib/scope';

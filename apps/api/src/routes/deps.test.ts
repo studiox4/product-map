@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { setupTestDb, truncateAll, closeTestDb, createTestUser, createTestProject, addMembership, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { projects, features, activity, featureDependencies } from '@productmap/db';
+import { projects, features, activity, featureDependencies } from '@productmap/db/schema';
 import { asc, eq } from 'drizzle-orm';
 
 let projectId: string;

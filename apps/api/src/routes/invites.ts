@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { and, eq, isNull } from 'drizzle-orm';
-import { invites, memberships, projects, users } from '@productmap/db';
+import { invites, memberships, projects, users } from '@productmap/db/schema';
 import { db } from '../db';
 import type { AuthEnv } from '../middleware/auth';
 import type { MemberRole } from '@productmap/shared';

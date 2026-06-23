@@ -7,6 +7,7 @@
   "types": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./schema": "./src/schema-only.ts",
     "./seed-data": "./src/seed-data.ts"
   },
   "scripts": {

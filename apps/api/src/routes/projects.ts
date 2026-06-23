@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { eq, and, isNull, desc } from 'drizzle-orm';
 import { projectCreate, projectUpdate, memberAdd, memberUpdate, inviteCreate, INVITE_TTL_SEC } from '@productmap/shared';
-import { projects, memberships, users, invites } from '@productmap/db';
+import { projects, memberships, users, invites } from '@productmap/db/schema';
 import { nanoid } from 'nanoid';
 import { db } from '../db';
 import { requireMembership, type MembershipEnv } from '../middleware/membership';
