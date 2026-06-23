@@ -31,7 +31,7 @@ export const authRoutes = new Hono<AuthEnv>()
       if (!isSameOrigin(c)) return c.json({ error: 'forbidden_origin' }, 403);
       const isRefresh = c.req.path.endsWith('/refresh');
       const limiter = isRefresh ? refreshLimiter : credLimiter;
-      if (!limiter.hit(clientIp(c))) return c.json({ error: 'rate_limited' }, 429);
+      if (!limiter.hit(await clientIp(c))) return c.json({ error: 'rate_limited' }, 429);
     }
     await next();
   })
