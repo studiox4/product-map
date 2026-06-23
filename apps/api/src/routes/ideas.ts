@@ -96,7 +96,7 @@ async function draftAiBrief(
   ideaBodyMd: string,
   actorId: string | undefined,
 ): Promise<void> {
-  const model = createAiModel();
+  const model = await createAiModel();
   if (!model) return;
   try {
     const [template] = await db

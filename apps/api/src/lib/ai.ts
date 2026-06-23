@@ -1,6 +1,8 @@
-import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock';
-import { fromNodeProviderChain } from '@aws-sdk/credential-providers';
 import { streamText, type LanguageModel } from 'ai';
+
+// @ai-sdk/amazon-bedrock and @aws-sdk/credential-providers are node-only and are
+// imported lazily inside defaultModelFactory so the Hono `app` graph stays
+// browser-safe (the demo runs with AI disabled and never reaches them).
 
 /** Default Bedrock model (cross-region inference profile). Override with BEDROCK_MODEL_ID. */
 export const DEFAULT_BEDROCK_MODEL_ID = 'us.anthropic.claude-sonnet-4-5-20250929-v1:0';
@@ -19,8 +21,10 @@ export function isAiEnabled(): boolean {
   );
 }
 
-function defaultModelFactory(): LanguageModel | null {
+async function defaultModelFactory(): Promise<LanguageModel | null> {
   if (!isAiEnabled()) return null;
+  const { createAmazonBedrock } = await import('@ai-sdk/amazon-bedrock');
+  const { fromNodeProviderChain } = await import('@aws-sdk/credential-providers');
   const bedrock = createAmazonBedrock({
     region: process.env.AWS_REGION ?? 'us-east-1',
     credentialProvider: async () => {
@@ -35,7 +39,8 @@ function defaultModelFactory(): LanguageModel | null {
   return bedrock(process.env.BEDROCK_MODEL_ID ?? DEFAULT_BEDROCK_MODEL_ID);
 }
 
-let modelFactory: () => LanguageModel | null = defaultModelFactory;
+let modelFactory: () => LanguageModel | null | Promise<LanguageModel | null> =
+  defaultModelFactory;
 
 /** Test seam: override the model factory (inject a MockLanguageModelV3). Pass null to restore the default. */
 export function setAiModelFactory(f: (() => LanguageModel | null) | null): void {
@@ -43,7 +48,7 @@ export function setAiModelFactory(f: (() => LanguageModel | null) | null): void 
 }
 
 /** Returns a Bedrock language model, or null when AI is disabled (no AWS credentials configured). */
-export function createAiModel(): LanguageModel | null {
+export async function createAiModel(): Promise<LanguageModel | null> {
   return modelFactory();
 }
 

@@ -15,7 +15,7 @@ const generateDocBody = generateDoc.extend({
 export const aiRoutes = new Hono()
   .get('/status', (c) => c.json({ enabled: isAiEnabled() }))
   .post('/generate-doc', zValidator('json', generateDocBody), async (c) => {
-    const model = createAiModel();
+    const model = await createAiModel();
     if (!model) return c.json({ error: 'ai_disabled' }, 503);
 
     const { docType, featureId, brief, templateId } = c.req.valid('json');
@@ -63,7 +63,7 @@ export const aiRoutes = new Hono()
   })
   // POST /api/ai/digest → SSE stream summarizing the last 7 days of activity.
   .post('/digest', async (c) => {
-    const model = createAiModel();
+    const model = await createAiModel();
     if (!model) return c.json({ error: 'ai_disabled' }, 503);
 
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);

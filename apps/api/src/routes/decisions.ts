@@ -119,7 +119,7 @@ export const decisionsRoutes = new Hono<MembershipEnv>()
       }
     }),
     async (c) => {
-      const model = createAiModel();
+      const model = await createAiModel();
       if (!model) return c.json({ error: 'ai_disabled' }, 503);
 
       const { commentId } = c.req.valid('json');
