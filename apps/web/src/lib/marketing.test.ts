@@ -30,7 +30,9 @@ describe('marketing constants', () => {
 
   it('exposes a numeric stars fallback for air-gapped instances', () => {
     expect(typeof STARS_FALLBACK).toBe('number');
-    expect(STARS_FALLBACK).toBeGreaterThan(0);
+    // 0 is intentional — never show an inflated/fake count; the real count
+    // loads client-side from the public GitHub API.
+    expect(STARS_FALLBACK).toBeGreaterThanOrEqual(0);
   });
 
   it('exposes hero + meta copy and an OG image path under /marketing/', () => {
