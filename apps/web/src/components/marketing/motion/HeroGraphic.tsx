@@ -8,11 +8,16 @@ const BARS = [
   { x: 44, y: 88, w: 52, fill: '#6D63F0' },
 ] as const;
 
+// Three evenly-spaced vertical gridlines within the chart area (x 18–84, y 18–102)
+const GRID_X = [36, 54, 72] as const;
+const GRID_Y1 = 18;
+const GRID_Y2 = 102;
+
 /**
  * Hero centerpiece. Same four-rect Stagger geometry as BrandMark, scaled up.
- * SSR ships the bars fully visible (no hidden initial until mount); on mount the
- * bars stagger/draw in via scaleX from the left, then breathe. Reduced motion →
- * static bars.
+ * SSR ships the bars + gridlines fully visible (no hidden initial until mount).
+ * On mount bars stagger/draw in via scaleX then breathe; a playhead sweeps
+ * left→right suggesting a moving "today" marker. Reduced motion → static frame.
  */
 export function HeroGraphic({ className }: { className?: string }) {
   const entered = useEntrance();
@@ -26,6 +31,22 @@ export function HeroGraphic({ className }: { className?: string }) {
       role="img"
       aria-label="Animated ProductMap roadmap bars"
     >
+      {/* Faint vertical gridlines — static, SSR-visible */}
+      {GRID_X.map((gx) => (
+        <line
+          key={gx}
+          data-grid
+          x1={gx}
+          y1={GRID_Y1}
+          x2={gx}
+          y2={GRID_Y2}
+          stroke="currentColor"
+          strokeOpacity={0.08}
+          strokeWidth={0.75}
+        />
+      ))}
+
+      {/* Roadmap bars */}
       {BARS.map((b, i) => (
         <m.rect
           key={i}
@@ -49,6 +70,23 @@ export function HeroGraphic({ className }: { className?: string }) {
           }}
         />
       ))}
+
+      {/* Playhead sweep — only rendered after mount (not during SSR), hidden under reduced motion */}
+      {animate && (
+        <m.line
+          data-playhead
+          x1={18}
+          y1={GRID_Y1}
+          x2={18}
+          y2={GRID_Y2}
+          stroke="#818CF8"
+          strokeOpacity={0.6}
+          strokeWidth={1}
+          initial={{ x: 0 }}
+          animate={{ x: 66 }}
+          transition={{ duration: 3.5, repeat: Infinity, ease: 'linear', repeatDelay: 0.5 }}
+        />
+      )}
     </svg>
   );
 }

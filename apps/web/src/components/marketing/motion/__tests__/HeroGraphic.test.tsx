@@ -12,4 +12,13 @@ describe('HeroGraphic', () => {
     );
     expect(container.querySelectorAll('rect').length).toBe(4);
   });
+
+  it('renders faint vertical gridlines with data-grid attribute', () => {
+    const { container } = render(
+      <MotionProvider>
+        <HeroGraphic />
+      </MotionProvider>,
+    );
+    expect(container.querySelectorAll('line[data-grid]').length).toBeGreaterThanOrEqual(3);
+  });
 });
