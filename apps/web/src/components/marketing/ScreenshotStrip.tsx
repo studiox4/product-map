@@ -1,5 +1,6 @@
 import { Boxes, CalendarRange, Check, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { BoardToRoadmap } from '@/components/marketing/motion/story/BoardToRoadmap';
 
 const ROWS = [
   {
@@ -10,6 +11,7 @@ const ROWS = [
     title: 'A board everyone can read',
     body: 'Drag features across Now, Next, and Later — each one sized, scored, and voted — so the plan is obvious without a meeting.',
     points: ['Now / Next / Later horizons', 'T-shirt sizing + score', 'Up / down voting'],
+    accent: 'board' as const,
   },
   {
     src: '/marketing/roadmap.png',
@@ -38,7 +40,7 @@ const ROWS = [
     body: 'The dashboard pulls your board, roadmap, and docs into one overview — the same product you saw up top, real and self-hosted.',
     points: ['Unified overview', 'Self-hosted', 'Your data'],
   },
-] as const;
+];
 
 export default function ScreenshotStrip() {
   return (
@@ -53,7 +55,7 @@ export default function ScreenshotStrip() {
       </div>
 
       <div className="flex flex-col gap-16 md:gap-28">
-        {ROWS.map(({ src, alt, icon: Icon, eyebrow, title, body, points }, i) => {
+        {ROWS.map(({ src, alt, icon: Icon, eyebrow, title, body, points, accent }, i) => {
           const imageRight = i % 2 === 1;
           return (
             <div key={src} className="grid items-center gap-8 md:grid-cols-2 md:gap-14">
@@ -84,6 +86,9 @@ export default function ScreenshotStrip() {
                   imageRight ? 'md:order-2' : 'md:order-1',
                 )}
               >
+                {accent === 'board' && (
+                  <BoardToRoadmap className="mb-2 h-16 w-full text-ink/70" />
+                )}
                 <img src={src} alt={alt} className="w-full rounded-xl" loading="lazy" />
               </figure>
             </div>
