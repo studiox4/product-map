@@ -49,10 +49,11 @@ PGlite is created **in-memory** (NOT `idb://...`, which would persist to Indexed
 
 When `demoMode` is on, construct the `hc` client with `{ fetch: demoFetch }` where `demoFetch(req) => demoApp.fetch(req)`. Production path unchanged (default `fetch`, credentials include).
 
-### 3. Auth bypass
+### 3. Auth + CSRF bypass
 
 - **Backend (demo build):** a demo variant of `requireAuth` / membership middleware returns hardcoded claims `{ id: 'demo-user', role: 'admin' }` and treats the demo project as owner-accessible. Selected via Vite alias in the demo bundle, not a runtime branch in prod.
-- **Frontend:** `AuthProvider` (`apps/web/src/lib/auth.tsx`) short-circuits `useMe()` to the demo user when `demoMode`, so `RequireAuth` never redirects to `/login`.
+- **CSRF / origin middleware (critical).** A *separate* global middleware (`app.ts:25-36`) runs an origin check on all non-GET mutations. The auth shim does NOT cover this. Because we bypass real network dispatch, the synthetic `Request` from `hc` carries **no `Origin` header**, so the real CSRF check rejects every POST/PATCH/DELETE — killing the "make changes" requirement. **`demoApp` must be assembled to omit/alias the CSRF middleware too.** Implication: `demoApp` should be built from a demo-specific assembly (compose the route sub-apps with demo middleware) rather than importing the production `app.ts` wholesale. Confirm during implementation which path `demoApp` takes.
+- **Frontend:** `AuthProvider` (`apps/web/src/lib/auth.tsx`) short-circuits `useMe()` to the demo user when `demoMode`, so `RequireAuth` never redirects to `/login`. The 401→`tryRefresh()` interceptor in `api.ts` must never fire in demo (auth is hardcoded, so no 401); verify the demo path returns no 401s against `demoApp`.
 
 ### 4. Demo entry + chrome
 
@@ -71,7 +72,8 @@ These are required so the real backend can load in a browser. None change data m
    - `apps/api/src/routes/uploads.ts` — `mkdirSync` side-effect + `node:fs` → moved inside the handler.
    - `apps/api/src/lib/ai.ts` — `@ai-sdk/amazon-bedrock` + `@aws-sdk/credential-providers` → dynamic import, or Vite alias to a stub in the demo build.
 3. **DB driver selection.** `apps/api/src/db.ts` stays `node-postgres` for prod; the demo bundle aliases the db module to a PGlite-backed handle (`drizzle-orm/pglite`). Vite alias — no runtime branch in prod.
-4. **CI guard.** A build/lint check that fails if a node-only module-level import enters the demo-reachable path, so a future `import fs` can't silently break the demo.
+4. **`process.env` / config boot (will-it-boot).** `config.ts` references `process.env` (pervasive) and hard-fails when `AUTH_SECRET` is missing. In a Vite client bundle `process` is undefined → bare `process.env.X` throws `ReferenceError` at module load. Plan must: (a) Vite `define` / shim `process.env` for the demo bundle, and (b) ensure config does **not** hard-fail on missing `AUTH_SECRET` in the demo context (auth is stubbed, the secret is genuinely unused). This is separate from lazy-loading `node:crypto` (refactor #2). Confirm config's module-load validation path.
+5. **CI guard.** A build/lint check that fails if a node-only module-level import enters the demo-reachable path, so a future `import fs` can't silently break the demo.
 
 ## Scope: what's full-fidelity vs stubbed
 
@@ -95,16 +97,20 @@ Schema is 100% PGlite-compatible (enums, JSONB, check constraints, partial uniqu
 A curated demo project (authored, not random) so the product looks alive on first load:
 ~15 features spanning now/next/later and mixed statuses, a few inbox ideas, 2 releases, 2–3 objectives, 2–3 documents, plus a scattering of comments, votes, and activity. Authored once as a seed module run on `/demo` boot.
 
+**Must seed a `users` row with `id = 'demo-user'`** (matching the hardcoded auth claim) plus its `memberships` row for the demo project. `comments.authorId`, `votes.userId`, `decisions.decidedBy`, and activity actor all FK to `users.id` — the first comment/vote/decision stamps the current user and fails the FK if that row is missing. Easy to omit, painful to debug.
+
 ## Testing / verification
 
 - **Reset:** refresh `/demo` → byte-identical starting state; mutations from a prior session are gone.
-- **Full-fidelity routes:** create/edit/delete a feature, move horizons on the roadmap, edit a doc, vote, comment — all succeed in-memory.
+- **Mutations actually persist in-session (CSRF guard removed):** create/edit/delete a feature, move horizons on the roadmap, edit a doc, vote, comment — all succeed (no origin-check rejection), and the demo-user FK stamps resolve.
 - **Stubbed routes:** AI buttons hidden/503; export hidden; uploads preview without persisting; no login redirect.
 - **Prod untouched:** production build still uses node-postgres + real auth; demo aliases apply only to the demo bundle. CI guard green.
 - **Bundle:** PGlite WASM (~3MB) loads only on `/demo`, not on the marketing landing or normal app.
 
-## Open implementation questions (resolve during planning)
+## Mechanism questions to resolve in the plan (will-it-run, not just polish)
 
+- **Migrations in-browser (mechanism, not perf).** Drizzle's migrator reads SQL from the filesystem — unavailable in the browser. The demo must apply **bundled migration SQL** (imported as strings) or a **prebuilt SQL dump** to PGlite at boot. Resolve which; this gates whether the schema exists at all.
+- **`apps/web` importing `apps/api` (new build edge).** The web bundle will import the real Hono app + ~22 route files across a package boundary that does not exist today. Expect tsconfig path / `moduleResolution` / dual-package friction. Add a spike before the rest of the work to de-risk it.
+- **PGlite concurrency.** PGlite is a single connection. The app shell fires many parallel React Query requests on mount, several doing `db.transaction()`. Verify PGlite serializes overlapping transactions cleanly rather than erroring; if not, queue/serialize demo requests.
 - Exact Vite mechanism for the demo bundle (separate entry vs. conditional alias set) and how `/demo` lazy-loads it.
 - Whether uploads use an in-memory blob map vs. skip-write only.
-- Migration execution in-browser: run Drizzle migration SQL against PGlite at boot vs. a prebuilt SQL snapshot for faster cold start.
