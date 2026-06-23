@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Github, Map } from 'lucide-react';
+import { Github } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { BrandMark } from '@/components/BrandMark';
 import { REPO_URL } from '@/lib/marketing';
 
 /**
@@ -33,7 +34,7 @@ export default function MarketingNav() {
         href="/"
         className="flex items-center gap-2 font-display text-lg font-bold tracking-tight text-ink"
       >
-        <Map className="h-4 w-4 text-action" aria-hidden />
+        <BrandMark className="h-5 w-5" />
         ProductMap
       </a>
       <div className="flex items-center gap-2">
