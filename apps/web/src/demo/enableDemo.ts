@@ -87,6 +87,14 @@ export async function demoFetch(input: RequestInfo | URL, init?: RequestInit): P
         : input.url;
   const url = new URL(rawUrl, 'http://demo.local');
 
+  // Uploads write to disk via node:fs in the real handler — unavailable in the
+  // browser. Intercept POST /api/uploads: keep the file as an in-memory blob and
+  // hand back a `blob:` URL the editor renders directly. Nothing persists; the
+  // object URL dies with the page, satisfying the "nothing saves" guarantee.
+  if (url.pathname === '/api/uploads' && (init?.method ?? 'GET').toUpperCase() === 'POST') {
+    return handleDemoUpload(init);
+  }
+
   // Merge incoming headers, then force our demo cookie (replacing any existing).
   const headers = new Headers(init?.headers ?? (typeof input === 'object' && 'headers' in input ? input.headers : undefined));
   headers.set('Cookie', _cookie);
@@ -94,3 +102,19 @@ export async function demoFetch(input: RequestInfo | URL, init?: RequestInit): P
   const request = new Request(url.toString(), { ...init, headers });
   return app.fetch(request);
 }
+
+/** In-memory upload stub: store the blob, return { id, url } with a blob: URL. */
+async function handleDemoUpload(init?: RequestInit): Promise<Response> {
+  const body = init?.body;
+  let url = '';
+  let id = `demo-upload-${_uploadSeq++}`;
+  if (body instanceof FormData) {
+    const file = body.get('file');
+    if (file instanceof Blob) url = URL.createObjectURL(file);
+  }
+  return new Response(JSON.stringify({ id, url }), {
+    status: 201,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+let _uploadSeq = 0;
