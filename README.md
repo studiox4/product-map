@@ -2,7 +2,7 @@
 
 **Self-hosted product management for teams that can't use Jira or Notion.**
 
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![CI](https://github.com/studiox4/product-map/actions/workflows/ci.yml/badge.svg)](.github/workflows/ci.yml)
 
 ProductMap is a roadmap-and-docs tool you run on your own infrastructure. Write PRDs, BRDs, tech specs, and feature briefs in a rich Notion-style editor; plan with a now-next-later board and a drag-to-schedule Gantt roadmap; discuss with threaded comments; prioritize with 🚀 Boost / 🧊 Cool voting. Everything exports to plain markdown whenever you want it.
@@ -190,4 +190,4 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for dev setup 
 
 ## License
 
-[Apache License 2.0](LICENSE) © ProductMap Contributors.
+[MIT](LICENSE) © studiox4. Self-host it, fork it, build on it — see the [demo](https://product-map-production.up.railway.app).
