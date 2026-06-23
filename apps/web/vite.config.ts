@@ -4,6 +4,11 @@ import path from 'node:path';
 
 export default defineConfig({
   plugins: [react()],
+  // PGlite ships a WASM module + a separate FS data bundle that Vite's dep
+  // pre-bundler corrupts (serves the wrong-sized .data file → "Invalid FS bundle
+  // size" at runtime). Excluding it makes Vite serve the package's own assets
+  // untouched. Required for the in-browser demo database.
+  optimizeDeps: { exclude: ['@electric-sql/pglite'] },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

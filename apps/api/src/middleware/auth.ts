@@ -15,7 +15,15 @@ export type AuthEnv = { Variables: { currentUser: UserRow } };
  * the hot path; routes that only need id/role use these claim-derived fields.
  */
 export const requireAuth = createMiddleware<AuthEnv>(async (c, next) => {
-  const token = getCookie(c, ACCESS_COOKIE);
+  // Cookie is the primary credential. Fall back to a standard `Authorization:
+  // Bearer <token>` header — used by the in-browser demo backend (the browser
+  // forbids setting a `Cookie` header on a constructed Request) and a legitimate
+  // bearer path for any non-cookie client.
+  let token = getCookie(c, ACCESS_COOKIE);
+  if (!token) {
+    const auth = c.req.header('Authorization');
+    if (auth?.startsWith('Bearer ')) token = auth.slice(7);
+  }
   const claims = token ? await verifyAccess(token) : null;
   if (!claims) return c.json({ error: 'unauthorized' }, 401);
   // Claim-backed user: id + role are authoritative for the access TTL.

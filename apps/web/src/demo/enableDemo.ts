@@ -13,7 +13,7 @@ import { seedDemo } from '../../../../packages/db/src/seed-data';
 import { projects } from '../../../../packages/db/src/schema';
 import type { Db } from '../../../../packages/db/src/index';
 import { createDemoDb } from './demoDb';
-import { mintDemoCookie, DEMO_USER_ID } from './demoSession';
+import { mintDemoToken, DEMO_USER_ID } from './demoSession';
 import { demoReady, getDemoProjectId, setDemoEnabled } from './demoState';
 
 // Re-export the lightweight state helpers so existing importers (and tests)
@@ -23,7 +23,7 @@ import { demoReady, getDemoProjectId, setDemoEnabled } from './demoState';
 export { app, DEMO_USER_ID, demoReady, getDemoProjectId };
 
 let _enabled = false;
-let _cookie: string | null = null;
+let _token: string | null = null;
 
 /**
  * The demo user, shaped like the app's `User` type (what `useMe()` returns).
@@ -59,7 +59,7 @@ export async function enableDemo(): Promise<void> {
   // enters the browser graph — the demo never logs in, so the hash is cosmetic.
   await seedDemo(db, markdownToTiptap, async () => 'demo-no-login');
 
-  _cookie = await mintDemoCookie();
+  _token = await mintDemoToken();
   const projectId = await loadSeededProjectId(db);
   _enabled = true;
   setDemoEnabled(projectId);
@@ -75,7 +75,7 @@ export async function enableDemo(): Promise<void> {
  * `Origin` header, so the app's CSRF same-origin check passes for mutations.
  */
 export async function demoFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  if (!_enabled || !_cookie) {
+  if (!_enabled || !_token) {
     throw new Error('Demo not enabled — call enableDemo() before demoFetch');
   }
 
@@ -95,9 +95,11 @@ export async function demoFetch(input: RequestInfo | URL, init?: RequestInit): P
     return handleDemoUpload(init);
   }
 
-  // Merge incoming headers, then force our demo cookie (replacing any existing).
+  // Authenticate via Authorization: Bearer. The browser forbids setting a
+  // `Cookie` header on a constructed Request (it gets silently stripped), so we
+  // hand the access token to the app's bearer fallback in requireAuth instead.
   const headers = new Headers(init?.headers ?? (typeof input === 'object' && 'headers' in input ? input.headers : undefined));
-  headers.set('Cookie', _cookie);
+  headers.set('Authorization', `Bearer ${_token}`);
 
   const request = new Request(url.toString(), { ...init, headers });
   return app.fetch(request);

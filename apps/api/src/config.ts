@@ -38,9 +38,17 @@ const bool = (v: string | undefined) => v === 'true' || v === '1';
 /** Build config from the current environment. Never throws (dev gets a fallback secret). */
 export function loadConfig(): AppConfig {
   const isProd = env('NODE_ENV') === 'production';
+  // In a browser this is the in-page demo backend. Vite can instantiate this
+  // module more than once (the demo's deep relative import vs. the app's internal
+  // import resolve to distinct module URLs), and a per-instance random secret
+  // would differ between the signer and verifier → every demo request 401s. A
+  // public demo has no secret to protect, so use a FIXED constant in the browser:
+  // every instance agrees, so sign and verify always match. The node server
+  // (window === undefined) keeps the real ephemeral/AUTH_SECRET behavior.
+  const inBrowser = typeof window !== 'undefined';
   const authSecret =
     env('AUTH_SECRET') ??
-    (isProd ? '' : randomSecretHex());
+    (inBrowser ? 'productmap-in-browser-demo-secret' : isProd ? '' : randomSecretHex());
   if (!env('AUTH_SECRET') && !isProd) {
     console.warn('[config] AUTH_SECRET unset — using an ephemeral dev secret (sessions reset on restart).');
   }

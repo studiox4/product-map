@@ -16,6 +16,9 @@ const SYSTEM_PROMPT =
  * shared config/SSO profiles, IAM task/instance roles) does the rest.
  */
 export function isAiEnabled(): boolean {
+  // `process` is undefined in the browser (the in-page demo backend), where AI is
+  // always disabled — guard so the status check returns false instead of throwing.
+  if (typeof process === 'undefined' || !process.env) return false;
   return Boolean(
     process.env.AWS_REGION || process.env.AWS_PROFILE || process.env.AWS_ACCESS_KEY_ID,
   );
