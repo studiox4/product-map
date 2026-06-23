@@ -5,6 +5,7 @@ import ScreenshotStrip from '@/components/marketing/ScreenshotStrip';
 import EthosBand from '@/components/marketing/EthosBand';
 import GitHubStars from '@/components/marketing/GitHubStars';
 import MarketingFooter from '@/components/marketing/MarketingFooter';
+import { MotionProvider } from '@/components/marketing/motion/MotionProvider';
 
 /**
  * Presentational marketing landing. NO router hooks, NO react-query, NO
@@ -14,16 +15,18 @@ import MarketingFooter from '@/components/marketing/MarketingFooter';
  */
 export default function Marketing() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <MarketingNav />
-      <main>
-        <Hero />
-        <FeatureHighlights />
-        <ScreenshotStrip />
-        <EthosBand />
-        <GitHubStars />
-      </main>
-      <MarketingFooter />
-    </div>
+    <MotionProvider>
+      <div className="min-h-screen bg-background text-foreground">
+        <MarketingNav />
+        <main>
+          <Hero />
+          <FeatureHighlights />
+          <ScreenshotStrip />
+          <EthosBand />
+          <GitHubStars />
+        </main>
+        <MarketingFooter />
+      </div>
+    </MotionProvider>
   );
 }
