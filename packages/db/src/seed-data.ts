@@ -5,7 +5,6 @@
 // The story: the ProductMap team (Corban, Priya, Marcus, Elena) has been
 // dogfooding its own roadmap for ~3 months. Docs, comments, votes and the
 // activity history are all written as that team would have left them.
-import { hash } from '@node-rs/argon2';
 import { sql } from 'drizzle-orm';
 import { TEMPLATES } from '@productmap/templates';
 import {
@@ -28,18 +27,27 @@ import {
   plans,
   planEntries,
   memberships,
-  type Db,
-} from './index';
+} from './schema';
+import type { Db } from './index';
 import { eq } from 'drizzle-orm';
 
 export type MarkdownToTiptap = (md: string) => unknown;
+
+/** Password hasher. Defaults to a lazy @node-rs/argon2 wrapper (node CLI only);
+ *  the demo injects a stub so the native argon2 addon never loads in the browser. */
+const defaultHashPassword = async (plain: string): Promise<string> =>
+  (await import('@node-rs/argon2')).hash(plain);
 
 // --- date helpers: "this month" / "next month" relative to today ---
 function iso(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Promise<void> {
+export async function seedDemo(
+  db: Db,
+  markdownToTiptap: MarkdownToTiptap,
+  hashPassword: (plain: string) => Promise<string> = defaultHashPassword,
+): Promise<void> {
   const today = new Date();
   const y = today.getUTCFullYear();
   const m = today.getUTCMonth();
@@ -59,7 +67,7 @@ export async function seedDemo(db: Db, markdownToTiptap: MarkdownToTiptap): Prom
     .values([
       // Stable UUID so the auth JWT (which encodes this id) remains valid across
       // reset-demo calls during e2e runs. Do NOT change this constant.
-      { id: '00000000-0000-0000-0000-000000000001', name: 'Corban', color: '#2b557e', createdAt: daysAgo(92), email: 'admin@productmap.local', role: 'admin', passwordHash: await hash('devpassword123') },
+      { id: '00000000-0000-0000-0000-000000000001', name: 'Corban', color: '#2b557e', createdAt: daysAgo(92), email: 'admin@productmap.local', role: 'admin', passwordHash: await hashPassword('devpassword123') },
       { name: 'Priya Shah', color: '#3c6b46', createdAt: daysAgo(82) },
       { name: 'Marcus Webb', color: '#9a6428', createdAt: daysAgo(73) },
       { name: 'Elena Rodriguez', color: '#6d3f9e', createdAt: daysAgo(56) },
