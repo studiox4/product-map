@@ -14,10 +14,14 @@ import { markdownToTiptap } from '../lib/markdown';
 // Dev-only convenience; hard-blocked in production.
 export const adminRoutes = new Hono()
   .post('/reset-demo', async (c) => {
-    if (process.env.NODE_ENV === 'production') {
+    // Guarded process read — admin.ts is on the in-browser demo app graph where
+    // `process` is undefined (a bare read would throw). In the browser the guard
+    // yields false, so the demo's own reset works; the node server keeps its
+    // live NODE_ENV check (so it still 403s in production).
+    if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
       return c.json({ error: 'forbidden', message: 'reset-demo is disabled in production' }, 403);
     }
-    await seedDemo(db, markdownToTiptap);
+    await seedDemo(db, markdownToTiptap, async () => 'demo-no-login');
     return c.json({ ok: true });
   })
   .get('/users', async (c) => {

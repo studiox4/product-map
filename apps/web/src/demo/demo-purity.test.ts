@@ -66,4 +66,20 @@ describe('demo graph purity (G5)', () => {
     }
     expect(offenders, `node-only top-level imports on the demo app graph:\n${offenders.join('\n')}`).toEqual([]);
   });
+
+  it('no app-graph module reads process.env without a typeof guard', () => {
+    // `process` is undefined in the browser. A bare `process.env` read throws.
+    // config.ts owns the guarded `env()` helper; every other app-graph file that
+    // touches process.env must also carry a `typeof process` guard.
+    const offenders: string[] = [];
+    for (const file of walk(API_SRC)) {
+      const base = file.slice(API_SRC.length + 1);
+      if (NODE_ENTRY_ONLY.has(base) || base === 'config.ts') continue;
+      const src = readFileSync(file, 'utf8');
+      if (src.includes('process.env') && !src.includes('typeof process')) {
+        offenders.push(base);
+      }
+    }
+    expect(offenders, `unguarded process.env on the demo app graph:\n${offenders.join('\n')}`).toEqual([]);
+  });
 });
