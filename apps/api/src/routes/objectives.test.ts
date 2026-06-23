@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { setupTestDb, truncateAll, closeTestDb, createTestUser, createTestProject, addMembership, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { objectives, features } from '@productmap/db';
+import { objectives, features } from '@productmap/db/schema';
 
 let userId: string;
 let projectId: string;

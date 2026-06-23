@@ -24,6 +24,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { SharingBlock } from '@/components/settings/SharingBlock';
+import { demoReady } from '@/demo/demoState';
 
 /**
  * Settings → Workspace tab (settings spec): product name + vision (PATCH
@@ -105,24 +106,28 @@ function WorkspaceForm({ product }: { product: Project }) {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-display text-lg font-bold tracking-tight text-ink">
-            Export
-          </CardTitle>
-          <CardDescription>
-            Download every document as markdown, zipped by feature.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button asChild variant="outline">
-            <a href={apiPath(pid, 'export.zip')} download>
-              <Download aria-hidden />
-              Export workspace
-            </a>
-          </Button>
-        </CardContent>
-      </Card>
+      {/* Export downloads via a real `<a href>` against the live origin, which
+          the in-page demo backend can't serve — hide it in demo. */}
+      {demoReady() ? null : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-display text-lg font-bold tracking-tight text-ink">
+              Export
+            </CardTitle>
+            <CardDescription>
+              Download every document as markdown, zipped by feature.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline">
+              <a href={apiPath(pid, 'export.zip')} download>
+                <Download aria-hidden />
+                Export workspace
+              </a>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Sharing block owned by the share/settings task (dream tier D8). */}
       <SharingBlock />

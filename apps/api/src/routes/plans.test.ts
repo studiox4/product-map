@@ -15,7 +15,7 @@ import {
 } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { features, plans, planEntries, activity } from '@productmap/db';
+import { features, plans, planEntries, activity } from '@productmap/db/schema';
 
 let projectId: string;
 let userId: string;

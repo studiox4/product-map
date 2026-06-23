@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '../db';
-import { projects, features, documents, comments } from '@productmap/db';
+import { projects, features, documents, comments } from '@productmap/db/schema';
 import { EMPTY_VOTE_SUMMARY, requestUserId, voteSummaries } from '../lib/votes';
 import type { MembershipEnv } from '../middleware/membership';
 import type {

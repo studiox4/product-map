@@ -1,4 +1,16 @@
-import { randomBytes } from 'node:crypto';
+// Browser+node safe: no node:crypto, no build-time define. Pulled in via
+// tokens→auth→app on the demo path, so it must import and evaluate in a browser.
+
+/** Cross-runtime env read (process is undefined in the browser). */
+const env = (k: string): string | undefined =>
+  typeof process !== 'undefined' && process.env ? process.env[k] : undefined;
+
+/** 32 random bytes as hex via Web Crypto (Node ≥18 + browsers). */
+function randomSecretHex(): string {
+  const b = new Uint8Array(32);
+  globalThis.crypto.getRandomValues(b);
+  return [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
+}
 
 export interface SmtpConfig {
   host: string;
@@ -25,31 +37,40 @@ const bool = (v: string | undefined) => v === 'true' || v === '1';
 
 /** Build config from the current environment. Never throws (dev gets a fallback secret). */
 export function loadConfig(): AppConfig {
-  const isProd = process.env.NODE_ENV === 'production';
+  const isProd = env('NODE_ENV') === 'production';
+  // In a browser this is the in-page demo backend. Vite can instantiate this
+  // module more than once (the demo's deep relative import vs. the app's internal
+  // import resolve to distinct module URLs), and a per-instance random secret
+  // would differ between the signer and verifier → every demo request 401s. A
+  // public demo has no secret to protect, so use a FIXED constant in the browser:
+  // every instance agrees, so sign and verify always match. The node server
+  // (window === undefined) keeps the real ephemeral/AUTH_SECRET behavior.
+  const inBrowser = typeof window !== 'undefined';
   const authSecret =
-    process.env.AUTH_SECRET ??
-    (isProd ? '' : randomBytes(32).toString('hex'));
-  if (!process.env.AUTH_SECRET && !isProd) {
+    env('AUTH_SECRET') ??
+    (inBrowser ? 'productmap-in-browser-demo-secret' : isProd ? '' : randomSecretHex());
+  if (!env('AUTH_SECRET') && !isProd) {
     console.warn('[config] AUTH_SECRET unset — using an ephemeral dev secret (sessions reset on restart).');
   }
-  const smtp: SmtpConfig | null = process.env.SMTP_HOST
+  const smtpHost = env('SMTP_HOST');
+  const smtp: SmtpConfig | null = smtpHost
     ? {
-        host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT ?? 587),
-        user: process.env.SMTP_USER || undefined,
-        pass: process.env.SMTP_PASS || undefined,
-        from: process.env.SMTP_FROM ?? 'ProductMap <no-reply@productmap.local>',
+        host: smtpHost,
+        port: Number(env('SMTP_PORT') ?? 587),
+        user: env('SMTP_USER') || undefined,
+        pass: env('SMTP_PASS') || undefined,
+        from: env('SMTP_FROM') ?? 'ProductMap <no-reply@productmap.local>',
       }
     : null;
 
   return {
     isProd,
     authSecret,
-    allowOpenSignup: bool(process.env.ALLOW_OPEN_SIGNUP),
-    trustProxy: bool(process.env.TRUST_PROXY),
+    allowOpenSignup: bool(env('ALLOW_OPEN_SIGNUP')),
+    trustProxy: bool(env('TRUST_PROXY')),
     accessTtlSec: 15 * 60,
     refreshTtlSec: 30 * 24 * 60 * 60,
-    appUrl: process.env.APP_URL ?? 'http://localhost:5173',
+    appUrl: env('APP_URL') ?? 'http://localhost:5173',
     smtp,
   };
 }

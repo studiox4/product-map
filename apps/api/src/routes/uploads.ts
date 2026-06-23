@@ -1,10 +1,6 @@
 import { Hono } from 'hono';
-import { mkdirSync } from 'node:fs';
-import { writeFile } from 'node:fs/promises';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { nanoid } from 'nanoid';
-import { uploads } from '@productmap/db';
+import { uploads } from '@productmap/db/schema';
 import { db } from '../db';
 
 const ALLOWED_MIME: Record<string, string> = {
@@ -17,12 +13,11 @@ const ALLOWED_MIME: Record<string, string> = {
 };
 const MAX_BYTES = 10 * 1024 * 1024; // 10MB
 
-// Storage: <repo>/uploads/<nanoid>.<ext> — dir ensured at boot (module load).
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
-export const uploadsDir = path.join(repoRoot, 'uploads');
-mkdirSync(uploadsDir, { recursive: true });
-
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Storage: <repo>/uploads/<nanoid>.<ext>. node:fs/path are loaded lazily inside
+// the POST handler so importing the Hono `app` graph stays browser-safe. The
+// uploads dir is ensured at boot by the node entry (index.ts).
 
 export const uploadsRoutes = new Hono()
   // POST /api/uploads — multipart {file, documentId?} → 201 { id, url }
@@ -42,6 +37,18 @@ export const uploadsRoutes = new Hono()
     if (file.size > MAX_BYTES) {
       return c.json({ error: 'too_large', maxBytes: MAX_BYTES }, 413);
     }
+
+    // @vite-ignore: this handler is unreachable in the in-browser demo (which
+    // imports the `app` graph); the comment keeps Vite from trying to bundle
+    // these node builtins into the demo chunk.
+    const { mkdirSync } = await import(/* @vite-ignore */ 'node:fs');
+    const { writeFile } = await import(/* @vite-ignore */ 'node:fs/promises');
+    const path = (await import(/* @vite-ignore */ 'node:path')).default;
+    const { fileURLToPath } = await import(/* @vite-ignore */ 'node:url');
+
+    const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
+    const uploadsDir = path.join(repoRoot, 'uploads');
+    mkdirSync(uploadsDir, { recursive: true });
 
     const storedName = `${nanoid()}.${ext}`;
     await writeFile(path.join(uploadsDir, storedName), Buffer.from(await file.arrayBuffer()));

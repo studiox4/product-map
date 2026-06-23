@@ -37,6 +37,7 @@ import {
   useVote,
 } from '@/lib/api';
 import { useProjectId } from '@/lib/project';
+import { demoReady } from '@/demo/demoState';
 import { setTheme, type Theme } from '@/lib/theme';
 import { navigateWithTransition } from '@/lib/transitions';
 import { appRoutes, appPatterns } from '@/lib/routes';
@@ -321,10 +322,13 @@ function PaletteContent({
                   ) : null}
                   {contextDocId ? (
                     <>
-                      <CommandItem value="action-export markdown export" onSelect={exportMarkdown}>
-                        <Download aria-hidden />
-                        Export markdown
-                      </CommandItem>
+                      {/* Markdown export hits the live origin; hide it in demo. */}
+                      {demoReady() ? null : (
+                        <CommandItem value="action-export markdown export" onSelect={exportMarkdown}>
+                          <Download aria-hidden />
+                          Export markdown
+                        </CommandItem>
+                      )}
                       <CommandItem
                         value="action-toggle-comments toggle comments"
                         onSelect={() => {

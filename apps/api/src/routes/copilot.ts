@@ -11,7 +11,7 @@ import { streamText } from 'ai';
 import { reviewDocBody, copilotChatBody } from '@productmap/shared';
 import type { CopilotNudge } from '@productmap/shared';
 import { db } from '../db';
-import { comments, documents, features } from '@productmap/db';
+import { comments, documents, features } from '@productmap/db/schema';
 import { createAiModel } from '../lib/ai';
 import { loadScoped } from '../lib/scope';
 import type { MembershipEnv } from '../middleware/membership';
@@ -39,7 +39,7 @@ const STALE_THREAD_DAYS = 7;
 export const copilotRoutes = new Hono<MembershipEnv>()
   // POST /api/projects/:projectId/ai/review-doc {documentId} → SSE markdown rubric review.
   .post('/ai/review-doc', zValidator('json', reviewDocBody), async (c) => {
-    const model = createAiModel();
+    const model = await createAiModel();
     if (!model) return c.json({ error: 'ai_disabled' }, 503);
 
     const pid = c.get('currentProjectId');
@@ -94,7 +94,7 @@ export const copilotRoutes = new Hono<MembershipEnv>()
   // the top-8 docs by Postgres full-text rank over content_md plus a feature
   // summary. Retrieval is scoped to the current project.
   .post('/ai/chat', zValidator('json', copilotChatBody), async (c) => {
-    const model = createAiModel();
+    const model = await createAiModel();
     if (!model) return c.json({ error: 'ai_disabled' }, 503);
 
     const pid = c.get('currentProjectId');

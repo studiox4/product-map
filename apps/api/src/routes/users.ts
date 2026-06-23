@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { asc, eq } from 'drizzle-orm';
 import { userUpdate } from '@productmap/shared';
-import { users } from '@productmap/db';
+import { users } from '@productmap/db/schema';
 import { db } from '../db';
 import { publicUser } from '../lib/auth/serialize';
 import { type CurrentUserEnv } from '../middleware/current-user';

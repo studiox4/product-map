@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { setupTestDb, truncateAll, closeTestDb, createTestUser, createTestProject, addMembership, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { projects } from '@productmap/db';
+import { projects } from '@productmap/db/schema';
 
 let projectId: string;
 let adminAuth: Record<string, string> = {};

@@ -87,10 +87,15 @@ export class ApiError extends Error {
   }
 }
 
+// Late-bound fetch so demo mode can route all API I/O through the in-page
+// demo backend (apps/web/src/demo). Production leaves this as the global fetch.
+let activeFetch: typeof fetch = (...args) => fetch(...args);
+export function setActiveFetch(f: typeof fetch): void { activeFetch = f; }
+
 let refreshing: Promise<boolean> | null = null;
 async function tryRefresh(): Promise<boolean> {
   if (!refreshing) {
-    refreshing = fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' })
+    refreshing = activeFetch('/api/auth/refresh', { method: 'POST', credentials: 'include' })
       .then((r) => r.ok)
       .finally(() => { refreshing = null; });
   }
@@ -98,7 +103,7 @@ async function tryRefresh(): Promise<boolean> {
 }
 
 export async function fetchJson<T>(input: string, init?: RequestInit): Promise<T> {
-  const doFetch = () => fetch(input, {
+  const doFetch = () => activeFetch(input, {
     ...init,
     credentials: 'include',
     headers: {
@@ -182,7 +187,7 @@ export function useMe() {
   return useQuery({
     queryKey: ['me'],
     queryFn: async (): Promise<User | null> => {
-      const res = await fetch('/api/auth/me', { credentials: 'include' });
+      const res = await activeFetch('/api/auth/me', { credentials: 'include' });
       if (res.status === 401) return null;
       if (!res.ok) throw new ApiError(res.status, await res.json().catch(() => null));
       return (await res.json()) as User;
@@ -1003,7 +1008,7 @@ export function useShareData(token: string) {
   return useQuery({
     queryKey: ['share', token],
     queryFn: async () => {
-      const res = await fetch(`/api/share/${token}/data`);
+      const res = await activeFetch(`/api/share/${token}/data`);
       if (!res.ok) {
         let body: unknown = null;
         try {

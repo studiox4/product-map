@@ -4,7 +4,7 @@ import { asc, eq, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { seedDemo } from '@productmap/db/seed-data';
 import { adminCreateUserInput, adminUpdateUserInput, USER_COLORS } from '@productmap/shared';
-import { users } from '@productmap/db';
+import { users } from '@productmap/db/schema';
 import { db } from '../db';
 import { hashPassword } from '../lib/auth/password';
 import { publicUser, adminUser } from '../lib/auth/serialize';
@@ -14,10 +14,14 @@ import { markdownToTiptap } from '../lib/markdown';
 // Dev-only convenience; hard-blocked in production.
 export const adminRoutes = new Hono()
   .post('/reset-demo', async (c) => {
-    if (process.env.NODE_ENV === 'production') {
+    // Guarded process read — admin.ts is on the in-browser demo app graph where
+    // `process` is undefined (a bare read would throw). In the browser the guard
+    // yields false, so the demo's own reset works; the node server keeps its
+    // live NODE_ENV check (so it still 403s in production).
+    if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
       return c.json({ error: 'forbidden', message: 'reset-demo is disabled in production' }, 403);
     }
-    await seedDemo(db, markdownToTiptap);
+    await seedDemo(db, markdownToTiptap, async () => 'demo-no-login');
     return c.json({ ok: true });
   })
   .get('/users', async (c) => {

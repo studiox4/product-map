@@ -11,6 +11,11 @@ describe('Hero', () => {
     expect(screen.getByRole('heading', { name: HERO_HEADLINE })).toBeTruthy();
   });
 
+  it('CTA "Try the live demo" points at /demo', () => {
+    render(<Hero />);
+    expect(screen.getByRole('link', { name: /try the live demo/i }).getAttribute('href')).toBe('/demo');
+  });
+
   it('primary CTA "Deploy your own" points at the GitHub repo', () => {
     render(<Hero />);
     expect(screen.getByRole('link', { name: /deploy your own/i }).getAttribute('href')).toBe(REPO_URL);

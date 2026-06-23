@@ -1,9 +1,8 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { and, asc, eq, isNull } from 'drizzle-orm';
-import archiver from 'archiver';
 import { documentCreate, documentUpdate } from '@productmap/shared';
-import { documents, features, ideas, releases, templates } from '@productmap/db';
+import { documents, features, ideas, releases, templates } from '@productmap/db/schema';
 import type { Context } from 'hono';
 import { db } from '../db';
 import { tiptapToMarkdown } from '../lib/markdown';
@@ -227,6 +226,7 @@ export const exportRoutes = new Hono<MembershipEnv>().get('/export.zip', async (
   const featureRows = await db.select().from(features).where(eq(features.projectId, pid)).orderBy(asc(features.createdAt));
   const docRows = await db.select().from(documents).where(eq(documents.projectId, pid)).orderBy(asc(documents.createdAt));
 
+  const { default: archiver } = await import('archiver');
   const archive = archiver('zip', { zlib: { level: 9 } });
   const chunks: Buffer[] = [];
   const done = new Promise<Buffer>((resolve, reject) => {

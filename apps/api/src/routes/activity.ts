@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { and, asc, eq, gte } from 'drizzle-orm';
-import { activity, features, users } from '@productmap/db';
+import { activity, features, users } from '@productmap/db/schema';
 import { db } from '../db';
 import type { MembershipEnv } from '../middleware/membership';
 

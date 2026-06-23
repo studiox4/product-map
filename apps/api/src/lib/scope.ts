@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import type { PgColumn } from 'drizzle-orm/pg-core';
 import { HTTPException } from 'hono/http-exception';
-import { comments, documents, features } from '@productmap/db';
+import { comments, documents, features } from '@productmap/db/schema';
 import { db } from '../db';
 
 /** Thrown when a resource is missing OR belongs to another project. Carries 404 — never leak existence. */

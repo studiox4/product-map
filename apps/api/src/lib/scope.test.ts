@@ -1,6 +1,7 @@
 import { setupTestDb, truncateAll, closeTestDb, createTestProject, createTestUser, TEST_DATABASE_URL } from '../test/helpers';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import { createDb, ideas, features, documents, comments } from '@productmap/db';
+import { createDb } from '@productmap/db';
+import { ideas, features, documents, comments } from '@productmap/db/schema';
 import { loadScoped, loadScopedComment, ScopeError } from './scope';
 
 const db = createDb(TEST_DATABASE_URL).db;
