@@ -38,10 +38,13 @@ export const uploadsRoutes = new Hono()
       return c.json({ error: 'too_large', maxBytes: MAX_BYTES }, 413);
     }
 
-    const { mkdirSync } = await import('node:fs');
-    const { writeFile } = await import('node:fs/promises');
-    const path = (await import('node:path')).default;
-    const { fileURLToPath } = await import('node:url');
+    // @vite-ignore: this handler is unreachable in the in-browser demo (which
+    // imports the `app` graph); the comment keeps Vite from trying to bundle
+    // these node builtins into the demo chunk.
+    const { mkdirSync } = await import(/* @vite-ignore */ 'node:fs');
+    const { writeFile } = await import(/* @vite-ignore */ 'node:fs/promises');
+    const path = (await import(/* @vite-ignore */ 'node:path')).default;
+    const { fileURLToPath } = await import(/* @vite-ignore */ 'node:url');
 
     const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
     const uploadsDir = path.join(repoRoot, 'uploads');
