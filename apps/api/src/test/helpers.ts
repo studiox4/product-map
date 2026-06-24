@@ -10,7 +10,9 @@ import { signAccess } from '../lib/auth/tokens';
 import { ACCESS_COOKIE } from '../lib/auth/cookies';
 import { hashPassword } from '../lib/auth/password';
 
-const TEST_DB_NAME = 'productmap_test';
+// Overridable so parallel build agents (separate worktrees) can each use an
+// isolated database and not race on truncateAll. Defaults to productmap_test.
+const TEST_DB_NAME = process.env.TEST_DB_NAME ?? 'productmap_test';
 const PG_BASE = process.env.TEST_PG_BASE ?? 'postgres://localhost:5432';
 
 export const TEST_DATABASE_URL = `${PG_BASE}/${TEST_DB_NAME}`;

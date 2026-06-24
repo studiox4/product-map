@@ -158,6 +158,7 @@ export const overviewRoutes = new Hono<MembershipEnv>().get('/', async (c) => {
     project: {
       id: project.id,
       name: project.name,
+      slug: project.slug ?? '',
       vision: project.vision,
       aboutMd: project.aboutMd,
     },

@@ -109,6 +109,7 @@ export const publicShareRoutes = new Hono<AuthEnv>()
       project: {
         id: project.id,
         name: project.name,
+        slug: project.slug ?? '',
         vision: project.vision,
         aboutMd: project.aboutMd,
       },

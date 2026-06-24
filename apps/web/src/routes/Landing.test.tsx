@@ -15,6 +15,7 @@ const TEST_PROJECT_ID = 'p1';
 const product = {
   id: 'p1',
   name: 'ProductMap',
+  slug: 'productmap',
   vision: 'Roadmaps and docs your security team will let you run.',
   aboutMd: '',
 };

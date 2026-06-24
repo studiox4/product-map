@@ -137,6 +137,8 @@ export const queryKeys = {
   activity: (pid: string, featureId: string) => ['p', pid, 'features', featureId, 'activity'] as const,
   workspaceActivity: (pid: string) => ['p', pid, 'activity', 'workspace'] as const,
   aiStatus: ['ai', 'status'] as const,
+  /** User-scoped (NOT pid-keyed) — the cross-project dashboard spans projects. */
+  dashboard: ['dashboard'] as const,
 };
 
 // ---- queries ----

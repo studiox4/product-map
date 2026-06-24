@@ -44,6 +44,9 @@ export const users = pgTable('users', {
 export const projects = pgTable('projects', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: text('name').notNull(),
+  // NULLABLE in migration 0014 (expand); flipped NOT NULL in 0015 (contract)
+  // once every project-create path writes a slug.
+  slug: text('slug').unique(),
   vision: text('vision').notNull().default(''),
   aboutMd: text('about_md').notNull().default(''),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -54,6 +57,15 @@ export const memberships = pgTable(
     userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
     projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
     role: memberRoleEnum('role').notNull().default('editor'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.projectId] })],
+);
+export const projectFavorites = pgTable(
+  'project_favorites',
+  {
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.userId, t.projectId] })],
@@ -119,11 +131,14 @@ export const featureCollaborators = pgTable(
 export const activity = pgTable('activity', {
   id: uuid('id').defaultRandom().primaryKey(),
   featureId: uuid('feature_id').notNull().references(() => features.id, { onDelete: 'cascade' }),
+  // NULLABLE in migration 0014 (expand; backfilled from features.project_id);
+  // flipped NOT NULL in 0015 (contract) once every recordActivity call writes it.
+  projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }),
   actorId: uuid('actor_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   kind: text('kind').notNull(),
   payload: jsonb('payload'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [index('activity_project_id_idx').on(t.projectId)]);
 export const comments = pgTable(
   'comments',
   {
