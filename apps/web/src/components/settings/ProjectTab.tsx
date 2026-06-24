@@ -57,7 +57,10 @@ export function ProjectTab() {
   return (
     <div className="space-y-6">
       {isOwner ? (
-        <RenameCard projectId={projectId} name={project.name} />
+        <>
+          <RenameCard projectId={projectId} name={project.name} />
+          <SlugCard projectId={projectId} name={project.name} slug={project.slug} />
+        </>
       ) : (
         <Card>
           <CardHeader>
@@ -127,6 +130,87 @@ function RenameCard({ projectId, name }: { projectId: string; name: string }) {
           <Button type="submit" disabled={updateProject.isPending} variant="secondary">
             Save
           </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Client-side mirror of the API's slugify (apps/api/src/lib/slug.ts). */
+function slugifyClient(name: string): string {
+  const base = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60)
+    .replace(/-+$/g, '');
+  return base || 'project';
+}
+
+function SlugCard({ projectId, name, slug }: { projectId: string; name: string; slug: string }) {
+  const [value, setValue] = useState(slug ?? '');
+  const qc = useQueryClient();
+  const updateProject = useUpdateProject();
+  const valid = /^[a-z0-9]+(-[a-z0-9]+)*$/.test(value) && value.length <= 60;
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const next = value.trim();
+    if (!valid || next === slug || updateProject.isPending) return;
+    updateProject.mutate(
+      { id: projectId, slug: next },
+      {
+        onSuccess: () => {
+          // Refresh the project list so the switcher, Overview nav link, and
+          // /app/p/:slug resolution pick up the new slug.
+          qc.invalidateQueries({ queryKey: projectsListKey });
+          toast.success('Project URL updated');
+        },
+        onError: (err) =>
+          toast.error(apiErrorMessage(err, 'Could not update the URL — that slug may be taken.')),
+      },
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="font-display text-lg font-bold tracking-tight text-ink">
+          Project URL
+        </CardTitle>
+        <CardDescription>
+          The slug in this project’s address: <span className="font-mono">/app/p/{value || '…'}</span>
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="max-w-md space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="project-slug">Slug</Label>
+            <Input
+              id="project-slug"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              className="rounded-xl font-mono"
+              required
+            />
+            {!valid && value.length > 0 ? (
+              <p className="text-xs text-destructive">
+                Use lowercase letters, numbers, and hyphens only.
+              </p>
+            ) : null}
+          </div>
+          <div className="flex gap-2">
+            <Button type="submit" disabled={updateProject.isPending || !valid} variant="secondary">
+              Save URL
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setValue(slugifyClient(name))}
+            >
+              Regenerate from name
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>

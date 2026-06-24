@@ -39,6 +39,7 @@ export const documentUpdate = z.object({
 });
 export const projectUpdate = z.object({
   name: z.string().min(1).optional(),
+  slug: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/).max(60).optional(),
   vision: z.string().optional(),
   aboutMd: z.string().optional(),
 });

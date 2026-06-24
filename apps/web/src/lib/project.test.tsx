@@ -44,6 +44,7 @@ interface ProjectListItem extends Project {
 const project1: ProjectListItem = {
   id: 'p1',
   name: 'Test Project',
+  slug: 'test-project',
   vision: 'Ship great products.',
   aboutMd: '',
   role: 'owner',
@@ -51,6 +52,7 @@ const project1: ProjectListItem = {
 const project2: ProjectListItem = {
   id: 'p2',
   name: 'Second Project',
+  slug: 'second-project',
   vision: '',
   aboutMd: '',
   role: 'viewer',

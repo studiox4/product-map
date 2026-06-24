@@ -100,7 +100,7 @@ export const featuresRoutes = new Hono<MembershipEnv>()
           updatedBy: user?.id ?? null,
         })
         .returning();
-      await recordActivity(row.id, user?.id, 'feature_created', {
+      await recordActivity(row.id, pid, user?.id, 'feature_created', {
         to: row.title,
         // Full snapshot so the roadmap Time Machine can replay this feature appearing.
         snapshot: {
@@ -177,25 +177,25 @@ export const featuresRoutes = new Hono<MembershipEnv>()
         .returning();
 
       if (updates.horizon !== undefined && row.horizon !== prev.horizon) {
-        await recordActivity(id, user?.id, 'horizon_changed', { from: prev.horizon, to: row.horizon });
+        await recordActivity(id, pid, user?.id,'horizon_changed', { from: prev.horizon, to: row.horizon });
       }
       if (updates.status !== undefined && row.status !== prev.status) {
-        await recordActivity(id, user?.id, 'status_changed', { from: prev.status, to: row.status });
+        await recordActivity(id, pid, user?.id,'status_changed', { from: prev.status, to: row.status });
       }
       if (
         (updates.startDate !== undefined || updates.endDate !== undefined) &&
         (row.startDate !== prev.startDate || row.endDate !== prev.endDate)
       ) {
-        await recordActivity(id, user?.id, 'dates_changed', {
+        await recordActivity(id, pid, user?.id,'dates_changed', {
           from: { startDate: prev.startDate, endDate: prev.endDate },
           to: { startDate: row.startDate, endDate: row.endDate },
         });
       }
       if (updates.descriptionMd !== undefined && row.descriptionMd !== prev.descriptionMd) {
-        await recordActivity(id, user?.id, 'description_edited');
+        await recordActivity(id, pid, user?.id,'description_edited');
       }
       if (updates.size !== undefined && row.size !== prev.size) {
-        await recordActivity(id, user?.id, 'size_changed', { from: prev.size, to: row.size });
+        await recordActivity(id, pid, user?.id,'size_changed', { from: prev.size, to: row.size });
       }
       await addCollaborator(id, user?.id);
       return c.json(row);

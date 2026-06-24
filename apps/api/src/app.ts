@@ -4,6 +4,7 @@ import { authRoutes } from './routes/auth';
 import { requireAuth, requireAdmin } from './middleware/auth';
 import { isSameOrigin } from './lib/rate-limit';
 import { projectsRoutes } from './routes/projects';
+import { dashboardRoutes } from './routes/dashboard';
 import { uploadsRoutes } from './routes/uploads';
 import { aiRoutes } from './routes/ai';
 import { usersRoutes } from './routes/users';
@@ -37,6 +38,7 @@ export const app = new Hono()
   })
   .use('/api/admin/*', requireAdmin)
   .route('/api/users', usersRoutes)
+  .route('/api/dashboard', dashboardRoutes)
   .route('/api/projects', projectsRoutes)
   .route('/api/invites', invitesRoutes)
   // Content sub-app: registered AFTER mgmt so projectsRoutes /:projectId* get

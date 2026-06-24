@@ -284,6 +284,7 @@ describe('POST /api/ai/digest', () => {
     await db.insert(activity).values([
       {
         featureId: feature.id,
+        projectId: feature.projectId,
         actorId: actor.id,
         kind: 'horizon_changed',
         payload: { from: 'later', to: 'now' },
@@ -291,6 +292,7 @@ describe('POST /api/ai/digest', () => {
       },
       {
         featureId: feature.id,
+        projectId: feature.projectId,
         actorId: actor.id,
         kind: 'status_changed',
         payload: { from: 'idea', to: 'planned' },

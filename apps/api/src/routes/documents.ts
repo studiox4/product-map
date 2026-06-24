@@ -151,7 +151,7 @@ export const documentsRoutes = new Hono<MembershipEnv>()
         updatedBy: user?.id ?? null,
       })
       .returning();
-    await recordActivity(body.featureId, user?.id, 'doc_created', { to: row.title });
+    await recordActivity(body.featureId, pid, user?.id, 'doc_created', { to: row.title });
     await addCollaborator(body.featureId, user?.id);
     return c.json(row, 201);
   })
@@ -198,13 +198,13 @@ export const documentsRoutes = new Hono<MembershipEnv>()
     // (feature_id NULL) have no feature feed to write into.
     if (row.featureId) {
       if (body.status !== undefined && row.status !== prev.status) {
-        await recordActivity(row.featureId, user?.id, 'doc_status_changed', {
+        await recordActivity(row.featureId, pid, user?.id, 'doc_status_changed', {
           from: prev.status,
           to: row.status,
         });
       }
       if (body.title !== undefined && row.title !== prev.title) {
-        await recordActivity(row.featureId, user?.id, 'doc_renamed', { from: prev.title, to: row.title });
+        await recordActivity(row.featureId, pid, user?.id, 'doc_renamed', { from: prev.title, to: row.title });
       }
       await addCollaborator(row.featureId, user?.id);
     }

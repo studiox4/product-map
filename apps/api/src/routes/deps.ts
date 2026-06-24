@@ -107,7 +107,7 @@ export const depsRoutes = new Hono<MembershipEnv>()
       const titles = new Map(blockerRows.map((f) => [f.id, f.title]));
       for (const blockerId of blockerIds) {
         if (!prev.has(blockerId)) {
-          await recordActivity(id, user?.id, 'dependency_added', {
+          await recordActivity(id, pid, user?.id, 'dependency_added', {
             blockerId,
             blockerTitle: titles.get(blockerId),
           });
@@ -115,7 +115,7 @@ export const depsRoutes = new Hono<MembershipEnv>()
       }
       for (const blockerId of prev) {
         if (!next.has(blockerId)) {
-          await recordActivity(id, user?.id, 'dependency_removed', { blockerId });
+          await recordActivity(id, pid, user?.id, 'dependency_removed', { blockerId });
         }
       }
 

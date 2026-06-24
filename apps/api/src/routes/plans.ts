@@ -215,6 +215,7 @@ export const plansRoutes = new Hono<MembershipEnv>()
           if (fields.startDate || fields.endDate) {
             await tx.insert(activity).values({
               featureId: feature.id,
+              projectId: pid,
               actorId: user.id,
               kind: 'dates_changed',
               payload: {
@@ -226,6 +227,7 @@ export const plansRoutes = new Hono<MembershipEnv>()
           if (fields.horizon) {
             await tx.insert(activity).values({
               featureId: feature.id,
+              projectId: pid,
               actorId: user.id,
               kind: 'horizon_changed',
               payload: { from: feature.horizon, to: entry.horizon },
@@ -233,6 +235,7 @@ export const plansRoutes = new Hono<MembershipEnv>()
           }
           await tx.insert(activity).values({
             featureId: feature.id,
+            projectId: pid,
             actorId: user.id,
             kind: 'plan_applied',
             payload: { planId: plan.id, planName: plan.name },

@@ -131,7 +131,7 @@ async function draftAiBrief(
         updatedBy: actorId ?? null,
       })
       .returning();
-    await recordActivity(feature.id, actorId, 'doc_created', { to: doc.title });
+    await recordActivity(feature.id, feature.projectId, actorId, 'doc_created', { to: doc.title });
   } catch (err) {
     console.error('idea promote: ai brief generation failed', err);
   }
@@ -235,7 +235,7 @@ export const ideasRoutes = new Hono<MembershipEnv>()
       );
       if (row.promotedFeatureId && fields.length > 0) {
         const user = c.get('currentUser');
-        await recordActivity(row.promotedFeatureId, user?.id, 'idea_edited', {
+        await recordActivity(row.promotedFeatureId, pid, user?.id, 'idea_edited', {
           ideaId: row.id,
           to: row.title,
           fields,
@@ -362,6 +362,7 @@ export const ideasRoutes = new Hono<MembershipEnv>()
         if (user) {
           await tx.insert(activity).values({
             featureId: row.id,
+            projectId: pid,
             actorId: user.id,
             kind: 'idea_promoted',
             payload: { ideaId: idea.id, to: row.title, horizon: row.horizon },

@@ -4,7 +4,7 @@ import type {
   ObjectiveStatus, PlanStatus, MemberRoleConst,
 } from './constants';
 
-export interface Project { id: string; name: string; vision: string; aboutMd: string; }
+export interface Project { id: string; name: string; slug: string; vision: string; aboutMd: string; }
 export type MemberRole = MemberRoleConst;
 export interface Membership { userId: string; projectId: string; role: MemberRole; createdAt: string; }
 export interface User { id: string; name: string; color: string; role: 'admin' | 'member'; createdAt?: string; }
@@ -198,3 +198,33 @@ export type CopilotNudge =
   | { kind: 'dateless_now'; featureId: string; title: string }
   | { kind: 'oversized'; featureId: string; title: string }
   | { kind: 'stale_thread'; commentId: string; featureId: string | null; documentId: string | null; title: string; createdAt: string };
+
+// --- E3 Dashboard (GET /api/dashboard) — user-scoped, cross-project home ---
+/** One project the caller is a member of or has favorited, with status rollup. */
+export interface DashboardProject {
+  id: string; name: string; slug: string;
+  role: MemberRole; favorite: boolean;
+  counts: { idea: number; planned: number; in_progress: number; shipped: number };
+  nextRelease: { id: string; name: string; date: string | null } | null;
+  /** Features overdue (endDate < today) and not yet shipped — a v1 heuristic. */
+  staleCount: number;
+}
+/** "What should I act on next?" — derived from existing signals (no notifications yet). */
+export type NextAction =
+  | { kind: 'open_comment'; source: 'authored' | 'collaborating'; projectId: string; projectSlug: string; featureId?: string; documentId?: string; title: string; count: number }
+  | { kind: 'doc_in_review'; projectId: string; projectSlug: string; documentId: string; featureId: string; title: string; docType: DocType }
+  | { kind: 'feature_missing_dates'; projectId: string; projectSlug: string; featureId: string; title: string };
+/** A feature the caller collaborates on, across projects. */
+export interface MyWorkItem {
+  featureId: string; projectId: string; projectSlug: string;
+  title: string; status: FeatureStatus; horizon: Horizon;
+}
+/** Cross-project activity row — workspace row plus its project scope. */
+export interface DashboardActivityItem extends WorkspaceActivityItem { projectId: string; projectSlug: string; }
+/** Full payload of GET /api/dashboard. */
+export interface DashboardResponse {
+  projects: DashboardProject[];
+  nextActions: NextAction[];
+  myWork: MyWorkItem[];
+  activity: DashboardActivityItem[];
+}

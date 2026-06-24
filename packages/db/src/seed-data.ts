@@ -92,6 +92,7 @@ export async function seedDemo(
     .insert(projects)
     .values({
       name: 'ProductMap',
+      slug: 'productmap',
       vision: 'Roadmaps and docs your security team will let you run.',
       aboutMd:
         'ProductMap is a self-hosted product planning workspace: a now-next-later board, a draggable Gantt roadmap, and a rich markdown document editor with AI drafting — all backed by your own Postgres, so nothing leaves your network.',
@@ -809,7 +810,7 @@ Fund the two weeks. Gate GA behind one partner running the module in staging for
     { featureId: realtime.id, actorId: marcus.id, kind: 'comment_added', payload: {}, createdAt: daysAgo(2) },
     { featureId: gantt.id, actorId: marcus.id, kind: 'comment_added', payload: {}, createdAt: daysAgo(1.1) },
     { featureId: editor.id, actorId: corban.id, kind: 'comment_resolved', payload: { resolved: true }, createdAt: daysAgo(0.5) },
-  ]);
+  ].map((a) => ({ ...a, projectId: project.id })));
 
   // --- comments: real team discussion across features and docs.
   // Two threads stay deliberately unresolved (editor PRD doc + Gantt feature)

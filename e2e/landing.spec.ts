@@ -4,9 +4,12 @@ import { test, expect } from '@playwright/test';
 // bars + today line; Now/Next/Later panels (top 3 + "+N more"); Attention panel with
 // ≥1 draft doc and ≥1 dateless feature, each navigating on click.
 
-test.describe('AC2 landing dashboard', () => {
+// The single-project overview moved from the /app index to the slug-addressed
+// /app/p/:slug (seed project slug = 'productmap'); /app is now the cross-project
+// dashboard. These specs exercise the overview at its new home.
+test.describe('AC2 project overview', () => {
   test('vision header is editable inline', async ({ page }) => {
-    await page.goto('/app');
+    await page.goto('/app/p/productmap');
     await expect(page.getByRole('heading', { level: 1, name: 'ProductMap' })).toBeVisible();
 
     const visionButton = page.getByTitle('Click to edit the vision');
@@ -25,7 +28,7 @@ test.describe('AC2 landing dashboard', () => {
   });
 
   test('gantt hero renders ≥6 seeded bars with a today line', async ({ page }) => {
-    await page.goto('/app');
+    await page.goto('/app/p/productmap');
     const bars = page.getByTestId('gantt-hero-bar');
     await expect(bars.first()).toBeVisible();
     expect(await bars.count()).toBeGreaterThanOrEqual(6);
@@ -34,13 +37,13 @@ test.describe('AC2 landing dashboard', () => {
   });
 
   test('hero bar click navigates to the roadmap', async ({ page }) => {
-    await page.goto('/app');
+    await page.goto('/app/p/productmap');
     await page.getByTestId('gantt-hero-bar').first().click();
     await expect(page).toHaveURL(/\/app\/roadmap\?feature=/);
   });
 
   test('now/next/later panels list seeded features with +N more overflow', async ({ page }) => {
-    await page.goto('/app');
+    await page.goto('/app/p/productmap');
     await expect(page.getByTestId('gantt-hero-bar').first()).toBeVisible();
 
     for (const label of ['Now', 'Next', 'Later']) {
@@ -63,7 +66,7 @@ test.describe('AC2 landing dashboard', () => {
   });
 
   test('panel feature click opens the board detail panel', async ({ page }) => {
-    await page.goto('/app');
+    await page.goto('/app/p/productmap');
     const now = page
       .locator('section')
       .filter({ has: page.getByRole('heading', { name: 'Now', exact: true }) });
@@ -75,7 +78,7 @@ test.describe('AC2 landing dashboard', () => {
   test('attention panel lists a draft doc and a dateless feature, both navigable', async ({
     page,
   }) => {
-    await page.goto('/app');
+    await page.goto('/app/p/productmap');
     const attention = page
       .locator('section')
       .filter({ has: page.getByRole('heading', { name: 'Needs attention' }) });
@@ -88,7 +91,7 @@ test.describe('AC2 landing dashboard', () => {
     await expect(page).toHaveURL(/\/app\/docs\//);
 
     // ≥1 dateless feature → navigates to the board detail panel.
-    await page.goto('/app');
+    await page.goto('/app/p/productmap');
     const datelessItem = attention.getByRole('button').filter({ hasText: 'No dates' }).first();
     await expect(datelessItem).toBeVisible();
     await datelessItem.click();

@@ -58,7 +58,7 @@ function feature(
 }
 
 const shareData: ShareData = {
-  project: { id: 'p1', name: 'ProductMap', vision: 'See the whole map.', aboutMd: '' },
+  project: { id: 'p1', name: 'ProductMap', slug: 'productmap', vision: 'See the whole map.', aboutMd: '' },
   features: [
     feature({
       id: 'f1',

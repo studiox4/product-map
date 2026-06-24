@@ -58,6 +58,7 @@ async function seedHistory() {
   await db.insert(activity).values([
     {
       featureId: editorId,
+      projectId,
       actorId: userId,
       kind: 'feature_created',
       payload: {
@@ -68,6 +69,7 @@ async function seedHistory() {
     },
     {
       featureId: editorId,
+      projectId,
       actorId: userId,
       kind: 'horizon_changed',
       payload: { from: 'later', to: 'now' },
@@ -75,6 +77,7 @@ async function seedHistory() {
     },
     {
       featureId: ganttId,
+      projectId,
       actorId: userId,
       kind: 'dates_changed',
       payload: {
@@ -144,6 +147,7 @@ describe('GET /api/projects/:projectId/activity', () => {
   it('caps the feed at 1000 rows', async () => {
     const rows = Array.from({ length: 1010 }, (_, i) => ({
       featureId: editorId,
+      projectId,
       actorId: userId,
       kind: 'description_edited',
       payload: null,
@@ -170,6 +174,7 @@ describe('GET /api/projects/:projectId/activity', () => {
       .returning();
     await db.insert(activity).values({
       featureId: featureB.id,
+      projectId: projectB.id,
       actorId: userId,
       kind: 'feature_created',
       payload: { to: 'Feature B', snapshot: { title: 'Feature B', horizon: 'now', status: 'idea', startDate: null, endDate: null } },
