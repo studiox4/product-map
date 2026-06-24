@@ -9,18 +9,11 @@
 export const STAGGER_INK = '#4338CA'; // deep stream
 export const STAGGER_LIT = '#6D63F0'; // lit stream
 export const PLAYHEAD = '#818CF8'; // "today" playhead / highlight
-
-// Indigo ramp (for glass-bar gradients).
-export const INK_TOP = '#6E63F2';
-export const INK_BASE = '#372BB0';
-export const LIT_TOP = '#A39BFA';
-export const LIT_BASE = '#5246D8';
+export const INK_BASE = '#372BB0'; // deep indigo for soft shadows
 
 // Restrained status accents (used sparingly on a couple of bars / pills / avatars).
 export const TEAL = '#0E9AAE';
-export const TEAL_TOP = '#3FC2D2';
 export const AMBER = '#D08A2C';
-export const AMBER_TOP = '#EBB35C';
 export const SAGE = '#3C9A63';
 
 // Surface tones for the floating glass panel.
