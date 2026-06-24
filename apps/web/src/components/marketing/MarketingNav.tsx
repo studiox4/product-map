@@ -1,6 +1,7 @@
 import { Github } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BrandMark } from '@/components/BrandMark';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { REPO_URL } from '@/lib/marketing';
 
 /**
@@ -19,6 +20,7 @@ export default function MarketingNav() {
         ProductMap
       </a>
       <div className="flex items-center gap-2">
+        <ThemeToggle />
         <Button asChild variant="ghost" size="sm">
           <a href={REPO_URL} target="_blank" rel="noreferrer noopener">
             <Github className="h-4 w-4" aria-hidden />
