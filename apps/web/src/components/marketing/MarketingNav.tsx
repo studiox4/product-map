@@ -1,33 +1,14 @@
-import { useEffect, useState } from 'react';
 import { Github } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BrandMark } from '@/components/BrandMark';
 import { REPO_URL } from '@/lib/marketing';
 
 /**
- * Presentational nav. Auth is checked with a BARE fetch (NOT useMe) because
- * Marketing has no QueryProvider. The check is non-blocking progressive
- * enhancement: we render "Sign in" immediately and upgrade to "Open app" only
- * if a live session is found. The prerendered HTML therefore always ships the
- * "Sign in" baseline.
+ * Presentational nav. The public site has no login flow — visitors are sent to
+ * the no-auth `/demo` (the real app running in-browser). Fully static, so it
+ * prerenders cleanly with no runtime fetch.
  */
 export default function MarketingNav() {
-  const [authed, setAuthed] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch('/api/auth/me', { credentials: 'include' })
-      .then((res) => {
-        if (!cancelled && res.ok) setAuthed(true);
-      })
-      .catch(() => {
-        /* offline / no session — keep the Sign in baseline */
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   return (
     <nav className="mx-auto flex h-16 max-w-screen-xl items-center justify-between px-6">
       <a
@@ -44,15 +25,9 @@ export default function MarketingNav() {
             GitHub
           </a>
         </Button>
-        {authed ? (
-          <Button asChild size="sm">
-            <a href="/app">Open app</a>
-          </Button>
-        ) : (
-          <Button asChild size="sm">
-            <a href="/login">Sign in</a>
-          </Button>
-        )}
+        <Button asChild size="sm">
+          <a href="/demo">Try the demo</a>
+        </Button>
       </div>
     </nav>
   );

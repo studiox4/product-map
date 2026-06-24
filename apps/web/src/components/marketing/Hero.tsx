@@ -19,9 +19,6 @@ export default function Hero() {
               Deploy your own
             </a>
           </Button>
-          <Button asChild size="lg" variant="ghost">
-            <a href="/login">Sign in</a>
-          </Button>
         </div>
       </div>
       {/* right column */}
