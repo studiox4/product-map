@@ -27,6 +27,7 @@ import { useAiStatus } from '@/lib/api';
 import { useActiveProject } from '@/lib/project';
 import { cn } from '@/lib/utils';
 import { appRoutes } from '@/lib/routes';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import DemoBanner from '@/demo/DemoBanner';
 
 const NAV_LINKS: { to: string; label: string; end: boolean; icon?: typeof Lightbulb }[] = [
@@ -182,6 +183,7 @@ export function AppShell() {
             </NavLink>
           </div>
           <div className="ml-auto flex items-center gap-1 md:gap-2">
+            <NotificationBell />
             <button
               type="button"
               onClick={() => setPaletteOpen(true)}
