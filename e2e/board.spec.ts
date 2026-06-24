@@ -117,8 +117,8 @@ test('AC4: drag Later→Now lands in Now and syncs the landing panel', async ({
     .poll(async () => (await getFeatureByTitle(request, FEATURE_TITLE)).horizon)
     .toBe('now');
 
-  // Landing Now panel includes it.
-  await page.goto('/app');
+  // Overview Now panel includes it.
+  await page.goto('/app/p/productmap');
   const nowPanel = page
     .locator('section')
     .filter({ has: page.getByRole('heading', { name: 'Now', exact: true }) });

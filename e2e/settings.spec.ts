@@ -153,7 +153,7 @@ test('AC4: vision edits reflect on the landing page and export downloads', async
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByText('Workspace saved')).toBeVisible();
 
-  await page.goto('/app');
+  await page.goto('/app/p/productmap');
   await expect(page.getByText('Ship roadmaps your auditors actually like.')).toBeVisible();
 
   // Export downloads the zip.
@@ -235,8 +235,8 @@ test('AC6 (negative): with AI status disabled no AI affordances render', async (
   await expect(page.getByText('Draft this document with AI')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Draft with AI' })).toHaveCount(0);
 
-  // Landing: AI digest card hidden.
-  await page.goto('/app');
+  // Overview: AI digest card hidden.
+  await page.goto('/app/p/productmap');
   await expect(page.getByRole('heading', { level: 1, name: 'ProductMap' })).toBeVisible();
   await expect(page.locator('[data-testid="ai-digest-card"]')).toHaveCount(0);
 });

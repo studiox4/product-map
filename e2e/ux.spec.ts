@@ -18,7 +18,8 @@ async function throttleApi(page: Page, ms = 700) {
 test('AC-UX1: landing, board and roadmap show skeletons while loading', async ({ page }) => {
   await throttleApi(page);
   for (const [path, testId] of [
-    ['/app', 'landing-skeleton'],
+    ['/app', 'dashboard-skeleton'],
+    ['/app/p/productmap', 'landing-skeleton'],
     ['/app/board', 'board-skeleton'],
     ['/app/roadmap', 'roadmap-skeleton'],
   ] as const) {

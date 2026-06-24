@@ -126,7 +126,7 @@ test('W2-1: Time Machine scrubs to the earliest event with ≥3 visible changes,
 test('W2-2: landing renders sparkline, horizon arc, and heatmap from seeded activity', async ({
   page,
 }) => {
-  await page.goto('/app');
+  await page.goto('/app/p/productmap');
 
   // Velocity sparkline: a real SVG path drawn in the action color.
   const sparkline = page.locator('[data-testid="velocity-sparkline"]');
@@ -151,7 +151,7 @@ test('W2-2: landing renders sparkline, horizon arc, and heatmap from seeded acti
 test('W2-2: AI digest streams when enabled and is hidden without a key', async ({ page }) => {
   // Without a key → no digest card at all.
   await page.route('**/api/ai/status', (route) => route.fulfill({ json: { enabled: false } }));
-  await page.goto('/app');
+  await page.goto('/app/p/productmap');
   await expect(page.locator('[data-testid="pulse-heatmap"]')).toBeVisible();
   await expect(page.locator('[data-testid="ai-digest-card"]')).toHaveCount(0);
 

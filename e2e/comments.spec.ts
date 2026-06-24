@@ -137,7 +137,7 @@ test('AC3: attention panel counts unresolved threads (feature + doc) and clears 
   page,
 }) => {
   // One unresolved feature thread + one unresolved doc thread → 2 open comments.
-  await page.goto('/app');
+  await page.goto('/app/p/productmap');
   const attention = page.locator('section', {
     has: page.getByRole('heading', { name: 'Needs attention' }),
   });
@@ -156,7 +156,7 @@ test('AC3: attention panel counts unresolved threads (feature + doc) and clears 
     .click();
   await expect(comments.getByRole('button', { name: /1 resolved/ })).toBeVisible();
 
-  await page.goto('/app');
+  await page.goto('/app/p/productmap');
   await expect(
     attention.getByRole('button', { name: `${FEATURE_TITLE} 1 open comment` }),
   ).toBeVisible();
@@ -171,7 +171,7 @@ test('AC3: attention panel counts unresolved threads (feature + doc) and clears 
     .click();
   await expect(sheet.getByRole('button', { name: /1 resolved/ })).toBeVisible();
 
-  await page.goto('/app');
+  await page.goto('/app/p/productmap');
   await expect(page.getByRole('heading', { name: 'Needs attention' })).toBeVisible();
   await expect(
     attention.getByRole('button', { name: new RegExp(`${FEATURE_TITLE} \\d+ open comment`) }),

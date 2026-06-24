@@ -450,7 +450,7 @@ test('AC9b: AI review streams rubric sections into the side sheet', async ({
 test('AC9c: all AI affordances hidden when AI is disabled', async ({ page, request }) => {
   await page.route('**/api/ai/status', (route) => route.fulfill({ json: { enabled: false } }));
 
-  await page.goto('/app');
+  await page.goto('/app/p/productmap');
   await expect(page.locator('[data-testid="pulse-heatmap"]')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Open copilot' })).toHaveCount(0);
 
