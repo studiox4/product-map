@@ -1,11 +1,12 @@
 import { m, useReducedMotion } from 'framer-motion';
 import { useEntrance } from './useEntrance';
+import { STAGGER_INK, STAGGER_LIT, PLAYHEAD } from './palette';
 
 const BARS = [
-  { x: 18, y: 22, w: 66, fill: '#4338CA' },
-  { x: 34, y: 44, w: 48, fill: '#6D63F0' },
-  { x: 18, y: 66, w: 38, fill: '#4338CA' },
-  { x: 44, y: 88, w: 52, fill: '#6D63F0' },
+  { x: 18, y: 22, w: 66, fill: STAGGER_INK },
+  { x: 34, y: 44, w: 48, fill: STAGGER_LIT },
+  { x: 18, y: 66, w: 38, fill: STAGGER_INK },
+  { x: 44, y: 88, w: 52, fill: STAGGER_LIT },
 ] as const;
 
 // Three evenly-spaced vertical gridlines within the chart area (x 18–84, y 18–102)
@@ -79,7 +80,7 @@ export function HeroGraphic({ className }: { className?: string }) {
           y1={GRID_Y1}
           x2={18}
           y2={GRID_Y2}
-          stroke="#818CF8"
+          stroke={PLAYHEAD}
           strokeOpacity={0.6}
           strokeWidth={1}
           initial={{ x: 0 }}

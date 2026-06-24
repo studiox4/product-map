@@ -1,11 +1,12 @@
 // apps/web/src/components/marketing/motion/story/BoardToRoadmap.tsx
 import { m, useReducedMotion } from 'framer-motion';
 import { useEntrance } from '../useEntrance';
+import { STAGGER_INK, STAGGER_LIT } from '../palette';
 
 const ROWS = [
-  { y: 20, fromX: 8, toX: 52, w: 56, fill: '#4338CA' },
-  { y: 44, fromX: 8, toX: 68, w: 40, fill: '#6D63F0' },
-  { y: 68, fromX: 8, toX: 44, w: 64, fill: '#4338CA' },
+  { y: 20, fromX: 8, toX: 52, w: 56, fill: STAGGER_INK },
+  { y: 44, fromX: 8, toX: 68, w: 40, fill: STAGGER_LIT },
+  { y: 68, fromX: 8, toX: 44, w: 64, fill: STAGGER_INK },
 ] as const;
 
 /**
