@@ -4,30 +4,40 @@ import { useEntrance } from './useEntrance';
 import { STAGGER_INK, STAGGER_LIT, PLAYHEAD, INK_BASE, TEAL, AMBER, SAGE, PANEL_TINT } from './palette';
 
 /**
- * Hero illustration — a dimensional "roadmap workspace": a floating glass gantt
- * panel with a real timeline (month axis, swimlanes with labels + assignee dots),
- * gradient task bars, a milestone diamond, dependency connectors, a "Today"
- * playhead, a branching what-if scenario draft, and an elevated task card popping
- * off the surface for collage depth. Indigo-dominant with restrained teal/amber
- * accents.
+ * Hero illustration — a flat, dimensional "roadmap workspace": a floating glass
+ * gantt panel with a real timeline (month axis, swimlanes with labels + assignee
+ * dots), solid task bars, a milestone diamond, finish-to-start dependency
+ * connectors, a "Today" playhead, a branching what-if scenario draft, and an
+ * elevated task card popping off the surface for collage depth. Indigo-dominant
+ * with restrained teal/amber accents.
  *
- * Motion (restrained): the panel and cards settle in, bars draw across the
- * timeline, the playhead's dot pulses, a slow specular glint crosses the glass,
- * the scenario ghost branches, and the whole scene tilts gently toward the cursor.
+ * The dependency connectors are derived from bar geometry — each links a
+ * predecessor's right edge to a successor's left edge (which always starts
+ * after the predecessor ends) with a right-angle elbow and arrowhead, the way a
+ * real gantt draws them.
  *
  * SSR-safe: every element renders at its final, visible state with no hidden
- * initial (tilt identity, glint absent) until mount. Reduced motion → a complete
- * static frame.
+ * initial until mount. Reduced motion → a complete static frame.
  */
 
-// Swimlane task bars. x/w are on the timeline; `fill` is a flat solid color.
+const BAR_H = 14;
+const HALF = BAR_H / 2;
+
+// Swimlane task bars. Successors (targets of a dependency) start after their
+// predecessor ends, so finish-to-start links connect cleanly.
 const ROWS = [
-  { y: 104, x: 150, w: 122, fill: STAGGER_INK, dot: STAGGER_LIT, label: 56 },
-  { y: 140, x: 182, w: 92, fill: STAGGER_LIT, dot: TEAL, label: 64 },
-  { y: 176, x: 150, w: 70, fill: TEAL, dot: SAGE, label: 48 },
-  { y: 212, x: 204, w: 108, fill: STAGGER_INK, dot: AMBER, label: 60 },
-  { y: 248, x: 162, w: 84, fill: AMBER, dot: STAGGER_LIT, label: 52 },
-  { y: 284, x: 232, w: 96, fill: STAGGER_LIT, dot: TEAL, label: 44 },
+  { y: 104, x: 150, w: 112, fill: STAGGER_INK, dot: STAGGER_LIT, label: 56 }, // 0  end 262
+  { y: 140, x: 150, w: 74, fill: STAGGER_LIT, dot: TEAL, label: 64 }, //        1  end 224
+  { y: 176, x: 278, w: 84, fill: TEAL, dot: SAGE, label: 48 }, //               2  start 278  <- dep 0→2
+  { y: 212, x: 176, w: 96, fill: STAGGER_INK, dot: AMBER, label: 60 }, //       3  end 272
+  { y: 248, x: 300, w: 90, fill: AMBER, dot: STAGGER_LIT, label: 52 }, //       4  start 300  <- dep 3→4
+  { y: 284, x: 206, w: 104, fill: STAGGER_LIT, dot: TEAL, label: 44 }, //       5  end 310
+] as const;
+
+// Finish-to-start dependencies [predecessorIndex, successorIndex].
+const DEPS = [
+  [0, 2],
+  [3, 4],
 ] as const;
 
 const GRID_X = [150, 210, 270, 330, 390] as const;
@@ -35,6 +45,17 @@ const MONTHS = ['JUN', 'JUL', 'AUG', 'SEP', 'OCT'] as const;
 const GRID_Y1 = 92;
 const GRID_Y2 = 312;
 const PLAYHEAD_X = 270;
+
+// Right-angle finish-to-start connector: predecessor right edge → elbow →
+// successor left edge.
+function connectorPath(p: (typeof ROWS)[number], s: (typeof ROWS)[number]) {
+  const ex = p.x + p.w;
+  const ey = p.y + HALF;
+  const sx = s.x;
+  const sy = s.y + HALF;
+  const midX = ex + Math.min(14, Math.max(8, (sx - ex) / 2));
+  return `M${ex} ${ey} H${midX} V${sy} H${sx}`;
+}
 
 export function HeroGraphic({ className }: { className?: string }) {
   const entered = useEntrance();
@@ -60,6 +81,12 @@ export function HeroGraphic({ className }: { className?: string }) {
     py.set(0);
   };
 
+  // Scenario "what-if" draft branches off the end of row 3.
+  const forkRow = ROWS[3];
+  const forkEx = forkRow.x + forkRow.w;
+  const forkEy = forkRow.y + HALF;
+  const ghost = { x: forkEx + 18, y: 232, w: 92 };
+
   return (
     <div
       ref={wrapRef}
@@ -75,7 +102,6 @@ export function HeroGraphic({ className }: { className?: string }) {
         style={{ rotateX, rotateY, transformStyle: 'preserve-3d', width: '100%', height: 'auto' }}
       >
         <defs>
-          {/* Near-flat surfaces — a whisper of tint, not a glossy gradient */}
           <linearGradient id="hg-panel" x1="0" y1="0" x2="0.2" y2="1">
             <stop offset="0" stopColor="#FFFFFF" />
             <stop offset="1" stopColor={PANEL_TINT} />
@@ -84,13 +110,15 @@ export function HeroGraphic({ className }: { className?: string }) {
             <stop offset="0" stopColor={STAGGER_LIT} stopOpacity="0.12" />
             <stop offset="1" stopColor={STAGGER_LIT} stopOpacity="0" />
           </radialGradient>
-          {/* Crisp, low flat-card shadows */}
           <filter id="hg-panelShadow" x="-20%" y="-20%" width="140%" height="150%">
             <feDropShadow dx="0" dy="8" stdDeviation="9" floodColor={INK_BASE} floodOpacity="0.12" />
           </filter>
           <filter id="hg-cardShadow" x="-40%" y="-40%" width="180%" height="200%">
             <feDropShadow dx="0" dy="6" stdDeviation="7" floodColor={INK_BASE} floodOpacity="0.16" />
           </filter>
+          <marker id="hg-arrow" markerWidth="6" markerHeight="6" refX="4.5" refY="3" orient="auto">
+            <path d="M0 0 L5 3 L0 6 z" fill="#A8AEC6" />
+          </marker>
           <clipPath id="hg-panelClip">
             <rect x={40} y={56} width={384} height={296} rx={20} />
           </clipPath>
@@ -128,69 +156,66 @@ export function HeroGraphic({ className }: { className?: string }) {
             </g>
           ))}
 
-          {/* Swimlane left labels (chip + avatar + text lines) */}
+          {/* Swimlane left labels (avatar + text lines) */}
           {ROWS.map((r) => (
             <g key={`lab-${r.y}`}>
-              <circle cx={62} cy={r.y + 7} r={6} fill={r.dot} />
+              <circle cx={62} cy={r.y + HALF} r={6} fill={r.dot} />
               <rect x={74} y={r.y + 1} width={r.label} height={5} rx={2.5} fill="#C4CADB" />
               <rect x={74} y={r.y + 10} width={r.label - 18} height={4} rx={2} fill="#DCE0EC" />
             </g>
           ))}
 
-          {/* Dependency connectors (drawn under bars) */}
-          <path
-            d="M272 115 C 292 115, 292 151, 308 151"
-            fill="none"
-            stroke="#B9C0D6"
-            strokeWidth={1.4}
-            strokeLinecap="round"
-          />
-          <path
-            d="M274 187 C 296 187, 300 223, 312 223"
-            fill="none"
-            stroke="#B9C0D6"
-            strokeWidth={1.4}
-            strokeLinecap="round"
-          />
+          {/* Finish-to-start dependency connectors (under the bars) */}
+          {DEPS.map(([p, s], i) => (
+            <path
+              key={`dep-${i}`}
+              d={connectorPath(ROWS[p], ROWS[s])}
+              fill="none"
+              stroke="#A8AEC6"
+              strokeWidth={1.4}
+              strokeLinejoin="round"
+              markerEnd="url(#hg-arrow)"
+            />
+          ))}
 
           {/* Task bars — flat solid fills */}
           {ROWS.map((r, i) => (
             <m.g
               key={`bar-${r.y}`}
-              style={{ transformOrigin: `${r.x}px ${r.y + 7}px` }}
+              style={{ transformOrigin: `${r.x}px ${r.y + HALF}px` }}
               initial={animate ? { scaleX: 0, opacity: 0 } : false}
               animate={animate ? { scaleX: 1, opacity: 1 } : undefined}
               transition={{ duration: 0.55, delay: 0.12 + 0.09 * i, ease: [0.22, 1, 0.36, 1] }}
             >
-              <rect data-bar x={r.x} y={r.y} width={r.w} height={14} rx={7} fill={r.fill} />
-              {/* assignee dot on the bar */}
-              <circle cx={r.x + r.w - 8} cy={r.y + 7} r={3} fill="#fff" />
-              <circle cx={r.x + r.w - 8} cy={r.y + 7} r={1.7} fill={r.dot} />
+              <rect data-bar x={r.x} y={r.y} width={r.w} height={BAR_H} rx={HALF} fill={r.fill} />
+              <circle cx={r.x + r.w - 8} cy={r.y + HALF} r={3} fill="#fff" />
+              <circle cx={r.x + r.w - 8} cy={r.y + HALF} r={1.7} fill={r.dot} />
             </m.g>
           ))}
 
-          {/* Scenario "what-if" ghost branching off row 4 */}
+          {/* Scenario "what-if" draft — dashed branch off row 3's end into a ghost bar */}
           <m.g
-            initial={animate ? { x: -22, opacity: 0 } : false}
+            initial={animate ? { x: -18, opacity: 0 } : false}
             animate={animate ? { x: 0, opacity: 1 } : undefined}
             transition={{ duration: 0.7, delay: 1.1, ease: [0.22, 1, 0.36, 1] }}
           >
             <path
-              d={`M${PLAYHEAD_X} 219 C ${PLAYHEAD_X + 14} 219, ${PLAYHEAD_X + 14} 240, ${PLAYHEAD_X + 30} 240`}
+              d={`M${forkEx} ${forkEy} H${forkEx + 9} V${ghost.y + HALF} H${ghost.x}`}
               fill="none"
               stroke={PLAYHEAD}
               strokeWidth={1.2}
               strokeDasharray="3 2"
-              opacity={0.8}
+              strokeLinejoin="round"
+              opacity={0.85}
             />
             <rect
-              x={PLAYHEAD_X + 30}
-              y={233}
-              width={86}
-              height={14}
-              rx={7}
+              x={ghost.x}
+              y={ghost.y}
+              width={ghost.w}
+              height={BAR_H}
+              rx={HALF}
               fill={PLAYHEAD}
-              fillOpacity={0.14}
+              fillOpacity={0.13}
               stroke={PLAYHEAD}
               strokeOpacity={0.7}
               strokeWidth={1}
@@ -198,15 +223,29 @@ export function HeroGraphic({ className }: { className?: string }) {
             />
           </m.g>
 
-          {/* Milestone diamonds */}
-          <g>
-            <rect x={387} y={101} width={9} height={9} rx={1.5} transform="rotate(45 391.5 105.5)" fill={AMBER} />
-            <rect x={326} y={245} width={9} height={9} rx={1.5} transform="rotate(45 330.5 249.5)" fill={SAGE} />
-          </g>
+          {/* Milestone diamonds at task finishes */}
+          <rect
+            x={ROWS[2].x + ROWS[2].w - 4}
+            y={ROWS[2].y + HALF - 4.5}
+            width={9}
+            height={9}
+            rx={1.5}
+            transform={`rotate(45 ${ROWS[2].x + ROWS[2].w + 0.5} ${ROWS[2].y + HALF})`}
+            fill={AMBER}
+          />
+          <rect
+            x={ROWS[5].x + ROWS[5].w - 4}
+            y={ROWS[5].y + HALF - 4.5}
+            width={9}
+            height={9}
+            rx={1.5}
+            transform={`rotate(45 ${ROWS[5].x + ROWS[5].w + 0.5} ${ROWS[5].y + HALF})`}
+            fill={SAGE}
+          />
         </g>
 
         {/* "Today" playhead — above the panel clip so the flag sits proud */}
-        <line x1={PLAYHEAD_X} y1={92} x2={PLAYHEAD_X} y2={344} stroke={STAGGER_INK} strokeOpacity={0.55} strokeWidth={1.4} />
+        <line x1={PLAYHEAD_X} y1={92} x2={PLAYHEAD_X} y2={344} stroke={STAGGER_INK} strokeOpacity={0.5} strokeWidth={1.4} />
         <rect x={PLAYHEAD_X - 22} y={44} width={44} height={16} rx={8} fill={STAGGER_INK} />
         <text x={PLAYHEAD_X} y={55} fontSize={8} fontWeight={700} letterSpacing={0.5} fill="#fff" textAnchor="middle">
           TODAY
@@ -240,14 +279,12 @@ export function HeroGraphic({ className }: { className?: string }) {
           }
         >
           <rect x={18} y={250} width={150} height={104} rx={14} fill="#FFFFFF" stroke="#ECECF6" strokeWidth={1} />
-          {/* card header: avatar + title */}
           <circle cx={38} cy={272} r={8} fill={STAGGER_LIT} />
           <text x={38} y={275.5} fontSize={8} fontWeight={700} fill="#fff" textAnchor="middle">
             ◆
           </text>
           <rect x={52} y={266} width={70} height={6} rx={3} fill="#C4CADB" />
           <rect x={52} y={277} width={48} height={5} rx={2.5} fill="#DCE0EC" />
-          {/* tags */}
           <rect x={30} y={296} width={34} height={12} rx={6} fill={STAGGER_INK} opacity={0.12} />
           <text x={47} y={305} fontSize={7} fontWeight={700} fill={STAGGER_INK} textAnchor="middle" opacity={0.8}>
             PRD
@@ -256,16 +293,10 @@ export function HeroGraphic({ className }: { className?: string }) {
           <text x={91} y={305} fontSize={7} fontWeight={700} fill={SAGE} textAnchor="middle">
             On track
           </text>
-          {/* progress */}
           <rect x={30} y={322} width={108} height={6} rx={3} fill="#E4E8F3" />
           <rect x={30} y={322} width={72} height={6} rx={3} fill={STAGGER_LIT} />
           <rect x={30} y={336} width={60} height={5} rx={2.5} fill="#DCE0EC" />
-          {/* AI sparkle nod */}
-          <path
-            d="M150 274 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2 z"
-            fill={STAGGER_LIT}
-            opacity={0.9}
-          />
+          <path d="M150 274 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2 z" fill={STAGGER_LIT} opacity={0.9} />
         </m.g>
       </m.svg>
     </div>
