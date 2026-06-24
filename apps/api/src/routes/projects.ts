@@ -2,9 +2,10 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { eq, and, isNull, desc } from 'drizzle-orm';
 import { projectCreate, projectUpdate, memberAdd, memberUpdate, inviteCreate, INVITE_TTL_SEC } from '@productmap/shared';
-import { projects, memberships, users, invites } from '@productmap/db/schema';
+import { projects, memberships, users, invites, projectFavorites } from '@productmap/db/schema';
 import { nanoid } from 'nanoid';
 import { db } from '../db';
+import { uniqueSlug } from '../lib/slug';
 import { requireMembership, type MembershipEnv } from '../middleware/membership';
 import { config } from '../config';
 import { createMailer, inviteEmail } from '../lib/mailer';
@@ -19,39 +20,65 @@ export const projectsRoutes = new Hono<MembershipEnv>()
     const user = c.get('currentUser');
     if (user.role === 'admin') {
       const rows = await db.select().from(projects);
-      return c.json(rows.map((p) => ({ id: p.id, name: p.name, vision: p.vision, aboutMd: p.aboutMd, role: 'owner' as const })));
+      return c.json(rows.map((p) => ({ id: p.id, name: p.name, slug: p.slug ?? '', vision: p.vision, aboutMd: p.aboutMd, role: 'owner' as const })));
     }
     const rows = await db
-      .select({ id: projects.id, name: projects.name, vision: projects.vision, aboutMd: projects.aboutMd, role: memberships.role })
+      .select({ id: projects.id, name: projects.name, slug: projects.slug, vision: projects.vision, aboutMd: projects.aboutMd, role: memberships.role })
       .from(memberships)
       .innerJoin(projects, eq(projects.id, memberships.projectId))
       .where(eq(memberships.userId, user.id));
-    return c.json(rows);
+    return c.json(rows.map((r) => ({ ...r, slug: r.slug ?? '' })));
   })
   .post('/', zValidator('json', projectCreate, bad), async (c) => {
     const user = c.get('currentUser');
     const input = c.req.valid('json');
     const project = await db.transaction(async (tx) => {
-      const [p] = await tx.insert(projects).values({ name: input.name, vision: input.vision ?? '', aboutMd: input.aboutMd ?? '' }).returning();
+      const slug = await uniqueSlug(input.name, async (s) => {
+        const [hit] = await tx.select({ id: projects.id }).from(projects).where(eq(projects.slug, s));
+        return !!hit;
+      });
+      const [p] = await tx.insert(projects).values({ name: input.name, slug, vision: input.vision ?? '', aboutMd: input.aboutMd ?? '' }).returning();
       await tx.insert(memberships).values({ userId: user.id, projectId: p.id, role: 'owner' });
       return p;
     });
-    return c.json({ id: project.id, name: project.name, vision: project.vision, aboutMd: project.aboutMd, role: 'owner' as const }, 201);
+    return c.json({ id: project.id, name: project.name, slug: project.slug ?? '', vision: project.vision, aboutMd: project.aboutMd, role: 'owner' as const }, 201);
   })
   .get('/:projectId', requireMembership('viewer'), async (c) => {
     const [p] = await db.select().from(projects).where(eq(projects.id, c.req.param('projectId')));
     if (!p) return c.json({ error: 'not_found' }, 404);
-    return c.json({ id: p.id, name: p.name, vision: p.vision, aboutMd: p.aboutMd, role: c.get('currentRole') });
+    return c.json({ id: p.id, name: p.name, slug: p.slug ?? '', vision: p.vision, aboutMd: p.aboutMd, role: c.get('currentRole') });
   })
   .patch('/:projectId', requireMembership('owner'), zValidator('json', projectUpdate, bad), async (c) => {
-    const [row] = await db.update(projects).set(c.req.valid('json')).where(eq(projects.id, c.req.param('projectId'))).returning();
+    const projectId = c.req.param('projectId');
+    const patch = c.req.valid('json');
+    // Slug is globally unique — reject a collision with a DIFFERENT project up front.
+    if (patch.slug !== undefined) {
+      const [clash] = await db.select({ id: projects.id }).from(projects).where(eq(projects.slug, patch.slug));
+      if (clash && clash.id !== projectId) return c.json({ error: 'slug_taken' }, 409);
+    }
+    const [row] = await db.update(projects).set(patch).where(eq(projects.id, projectId)).returning();
     if (!row) return c.json({ error: 'not_found' }, 404);
-    return c.json({ id: row.id, name: row.name, vision: row.vision, aboutMd: row.aboutMd });
+    return c.json({ id: row.id, name: row.name, slug: row.slug ?? '', vision: row.vision, aboutMd: row.aboutMd });
   })
   .delete('/:projectId', requireMembership('owner'), async (c) => {
     const deleted = await db.delete(projects).where(eq(projects.id, c.req.param('projectId'))).returning({ id: projects.id });
     if (!deleted.length) return c.json({ error: 'not_found' }, 404);
     return c.body(null, 204);
+  })
+  // Per-user favorite (pin). Membership-gated, so admins pass (no membership row
+  // needed — the flag lives in project_favorites, not memberships).
+  .post('/:projectId/favorite', requireMembership('viewer'), async (c) => {
+    await db
+      .insert(projectFavorites)
+      .values({ userId: c.get('currentUser').id, projectId: c.req.param('projectId') })
+      .onConflictDoNothing();
+    return c.json({ favorite: true });
+  })
+  .delete('/:projectId/favorite', requireMembership('viewer'), async (c) => {
+    await db
+      .delete(projectFavorites)
+      .where(and(eq(projectFavorites.userId, c.get('currentUser').id), eq(projectFavorites.projectId, c.req.param('projectId'))));
+    return c.json({ favorite: false });
   })
   .get('/:projectId/members', requireMembership('viewer'), async (c) => {
     const rows = await db

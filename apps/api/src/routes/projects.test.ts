@@ -350,3 +350,51 @@ describe('project invites (create/revoke)', () => {
     expect(invites.some((i) => i.token === token)).toBe(true);
   });
 });
+
+describe('project slugs', () => {
+  const post = (body: unknown) => ({
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...adminAuth },
+    body: JSON.stringify(body),
+  });
+
+  it('POST generates a slug from the name and returns it', async () => {
+    const res = await app.request('/api/projects', post({ name: 'My Cool Project!' }));
+    expect(res.status).toBe(201);
+    expect((await res.json()).slug).toBe('my-cool-project');
+  });
+
+  it('POST disambiguates a colliding slug with -2', async () => {
+    const a = await app.request('/api/projects', post({ name: 'Alpha' }));
+    expect((await a.json()).slug).toBe('alpha');
+    const b = await app.request('/api/projects', post({ name: 'Alpha' }));
+    expect((await b.json()).slug).toBe('alpha-2');
+  });
+
+  it('GET /api/projects includes slug', async () => {
+    await app.request('/api/projects', post({ name: 'Listed' }));
+    const res = await app.request('/api/projects', { headers: adminAuth });
+    const rows = (await res.json()) as Array<{ name: string; slug: string }>;
+    expect(rows.find((r) => r.name === 'Listed')?.slug).toBe('listed');
+  });
+
+  it('PATCH can set a custom slug', async () => {
+    const res = await app.request(`/api/projects/${projectId}`, patch({ slug: 'custom-slug' }));
+    expect(res.status).toBe(200);
+    expect((await res.json()).slug).toBe('custom-slug');
+  });
+
+  it('PATCH rejects a slug already taken by another project with 409', async () => {
+    const a = await app.request('/api/projects', post({ name: 'Taken' }));
+    const takenSlug = (await a.json()).slug; // 'taken'
+    const res = await app.request(`/api/projects/${projectId}`, patch({ slug: takenSlug }));
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe('slug_taken');
+  });
+
+  it('PATCH allows setting a project to its own existing slug (no false collision)', async () => {
+    await app.request(`/api/projects/${projectId}`, patch({ slug: 'mine' }));
+    const res = await app.request(`/api/projects/${projectId}`, patch({ slug: 'mine' }));
+    expect(res.status).toBe(200);
+  });
+});
