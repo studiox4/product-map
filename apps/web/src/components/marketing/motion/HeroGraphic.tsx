@@ -1,20 +1,20 @@
 import { useRef } from 'react';
 import { m, useMotionValue, useSpring, useTransform, useReducedMotion } from 'framer-motion';
 import { useEntrance } from './useEntrance';
-import { STAGGER_INK, STAGGER_LIT, PLAYHEAD } from './palette';
+import { STAGGER_INK, STAGGER_LIT } from './palette';
 
 /**
- * Hero centerpiece — a cinematic, layered gantt rather than a flat logo.
+ * Hero centerpiece — a calm, Apple-grade material study of a roadmap.
  *
- * Depth: each bar is a translucent gradient slab with a soft drop shadow, the
- * back rows sitting lower-opacity so the stack reads 3-dimensional. Life: a slow
- * specular sheen sweeps across the bars, faint particles drift up the timeline,
- * and the whole composition tilts toward the cursor (parallax) so it feels like
- * a live surface, not a picture.
+ * The four Stagger bars are rendered as lit glass slabs: a multi-stop gradient
+ * with a bright top edge, a soft drop shadow for lift, and a slow specular glint
+ * that travels across the surface. A single soft glow blooms behind the stack
+ * for ambient depth, and the whole composition tilts gently toward the cursor.
+ * No floating particles, no clutter — restraint over decoration.
  *
- * SSR-safe: bars + gridlines render fully visible with no hidden initial (tilt is
- * identity, sheen/particles are absent) until mount. Reduced motion → a static,
- * still-premium layered frame (no tilt, sheen, particles, or float).
+ * SSR-safe: bars, glow, and gridlines render fully visible with no hidden initial
+ * (tilt is identity, glint is absent) until mount. Reduced motion → a still,
+ * fully-formed frame (no tilt, glint, or float).
  */
 
 const BARS = [
@@ -28,25 +28,17 @@ const GRID_X = [36, 54, 72] as const;
 const GRID_Y1 = 18;
 const GRID_Y2 = 110;
 
-// Drift particles along the timeline (positions are static; motion is per-particle).
-const PARTICLES = [
-  { x: 28, delay: 0, dur: 7 },
-  { x: 50, delay: 1.6, dur: 8.5 },
-  { x: 68, delay: 3.1, dur: 6.5 },
-  { x: 84, delay: 4.4, dur: 9 },
-] as const;
-
 export function HeroGraphic({ className }: { className?: string }) {
   const entered = useEntrance();
   const reduce = useReducedMotion();
   const animate = entered && !reduce;
 
-  // Cursor parallax tilt — pointer position (-0.5..0.5) → small spring-damped rotation.
+  // Gentle cursor parallax tilt — restrained, spring-damped.
   const wrapRef = useRef<HTMLDivElement>(null);
   const px = useMotionValue(0);
   const py = useMotionValue(0);
-  const rotateY = useSpring(useTransform(px, [-0.5, 0.5], [8, -8]), { stiffness: 120, damping: 18 });
-  const rotateX = useSpring(useTransform(py, [-0.5, 0.5], [-6, 6]), { stiffness: 120, damping: 18 });
+  const rotateY = useSpring(useTransform(px, [-0.5, 0.5], [5, -5]), { stiffness: 90, damping: 20 });
+  const rotateX = useSpring(useTransform(py, [-0.5, 0.5], [-4, 4]), { stiffness: 90, damping: 20 });
 
   function onMove(e: React.PointerEvent<HTMLDivElement>) {
     if (!animate) return;
@@ -66,7 +58,7 @@ export function HeroGraphic({ className }: { className?: string }) {
       className={className}
       onPointerMove={onMove}
       onPointerLeave={onLeave}
-      style={{ perspective: 900 }}
+      style={{ perspective: 1000 }}
     >
       <m.svg
         viewBox="0 0 120 128"
@@ -75,23 +67,30 @@ export function HeroGraphic({ className }: { className?: string }) {
         style={{ rotateX, rotateY, transformStyle: 'preserve-3d', width: '100%', height: 'auto' }}
       >
         <defs>
-          {/* Per-stream vertical gradient for glassy depth */}
+          {/* Lit-glass gradients: bright top edge → saturated body → deeper base */}
           <linearGradient id="hg-ink" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor={STAGGER_LIT} />
-            <stop offset="1" stopColor={STAGGER_INK} />
+            <stop offset="0" stopColor="#6E63F2" />
+            <stop offset="0.45" stopColor={STAGGER_INK} />
+            <stop offset="1" stopColor="#372BB0" />
           </linearGradient>
           <linearGradient id="hg-lit" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#8B83F5" />
-            <stop offset="1" stopColor={STAGGER_LIT} />
+            <stop offset="0" stopColor="#A39BFA" />
+            <stop offset="0.45" stopColor={STAGGER_LIT} />
+            <stop offset="1" stopColor="#5246D8" />
           </linearGradient>
+          {/* Soft ambient bloom behind the stack */}
+          <radialGradient id="hg-glow" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0" stopColor={STAGGER_LIT} stopOpacity="0.22" />
+            <stop offset="1" stopColor={STAGGER_LIT} stopOpacity="0" />
+          </radialGradient>
           {/* Soft drop shadow for lift */}
-          <filter id="hg-shadow" x="-20%" y="-20%" width="140%" height="160%">
-            <feDropShadow dx="0" dy="2.4" stdDeviation="2.6" floodColor={STAGGER_INK} floodOpacity="0.28" />
+          <filter id="hg-shadow" x="-25%" y="-25%" width="150%" height="170%">
+            <feDropShadow dx="0" dy="3" stdDeviation="3.2" floodColor={STAGGER_INK} floodOpacity="0.22" />
           </filter>
-          {/* Specular sheen gradient, animated via gradientTransform */}
-          <linearGradient id="hg-sheen" x1="0" y1="0" x2="1" y2="0">
+          {/* Specular glint that travels across the bars (clipped to them) */}
+          <linearGradient id="hg-glint" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0" stopColor="#fff" stopOpacity="0" />
-            <stop offset="0.5" stopColor="#fff" stopOpacity="0.55" />
+            <stop offset="0.5" stopColor="#fff" stopOpacity="0.4" />
             <stop offset="1" stopColor="#fff" stopOpacity="0" />
             {animate && (
               <animateTransform
@@ -99,8 +98,8 @@ export function HeroGraphic({ className }: { className?: string }) {
                 type="translate"
                 from="-1 0"
                 to="1 0"
-                dur="3.6s"
-                begin="0.4s"
+                dur="5s"
+                begin="0.6s"
                 repeatCount="indefinite"
               />
             )}
@@ -112,7 +111,10 @@ export function HeroGraphic({ className }: { className?: string }) {
           </clipPath>
         </defs>
 
-        {/* Faint vertical gridlines — static, SSR-visible */}
+        {/* Ambient bloom — static, SSR-visible */}
+        <ellipse cx={60} cy={66} rx={58} ry={50} fill="url(#hg-glow)" />
+
+        {/* Faint vertical gridlines */}
         {GRID_X.map((gx) => (
           <line
             key={gx}
@@ -122,12 +124,12 @@ export function HeroGraphic({ className }: { className?: string }) {
             x2={gx}
             y2={GRID_Y2}
             stroke="currentColor"
-            strokeOpacity={0.08}
+            strokeOpacity={0.07}
             strokeWidth={0.75}
           />
         ))}
 
-        {/* Layered translucent roadmap bars with depth + soft shadow */}
+        {/* Lit-glass roadmap bars with depth + soft shadow */}
         <g filter="url(#hg-shadow)">
           {BARS.map((b, i) => (
             <m.rect
@@ -139,45 +141,45 @@ export function HeroGraphic({ className }: { className?: string }) {
               height={15}
               rx={7.5}
               fill={b.fill === STAGGER_INK ? 'url(#hg-ink)' : 'url(#hg-lit)'}
-              opacity={1 - b.depth * 0.12}
+              opacity={1 - b.depth * 0.1}
               style={{ transformOrigin: `${b.x}px ${b.y + 7.5}px` }}
               initial={animate ? { scaleX: 0, opacity: 0 } : false}
-              animate={animate ? { scaleX: 1, opacity: 1 - b.depth * 0.12, y: [0, -1.6, 0] } : undefined}
+              animate={animate ? { scaleX: 1, opacity: 1 - b.depth * 0.1, y: [0, -1.4, 0] } : undefined}
               transition={{
-                scaleX: { duration: 0.55, delay: 0.1 * i, ease: [0.22, 1, 0.36, 1] },
-                opacity: { duration: 0.35, delay: 0.1 * i },
-                y: { duration: 4.5 + i, repeat: Infinity, ease: 'easeInOut', delay: 0.7 + i * 0.3 },
+                scaleX: { duration: 0.6, delay: 0.1 * i, ease: [0.22, 1, 0.36, 1] },
+                opacity: { duration: 0.4, delay: 0.1 * i },
+                y: { duration: 5 + i, repeat: Infinity, ease: 'easeInOut', delay: 0.8 + i * 0.35 },
               }}
             />
           ))}
         </g>
 
-        {/* Specular sheen — sweeps across the bars only (clipped) */}
+        {/* Crisp top-edge highlight for the glass read (subtle, static) */}
+        {BARS.map((b, i) => (
+          <rect
+            key={`hl${i}`}
+            x={b.x + 3}
+            y={b.y + 1.5}
+            width={b.w - 6}
+            height={2}
+            rx={1}
+            fill="#fff"
+            opacity={(1 - b.depth * 0.1) * 0.28}
+          />
+        ))}
+
+        {/* Specular glint sweep — clipped to the bars */}
         {animate && (
           <rect
             x={14}
             y={20}
             width={92}
             height={88}
-            fill="url(#hg-sheen)"
+            fill="url(#hg-glint)"
             clipPath="url(#hg-bars-clip)"
             pointerEvents="none"
           />
         )}
-
-        {/* Ambient particles drifting up the timeline */}
-        {animate &&
-          PARTICLES.map((p, i) => (
-            <m.circle
-              key={i}
-              cx={p.x}
-              r={1.1}
-              fill={PLAYHEAD}
-              initial={{ cy: GRID_Y2, opacity: 0 }}
-              animate={{ cy: GRID_Y1, opacity: [0, 0.7, 0] }}
-              transition={{ duration: p.dur, delay: p.delay, repeat: Infinity, ease: 'linear' }}
-            />
-          ))}
       </m.svg>
     </div>
   );
