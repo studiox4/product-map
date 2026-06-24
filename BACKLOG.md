@@ -46,6 +46,18 @@ A personal home: what to do next and status across the projects you care about.
 
 Multi-project is shipped but under-sold externally. Add a homepage section (and/or `Roadmap.tsx` marketing route) showing it in detail: many projects, roles/invites, public share links. Use real screenshots (switcher, members, share). **S** — content/design, no backend. Pairs with E1 discoverability so in-app matches the pitch.
 
+### E5 — Public idea intake form (per project, unauthenticated)
+
+A per-project public form where **anyone — no login** — can submit an idea, landing in that project's idea inbox for triage. Turns the roadmap into a two-way channel with customers/teammates without giving them accounts. Builds on the E1 public share-token machinery (extend it with an `intake` token kind alongside `roadmap`).
+
+- **Public form** — per-project shareable URL (e.g. `/p/<token>/submit`); mint/revoke an `intake` share token from project settings. Renders a bare, unauthenticated page (no app shell): title, description, optional submitter name/email, project-configurable extra fields.
+- **Unauthenticated submit** — `POST` (no session) creates an idea in the **target project's** inbox as `new`/untriaged, tagged source=`public`, with submitter contact stored if given. Scope strictly to the token's project — never trust a project id from the client.
+- **Abuse protection (required for an open endpoint)** — per-IP + per-token rate limiting, honeypot field, optional CAPTCHA/Turnstile, `noindex`, and an optional moderation queue (hold public submissions for owner/editor approval before they hit the inbox).
+- **Triage** — submissions appear in the existing idea inbox; owner/editor promotes to a feature or dismisses. Optional: email the submitter on status change if they left contact.
+- **Config** — per-project toggle (off by default), custom intro copy, required/optional fields, moderation on/off.
+
+Depends on E1 (share tokens, project scoping) and the AI-copilot idea inbox. **M** — one new token kind + one public route + a small public page + spam hardening. Pairs with E2 (notify owners of new public submissions).
+
 ---
 
 ## v2 — Team-ready
