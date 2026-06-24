@@ -5,7 +5,14 @@ import {
   DOC_TYPE_COLORS,
   DOC_STATUS_COLORS,
   USER_COLORS,
+  NOTIFICATION_KINDS,
 } from './constants';
+
+describe('NOTIFICATION_KINDS', () => {
+  it('is the four E2a kinds in order', () => {
+    expect(NOTIFICATION_KINDS).toEqual(['mention', 'comment', 'reply', 'project_invite']);
+  });
+});
 
 describe('DOC_TYPE_COLORS', () => {
   it('covers every doc type with chip classes and a hex edge', () => {

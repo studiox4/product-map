@@ -3,7 +3,7 @@ import {
   HORIZONS, FEATURE_STATUSES, DOC_TYPES, DOC_STATUSES,
   IDEA_STATUSES, EVIDENCE_KINDS, FEATURE_SIZES,
   RELEASE_STATUSES, OBJECTIVE_STATUSES, MIN_PASSWORD_LENGTH,
-  MEMBER_ROLES,
+  MEMBER_ROLES, NOTIFICATION_KINDS,
 } from './constants';
 
 export const featureCreate = z.object({
@@ -245,4 +245,10 @@ export const memberUpdate = z.object({ role });
 export const inviteCreate = z.object({
   role: role.default('editor'),
   email: z.string().email().optional(),
+});
+
+// --- E2a In-app notifications ---
+export const notificationPrefUpdate = z.object({
+  kind: z.enum(NOTIFICATION_KINDS),
+  enabled: z.boolean(),
 });
