@@ -1,21 +1,7 @@
 import { useRef } from 'react';
 import { m, useMotionValue, useSpring, useTransform, useReducedMotion } from 'framer-motion';
 import { useEntrance } from './useEntrance';
-import {
-  STAGGER_INK,
-  STAGGER_LIT,
-  PLAYHEAD,
-  INK_TOP,
-  INK_BASE,
-  LIT_TOP,
-  LIT_BASE,
-  TEAL,
-  TEAL_TOP,
-  AMBER,
-  AMBER_TOP,
-  SAGE,
-  PANEL_TINT,
-} from './palette';
+import { STAGGER_INK, STAGGER_LIT, PLAYHEAD, INK_BASE, TEAL, AMBER, SAGE, PANEL_TINT } from './palette';
 
 /**
  * Hero illustration — a dimensional "roadmap workspace": a floating glass gantt
@@ -34,14 +20,14 @@ import {
  * static frame.
  */
 
-// Swimlane task bars. x/w are on the timeline; `grad` selects a gradient.
+// Swimlane task bars. x/w are on the timeline; `fill` is a flat solid color.
 const ROWS = [
-  { y: 104, x: 150, w: 122, grad: 'ink', dot: STAGGER_LIT, label: 56 },
-  { y: 140, x: 182, w: 92, grad: 'lit', dot: TEAL, label: 64 },
-  { y: 176, x: 150, w: 70, grad: 'teal', dot: SAGE, label: 48 },
-  { y: 212, x: 204, w: 108, grad: 'ink', dot: AMBER, label: 60 },
-  { y: 248, x: 162, w: 84, grad: 'amber', dot: STAGGER_LIT, label: 52 },
-  { y: 284, x: 232, w: 96, grad: 'lit', dot: TEAL, label: 44 },
+  { y: 104, x: 150, w: 122, fill: STAGGER_INK, dot: STAGGER_LIT, label: 56 },
+  { y: 140, x: 182, w: 92, fill: STAGGER_LIT, dot: TEAL, label: 64 },
+  { y: 176, x: 150, w: 70, fill: TEAL, dot: SAGE, label: 48 },
+  { y: 212, x: 204, w: 108, fill: STAGGER_INK, dot: AMBER, label: 60 },
+  { y: 248, x: 162, w: 84, fill: AMBER, dot: STAGGER_LIT, label: 52 },
+  { y: 284, x: 232, w: 96, fill: STAGGER_LIT, dot: TEAL, label: 44 },
 ] as const;
 
 const GRID_X = [150, 210, 270, 330, 390] as const;
@@ -49,10 +35,6 @@ const MONTHS = ['JUN', 'JUL', 'AUG', 'SEP', 'OCT'] as const;
 const GRID_Y1 = 92;
 const GRID_Y2 = 312;
 const PLAYHEAD_X = 270;
-
-function gradId(g: string) {
-  return `url(#hg-${g})`;
-}
 
 export function HeroGraphic({ className }: { className?: string }) {
   const entered = useEntrance();
@@ -93,73 +75,29 @@ export function HeroGraphic({ className }: { className?: string }) {
         style={{ rotateX, rotateY, transformStyle: 'preserve-3d', width: '100%', height: 'auto' }}
       >
         <defs>
-          <linearGradient id="hg-ink" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor={INK_TOP} />
-            <stop offset="0.5" stopColor={STAGGER_INK} />
-            <stop offset="1" stopColor={INK_BASE} />
-          </linearGradient>
-          <linearGradient id="hg-lit" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor={LIT_TOP} />
-            <stop offset="0.5" stopColor={STAGGER_LIT} />
-            <stop offset="1" stopColor={LIT_BASE} />
-          </linearGradient>
-          <linearGradient id="hg-teal" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor={TEAL_TOP} />
-            <stop offset="1" stopColor={TEAL} />
-          </linearGradient>
-          <linearGradient id="hg-amber" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor={AMBER_TOP} />
-            <stop offset="1" stopColor={AMBER} />
-          </linearGradient>
-          <linearGradient id="hg-panel" x1="0" y1="0" x2="0.4" y2="1">
+          {/* Near-flat surfaces — a whisper of tint, not a glossy gradient */}
+          <linearGradient id="hg-panel" x1="0" y1="0" x2="0.2" y2="1">
             <stop offset="0" stopColor="#FFFFFF" />
             <stop offset="1" stopColor={PANEL_TINT} />
           </linearGradient>
-          <linearGradient id="hg-card" x1="0" y1="0" x2="0.3" y2="1">
-            <stop offset="0" stopColor="#FFFFFF" />
-            <stop offset="1" stopColor="#F4F1FD" />
-          </linearGradient>
           <radialGradient id="hg-glow" cx="0.5" cy="0.5" r="0.5">
-            <stop offset="0" stopColor={STAGGER_LIT} stopOpacity="0.28" />
+            <stop offset="0" stopColor={STAGGER_LIT} stopOpacity="0.12" />
             <stop offset="1" stopColor={STAGGER_LIT} stopOpacity="0" />
           </radialGradient>
-          <radialGradient id="hg-glow2" cx="0.5" cy="0.5" r="0.5">
-            <stop offset="0" stopColor={TEAL} stopOpacity="0.16" />
-            <stop offset="1" stopColor={TEAL} stopOpacity="0" />
-          </radialGradient>
-          <linearGradient id="hg-glint" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor="#fff" stopOpacity="0" />
-            <stop offset="0.5" stopColor="#fff" stopOpacity="0.5" />
-            <stop offset="1" stopColor="#fff" stopOpacity="0" />
-            {animate && (
-              <animateTransform
-                attributeName="gradientTransform"
-                type="translate"
-                from="-1 0"
-                to="1 0"
-                dur="5.5s"
-                begin="0.8s"
-                repeatCount="indefinite"
-              />
-            )}
-          </linearGradient>
+          {/* Crisp, low flat-card shadows */}
           <filter id="hg-panelShadow" x="-20%" y="-20%" width="140%" height="150%">
-            <feDropShadow dx="0" dy="14" stdDeviation="16" floodColor={INK_BASE} floodOpacity="0.18" />
+            <feDropShadow dx="0" dy="8" stdDeviation="9" floodColor={INK_BASE} floodOpacity="0.12" />
           </filter>
           <filter id="hg-cardShadow" x="-40%" y="-40%" width="180%" height="200%">
-            <feDropShadow dx="0" dy="10" stdDeviation="11" floodColor={INK_BASE} floodOpacity="0.22" />
-          </filter>
-          <filter id="hg-barShadow" x="-20%" y="-40%" width="140%" height="200%">
-            <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor={INK_BASE} floodOpacity="0.18" />
+            <feDropShadow dx="0" dy="6" stdDeviation="7" floodColor={INK_BASE} floodOpacity="0.16" />
           </filter>
           <clipPath id="hg-panelClip">
             <rect x={40} y={56} width={384} height={296} rx={20} />
           </clipPath>
         </defs>
 
-        {/* Ambient blooms behind the panel */}
-        <ellipse cx={150} cy={120} rx={150} ry={120} fill="url(#hg-glow)" />
-        <ellipse cx={380} cy={300} rx={130} ry={110} fill="url(#hg-glow2)" />
+        {/* Single faint ambient bloom */}
+        <ellipse cx={230} cy={150} rx={170} ry={130} fill="url(#hg-glow)" />
 
         {/* ===== Main glass gantt panel ===== */}
         <g filter="url(#hg-panelShadow)">
@@ -215,25 +153,21 @@ export function HeroGraphic({ className }: { className?: string }) {
             strokeLinecap="round"
           />
 
-          {/* Task bars */}
-          <g filter="url(#hg-barShadow)">
-            {ROWS.map((r, i) => (
-              <m.g
-                key={`bar-${r.y}`}
-                style={{ transformOrigin: `${r.x}px ${r.y + 7}px` }}
-                initial={animate ? { scaleX: 0, opacity: 0 } : false}
-                animate={animate ? { scaleX: 1, opacity: 1 } : undefined}
-                transition={{ duration: 0.55, delay: 0.12 + 0.09 * i, ease: [0.22, 1, 0.36, 1] }}
-              >
-                <rect data-bar x={r.x} y={r.y} width={r.w} height={14} rx={7} fill={gradId(r.grad)} />
-                {/* top-edge highlight */}
-                <rect x={r.x + 3} y={r.y + 1.5} width={r.w - 6} height={1.6} rx={0.8} fill="#fff" opacity={0.35} />
-                {/* assignee dot on the bar */}
-                <circle cx={r.x + r.w - 8} cy={r.y + 7} r={3.4} fill="#fff" opacity={0.9} />
-                <circle cx={r.x + r.w - 8} cy={r.y + 7} r={2} fill={r.dot} />
-              </m.g>
-            ))}
-          </g>
+          {/* Task bars — flat solid fills */}
+          {ROWS.map((r, i) => (
+            <m.g
+              key={`bar-${r.y}`}
+              style={{ transformOrigin: `${r.x}px ${r.y + 7}px` }}
+              initial={animate ? { scaleX: 0, opacity: 0 } : false}
+              animate={animate ? { scaleX: 1, opacity: 1 } : undefined}
+              transition={{ duration: 0.55, delay: 0.12 + 0.09 * i, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <rect data-bar x={r.x} y={r.y} width={r.w} height={14} rx={7} fill={r.fill} />
+              {/* assignee dot on the bar */}
+              <circle cx={r.x + r.w - 8} cy={r.y + 7} r={3} fill="#fff" />
+              <circle cx={r.x + r.w - 8} cy={r.y + 7} r={1.7} fill={r.dot} />
+            </m.g>
+          ))}
 
           {/* Scenario "what-if" ghost branching off row 4 */}
           <m.g
@@ -269,11 +203,6 @@ export function HeroGraphic({ className }: { className?: string }) {
             <rect x={387} y={101} width={9} height={9} rx={1.5} transform="rotate(45 391.5 105.5)" fill={AMBER} />
             <rect x={326} y={245} width={9} height={9} rx={1.5} transform="rotate(45 330.5 249.5)" fill={SAGE} />
           </g>
-
-          {/* Specular glint sweep across the panel */}
-          {animate && (
-            <rect x={40} y={56} width={384} height={296} fill="url(#hg-glint)" pointerEvents="none" />
-          )}
         </g>
 
         {/* "Today" playhead — above the panel clip so the flag sits proud */}
@@ -310,7 +239,7 @@ export function HeroGraphic({ className }: { className?: string }) {
               : undefined
           }
         >
-          <rect x={18} y={250} width={150} height={104} rx={14} fill="url(#hg-card)" stroke="#fff" strokeWidth={1} />
+          <rect x={18} y={250} width={150} height={104} rx={14} fill="#FFFFFF" stroke="#ECECF6" strokeWidth={1} />
           {/* card header: avatar + title */}
           <circle cx={38} cy={272} r={8} fill={STAGGER_LIT} />
           <text x={38} y={275.5} fontSize={8} fontWeight={700} fill="#fff" textAnchor="middle">
