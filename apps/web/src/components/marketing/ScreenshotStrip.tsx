@@ -2,6 +2,7 @@ import { Boxes, CalendarRange, Check, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BoardToRoadmap } from '@/components/marketing/motion/story/BoardToRoadmap';
 import { DocsType } from '@/components/marketing/motion/story/DocsType';
+import { Reveal } from '@/components/marketing/motion/Reveal';
 
 const ROWS = [
   {
@@ -47,20 +48,20 @@ const ROWS = [
 export default function ScreenshotStrip() {
   return (
     <section className="mx-auto max-w-screen-xl px-6 py-16 md:py-24">
-      <div className="mx-auto mb-14 max-w-2xl text-center md:mb-20">
+      <Reveal className="mx-auto mb-14 max-w-2xl text-center md:mb-20">
         <p className="font-mono text-xs font-medium uppercase tracking-[0.2em] text-action">
           One workspace
         </p>
         <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-ink md:text-4xl">
           The whole loop, in one place
         </h2>
-      </div>
+      </Reveal>
 
       <div className="flex flex-col gap-16 md:gap-28">
         {ROWS.map(({ src, alt, icon: Icon, eyebrow, title, body, points, accent }, i) => {
           const imageRight = i % 2 === 1;
           return (
-            <div key={src} className="grid items-center gap-8 md:grid-cols-2 md:gap-14">
+            <Reveal key={src} y={28} className="grid items-center gap-8 md:grid-cols-2 md:gap-14">
               {/* Copy */}
               <div className={cn('flex flex-col gap-5', imageRight ? 'md:order-1' : 'md:order-2')}>
                 <span className="inline-flex w-fit items-center gap-2 rounded-full bg-action-soft px-3 py-1 text-xs font-semibold uppercase tracking-wide text-action">
@@ -94,7 +95,7 @@ export default function ScreenshotStrip() {
                 {accent === 'docs' && <DocsType className="mb-2 h-14 w-full text-ink/70" />}
                 <img src={src} alt={alt} className="w-full rounded-xl" loading="lazy" />
               </figure>
-            </div>
+            </Reveal>
           );
         })}
       </div>
