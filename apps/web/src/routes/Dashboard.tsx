@@ -1,0 +1,87 @@
+import { Link } from 'react-router-dom';
+import { Search, Plus } from 'lucide-react';
+import { useDashboard } from '@/lib/api';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import MyProjects from '@/components/dashboard/MyProjects';
+import NextActions from '@/components/dashboard/NextActions';
+import MyWork from '@/components/dashboard/MyWork';
+import DashboardFeed from '@/components/dashboard/DashboardFeed';
+
+/** Opens the existing command palette (AppShell listens for ⌘K / Ctrl+K). */
+function openCommandPalette() {
+  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true, bubbles: true }));
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-8" data-testid="dashboard-skeleton">
+      <Skeleton className="h-9 w-56" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {[0, 1, 2].map((i) => (
+          <Skeleton key={i} className="h-32 rounded-2xl" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="mx-auto max-w-md py-24 text-center" data-testid="dashboard-empty">
+      <h1 className="font-display text-2xl font-bold text-ink">Welcome to ProductMap</h1>
+      <p className="mt-2 text-sm text-muted-ink">
+        You’re not part of any projects yet. Create one to start mapping your roadmap.
+      </p>
+      <Button asChild className="mt-6">
+        <Link to="?new=1">
+          <Plus className="h-4 w-4" aria-hidden /> New project
+        </Link>
+      </Button>
+    </div>
+  );
+}
+
+export default function Dashboard() {
+  const { data, isPending, isError, refetch } = useDashboard();
+
+  if (isPending) return <DashboardSkeleton />;
+  if (isError || !data) {
+    return (
+      <div className="py-24 text-center" data-testid="dashboard-error">
+        <p className="text-sm text-muted-ink">Couldn’t load your dashboard.</p>
+        <Button variant="outline" className="mt-4" onClick={() => refetch()}>
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
+  if (data.projects.length === 0) return <EmptyState />;
+
+  return (
+    <div className="space-y-8" data-testid="dashboard">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-display text-2xl font-bold text-ink">Dashboard</h1>
+        <button
+          type="button"
+          onClick={openCommandPalette}
+          className="flex items-center gap-2 rounded-full bg-surface px-3 py-1.5 text-sm text-muted-ink shadow-card outline-none transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Search className="h-3.5 w-3.5" aria-hidden />
+          Search everything
+        </button>
+      </div>
+
+      <NextActions actions={data.nextActions} />
+
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <div className="space-y-8 lg:col-span-2">
+          <MyProjects projects={data.projects} />
+          <MyWork items={data.myWork} />
+        </div>
+        <DashboardFeed items={data.activity} />
+      </div>
+    </div>
+  );
+}

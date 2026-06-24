@@ -24,12 +24,13 @@ import ProjectSwitcher from '@/components/ProjectSwitcher';
 import { useGlobalShortcuts } from '@/components/command/useGlobalShortcuts';
 import { useTrackRecents } from '@/components/command/recents';
 import { useAiStatus } from '@/lib/api';
+import { useActiveProject } from '@/lib/project';
 import { cn } from '@/lib/utils';
 import { appRoutes } from '@/lib/routes';
 import DemoBanner from '@/demo/DemoBanner';
 
 const NAV_LINKS: { to: string; label: string; end: boolean; icon?: typeof Lightbulb }[] = [
-  { to: appRoutes.dashboard, label: 'Overview', end: true },
+  { to: appRoutes.dashboard, label: 'Dashboard', end: true },
   { to: appRoutes.inbox, label: 'Inbox', end: false, icon: Lightbulb },
 ];
 
@@ -64,6 +65,8 @@ const pillClass = (isActive: boolean) =>
 
 export function AppShell() {
   const location = useLocation();
+  const { projects, projectId } = useActiveProject();
+  const activeSlug = projects.find((p) => p.id === projectId)?.slug;
   const planActive = PLAN_LINKS.some((l) => location.pathname.startsWith(l.to));
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -141,6 +144,14 @@ export function AppShell() {
                 {link.label}
               </NavLink>
             ))}
+            {activeSlug ? (
+              <NavLink
+                to={appRoutes.projectOverview(activeSlug)}
+                className={({ isActive }) => pillClass(isActive)}
+              >
+                Overview
+              </NavLink>
+            ) : null}
             <DropdownMenu>
               <DropdownMenuTrigger className={pillClass(planActive)}>
                 Plan

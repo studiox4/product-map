@@ -14,6 +14,8 @@ export const APP_BASE = '/app';
 
 export const appRoutes = {
   dashboard: APP_BASE,
+  /** Single-project overview, addressed by the project's slug. */
+  projectOverview: (slug: string) => `${APP_BASE}/p/${slug}`,
   board: `${APP_BASE}/board`,
   roadmap: `${APP_BASE}/roadmap`,
   inbox: `${APP_BASE}/inbox`,
@@ -34,4 +36,5 @@ export const appPatterns = {
   board: `${APP_BASE}/board`,
   feature: `${APP_BASE}/features/:id`,
   doc: `${APP_BASE}/docs/:id`,
+  projectOverview: `${APP_BASE}/p/:slug`,
 } as const;

@@ -10,6 +10,7 @@ import type {
   ActivityItem,
   Comment,
   CommentThread,
+  DashboardResponse,
   DocStatus,
   DocType,
   DocumentFull,
@@ -68,6 +69,7 @@ export interface DocumentUpdateInput {
 }
 export interface ProjectUpdateInput {
   name?: string;
+  slug?: string;
   vision?: string;
   aboutMd?: string;
 }
@@ -148,6 +150,46 @@ export function useOverview() {
   return useQuery({
     queryKey: queryKeys.overview(pid),
     queryFn: () => fetchJson<OverviewResponse>(apiPath(pid, 'overview')),
+  });
+}
+
+/** User-scoped cross-project dashboard (NOT pid-keyed — it spans projects). */
+export function useDashboard() {
+  return useQuery({
+    queryKey: queryKeys.dashboard,
+    queryFn: () => fetchJson<DashboardResponse>('/api/dashboard'),
+    staleTime: 30_000,
+  });
+}
+
+/**
+ * Toggle a per-user project favorite. Optimistically flips the flag in the
+ * dashboard cache and re-sorts (favorites first), rolling back on error.
+ */
+export function useToggleFavorite() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ projectId, favorite }: { projectId: string; favorite: boolean }) =>
+      fetchJson<{ favorite: boolean }>(`/api/projects/${projectId}/favorite`, {
+        method: favorite ? 'POST' : 'DELETE',
+      }),
+    onMutate: async ({ projectId, favorite }) => {
+      await qc.cancelQueries({ queryKey: queryKeys.dashboard });
+      const prev = qc.getQueryData<DashboardResponse>(queryKeys.dashboard);
+      if (prev) {
+        qc.setQueryData<DashboardResponse>(queryKeys.dashboard, {
+          ...prev,
+          projects: prev.projects
+            .map((p) => (p.id === projectId ? { ...p, favorite } : p))
+            .sort((a, b) => Number(b.favorite) - Number(a.favorite) || a.name.localeCompare(b.name)),
+        });
+      }
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(queryKeys.dashboard, ctx.prev);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: queryKeys.dashboard }),
   });
 }
 

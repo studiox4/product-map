@@ -3,7 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AppShell from '@/components/AppShell';
 import { NewProjectDialog } from '@/components/NewProjectDialog';
-import Landing from '@/routes/Landing';
+import Dashboard from '@/routes/Dashboard';
 import Login from '@/routes/Login';
 import Register from '@/routes/Register';
 import { AuthProvider, RequireAuth } from '@/lib/auth';
@@ -13,6 +13,8 @@ import { appRoutes } from '@/lib/routes';
 
 // Lazy routes owned by parallel tasks (3B-D); stubs render "coming soon" until they land.
 const BoardPage = lazy(() => import('@/routes/Board'));
+// Single-project overview (the former home), now slug-addressed at /app/p/:slug.
+const ProjectOverviewPage = lazy(() => import('@/routes/ProjectOverview'));
 // Idea Inbox (Dream tier D1 — inbox agent route line).
 const InboxPage = lazy(() => import('@/routes/Inbox'));
 const RoadmapPage = lazy(() => import('@/routes/Roadmap'));
@@ -124,7 +126,16 @@ export default function App() {
                 </RequireAuth>
               }
             >
-              <Route index element={<Landing />} />
+              <Route index element={<Dashboard />} />
+              {/* Single-project overview, slug-addressed. */}
+              <Route
+                path="p/:slug"
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <ProjectOverviewPage />
+                  </Suspense>
+                }
+              />
               {/* Idea Inbox (inbox agent route line). */}
               <Route
                 path="inbox"
