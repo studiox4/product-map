@@ -1,5 +1,5 @@
 // Loads the real Drizzle migrations and applies them to an in-browser PGlite
-// client. The 15 SQL files in packages/db/migrations are bundled as raw strings
+// client. The 16 SQL files in packages/db/migrations are bundled as raw strings
 // at build time; ordering comes from the Drizzle journal (idx ascending).
 import type { PGlite } from '@electric-sql/pglite';
 import journal from '../../../../packages/db/migrations/meta/_journal.json';
@@ -58,7 +58,7 @@ export async function applyMigrations(client: PGlite): Promise<void> {
   }
 }
 
-/** Exposed for the test: confirms the glob matched all 15 migration files. */
+/** Exposed for the test: confirms the glob matched all 16 migration files. */
 export function migrationCount(): number {
   return Object.keys(sqlByPath).length;
 }

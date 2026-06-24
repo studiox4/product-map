@@ -92,6 +92,7 @@ export async function seedDemo(
     .insert(projects)
     .values({
       name: 'ProductMap',
+      slug: 'productmap',
       vision: 'Roadmaps and docs your security team will let you run.',
       aboutMd:
         'ProductMap is a self-hosted product planning workspace: a now-next-later board, a draggable Gantt roadmap, and a rich markdown document editor with AI drafting — all backed by your own Postgres, so nothing leaves your network.',

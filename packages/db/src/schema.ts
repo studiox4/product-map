@@ -44,9 +44,10 @@ export const users = pgTable('users', {
 export const projects = pgTable('projects', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: text('name').notNull(),
-  // NULLABLE in migration 0014 (expand); flipped NOT NULL in 0015 (contract)
-  // once every project-create path writes a slug.
-  slug: text('slug').unique(),
+  // NOT NULL + unique. The API always supplies a name-derived slug (uniqueSlug);
+  // the gen_random_uuid default is a safety net so direct DB inserts (seeds,
+  // tests) never violate NOT NULL. Added nullable in 0014, finalized in 0015.
+  slug: text('slug').notNull().unique().default(sql`gen_random_uuid()::text`),
   vision: text('vision').notNull().default(''),
   aboutMd: text('about_md').notNull().default(''),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -131,9 +132,10 @@ export const featureCollaborators = pgTable(
 export const activity = pgTable('activity', {
   id: uuid('id').defaultRandom().primaryKey(),
   featureId: uuid('feature_id').notNull().references(() => features.id, { onDelete: 'cascade' }),
-  // NULLABLE in migration 0014 (expand; backfilled from features.project_id);
-  // flipped NOT NULL in 0015 (contract) once every recordActivity call writes it.
-  projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }),
+  // Denormalized scope key for the cross-project dashboard feed. Added nullable
+  // in 0014 (backfilled from features.project_id), flipped NOT NULL in 0015 once
+  // every recordActivity caller writes it.
+  projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
   actorId: uuid('actor_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   kind: text('kind').notNull(),
   payload: jsonb('payload'),
