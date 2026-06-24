@@ -2,6 +2,7 @@ import { Boxes, CalendarRange, Check, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BoardToRoadmap } from '@/components/marketing/motion/story/BoardToRoadmap';
 import { DocsType } from '@/components/marketing/motion/story/DocsType';
+import { ScenarioFork } from '@/components/marketing/motion/story/ScenarioFork';
 import { Reveal } from '@/components/marketing/motion/Reveal';
 
 const ROWS = [
@@ -19,10 +20,11 @@ const ROWS = [
     src: '/marketing/roadmap.png',
     alt: 'Gantt roadmap',
     icon: CalendarRange,
-    eyebrow: 'Schedule',
-    title: 'The timeline, drag-and-drop',
-    body: 'Schedule by dragging bars, resize to estimate, and sketch what-if scenarios in isolation before anything ships.',
-    points: ['Drag to schedule + resize', 'Scenario drafts', 'Color-coded horizons'],
+    eyebrow: 'Scenario plan',
+    title: 'Explore the hard calls, safely',
+    body: 'Fork the roadmap into a what-if draft — cut a feature, add headcount, reorder a quarter — and compare it against the live plan before you commit. The real roadmap never moves until your team says so.',
+    points: ['What-if drafts, fully isolated', 'Compare against the live plan', 'Commit only when the team agrees'],
+    accent: 'scenario' as const,
   },
   {
     src: '/marketing/feature.png',
@@ -93,6 +95,9 @@ export default function ScreenshotStrip() {
                   <BoardToRoadmap className="mb-2 h-16 w-full text-ink/70" />
                 )}
                 {accent === 'docs' && <DocsType className="mb-2 h-14 w-full text-ink/70" />}
+                {accent === 'scenario' && (
+                  <ScenarioFork className="mb-2 h-16 w-full text-ink/70" />
+                )}
                 <img src={src} alt={alt} className="w-full rounded-xl" loading="lazy" />
               </figure>
             </Reveal>
