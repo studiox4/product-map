@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { CommentComposer } from './CommentComposer';
+import { segmentMentions } from '@/lib/mentions';
 
 export interface CommentThreadProps {
   thread: Thread;
@@ -23,6 +24,22 @@ export interface CommentThreadProps {
   /** AI decision extraction (resolved roots only); omitted when AI is disabled. */
   onLogDecision?: () => void;
   logDecisionPending?: boolean;
+}
+
+function CommentBody({ body }: { body: string }) {
+  return (
+    <>
+      {segmentMentions(body).map((seg, i) =>
+        seg.type === 'mention' ? (
+          <span key={i} className="rounded bg-accent/15 px-1 font-medium text-accent">
+            @{seg.label}
+          </span>
+        ) : (
+          <span key={i} style={{ whiteSpace: 'pre-wrap' }}>{seg.value}</span>
+        ),
+      )}
+    </>
+  );
 }
 
 function CommentItem({
@@ -66,7 +83,7 @@ function CommentItem({
             }}
           />
         ) : (
-          <p className="mt-0.5 whitespace-pre-wrap text-sm text-body-ink">{comment.body}</p>
+          <p className="mt-0.5 whitespace-pre-wrap text-sm text-body-ink"><CommentBody body={comment.body} /></p>
         )}
       </div>
       {isOwn && !editing ? (

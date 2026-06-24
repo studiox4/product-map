@@ -358,6 +358,25 @@ describe('CommentsSection', () => {
     expect(screen.queryByText('Root by Corban')).toBeNull();
   });
 
+  it('renders mention tokens as @Name chips with surrounding plain text intact', async () => {
+    threads = [
+      comment({
+        id: 'c-chip',
+        body: 'Hey @[Alice](u-alice) check this out',
+      }),
+    ];
+    renderSection();
+    // The chip shows the visible @Name label (exercises segmentMentions)
+    const chip = await screen.findByText('@Alice');
+    expect(chip).toBeTruthy();
+    // Plain text segments before and after are in the same paragraph as the chip
+    const para = chip.closest('p')!;
+    expect(para.textContent).toContain('Hey');
+    expect(para.textContent).toContain('check this out');
+    // The chip text is not the raw token — the raw @[Alice](u-alice) string should not appear
+    expect(para.textContent).not.toContain('@[Alice]');
+  });
+
   it('@mention typeahead: typing @Bo shows Bob Lee, clicking inserts token', async () => {
     threads = [];
     // Override members with Bob Lee for this test.
