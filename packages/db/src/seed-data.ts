@@ -809,7 +809,7 @@ Fund the two weeks. Gate GA behind one partner running the module in staging for
     { featureId: realtime.id, actorId: marcus.id, kind: 'comment_added', payload: {}, createdAt: daysAgo(2) },
     { featureId: gantt.id, actorId: marcus.id, kind: 'comment_added', payload: {}, createdAt: daysAgo(1.1) },
     { featureId: editor.id, actorId: corban.id, kind: 'comment_resolved', payload: { resolved: true }, createdAt: daysAgo(0.5) },
-  ]);
+  ].map((a) => ({ ...a, projectId: project.id })));
 
   // --- comments: real team discussion across features and docs.
   // Two threads stay deliberately unresolved (editor PRD doc + Gantt feature)

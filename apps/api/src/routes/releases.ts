@@ -52,7 +52,7 @@ async function updateRelease(
   const [row] = await db.update(releases).set(set).where(eq(releases.id, id)).returning();
   if (statusChanged) {
     for (const feature of await releaseFeatures(id, prev.projectId)) {
-      await recordActivity(feature.id, userId, 'release_status_changed', {
+      await recordActivity(feature.id, prev.projectId, userId, 'release_status_changed', {
         releaseId: row.id,
         releaseName: row.name,
         from: prev.status,

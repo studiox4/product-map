@@ -122,7 +122,7 @@ export const commentsRoutes = new Hono<MembershipEnv>()
 
       const activityFeatureId = await activityFeatureIdFor(row);
       if (activityFeatureId) {
-        await recordActivity(activityFeatureId, user.id, 'comment_added', {
+        await recordActivity(activityFeatureId, pid, user.id, 'comment_added', {
           commentId: row.id,
           documentId: row.documentId,
         });
@@ -159,7 +159,7 @@ export const commentsRoutes = new Hono<MembershipEnv>()
 
       const activityFeatureId = await activityFeatureIdFor(row);
       if (activityFeatureId) {
-        await recordActivity(activityFeatureId, user?.id, 'comment_resolved', {
+        await recordActivity(activityFeatureId, pid, user?.id, 'comment_resolved', {
           commentId: row.id,
           resolved,
         });

@@ -361,6 +361,7 @@ describe('GET /api/projects/:projectId/features/:id/activity', () => {
     for (let i = 0; i < 55; i++) {
       await db.insert(activity).values({
         featureId: f.id,
+        projectId,
         actorId: userId,
         kind: 'status_changed',
         payload: { from: 'idea', to: `step-${i}` },

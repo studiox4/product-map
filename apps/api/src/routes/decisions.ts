@@ -95,7 +95,7 @@ export const decisionsRoutes = new Hono<MembershipEnv>()
 
       const fullUser = await loadUser(user.id);
       if (row.featureId) {
-        await recordActivity(row.featureId, user.id, 'decision_logged', {
+        await recordActivity(row.featureId, pid, user.id, 'decision_logged', {
           decisionId: row.id,
           title: row.title,
         });
