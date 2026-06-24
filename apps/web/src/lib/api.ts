@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { hc } from 'hono/client';
 import {
   useMutation,
@@ -20,8 +21,11 @@ import type {
   FeatureStatus,
   FeatureWithDocs,
   Horizon,
+  NotificationItem,
+  NotificationPrefs,
   OverviewResponse,
   Project,
+  UnreadCount,
   User,
 } from '@productmap/shared';
 import type { AppType } from '../../../api/src/app';
@@ -141,6 +145,9 @@ export const queryKeys = {
   aiStatus: ['ai', 'status'] as const,
   /** User-scoped (NOT pid-keyed) — the cross-project dashboard spans projects. */
   dashboard: ['dashboard'] as const,
+  notifications: ['notifications'] as const,
+  unreadCount: ['notifications', 'unread-count'] as const,
+  notificationPrefs: ['notifications', 'prefs'] as const,
 };
 
 // ---- queries ----
@@ -1979,3 +1986,67 @@ export function useAcceptInvite() {
 }
 
 // =============== END APPEND BLOCK (projects / members / invites) ============
+
+// ============================================================================
+// APPEND BLOCK — notifications (E2a: notification centre).
+// Owned by the notifications task; keep additions inside this block.
+// ============================================================================
+
+export function useUnreadCount() {
+  return useQuery({
+    queryKey: queryKeys.unreadCount,
+    queryFn: () => fetchJson<UnreadCount>('/api/notifications/unread-count'),
+    refetchInterval: 45_000,
+    refetchOnWindowFocus: true,
+  });
+}
+
+export function useNotificationList() {
+  return useQuery({
+    queryKey: queryKeys.notifications,
+    queryFn: () => fetchJson<{ items: NotificationItem[]; nextCursor: string | null }>('/api/notifications'),
+  });
+}
+
+export function useMarkNotificationRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => fetchJson<void>(`/api/notifications/${id}/read`, { method: 'POST' }),
+    onError: () => toast.error("Couldn't update notifications"),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.unreadCount });
+      qc.invalidateQueries({ queryKey: queryKeys.notifications });
+    },
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => fetchJson<void>('/api/notifications/read-all', { method: 'POST' }),
+    onError: () => toast.error("Couldn't update notifications"),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.unreadCount });
+      qc.invalidateQueries({ queryKey: queryKeys.notifications });
+    },
+  });
+}
+
+export function useNotificationPrefs() {
+  return useQuery({
+    queryKey: queryKeys.notificationPrefs,
+    queryFn: () => fetchJson<NotificationPrefs>('/api/notifications/prefs'),
+  });
+}
+
+export function useUpdateNotificationPref() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { kind: keyof NotificationPrefs; enabled: boolean }) =>
+      fetchJson<void>('/api/notifications/prefs', { method: 'PUT', body: JSON.stringify(vars) }),
+    onError: () => toast.error("Couldn't update notification settings"),
+    onSettled: () => qc.invalidateQueries({ queryKey: queryKeys.notificationPrefs }),
+  });
+}
+
+// ================= END APPEND BLOCK (notifications) ========================

@@ -9,6 +9,7 @@ import { uniqueSlug } from '../lib/slug';
 import { requireMembership, type MembershipEnv } from '../middleware/membership';
 import { config } from '../config';
 import { createMailer, inviteEmail } from '../lib/mailer';
+import { fanOutInviteNotification } from '../lib/notifications';
 
 const mailer = createMailer(config.smtp);
 
@@ -230,6 +231,8 @@ export const projectsRoutes = new Hono<MembershipEnv>()
         emailSent = false;
       }
     }
+    // Best-effort: fan-out swallows its own errors; must not fail invite creation.
+    await fanOutInviteNotification({ projectId: row.projectId, email: row.email, createdBy: row.createdBy });
     return c.json(
       { token: row.token, projectId: row.projectId, role: row.role, email: row.email, expiresAt: row.expiresAt.toISOString(), emailSent },
       201,

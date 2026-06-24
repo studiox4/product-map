@@ -1,7 +1,7 @@
 import type {
   Horizon, FeatureStatus, DocType, DocStatus, ActivityKind,
   IdeaStatus, EvidenceKind, ReleaseStatus, FeatureSize,
-  ObjectiveStatus, PlanStatus, MemberRoleConst,
+  ObjectiveStatus, PlanStatus, MemberRoleConst, NotificationKind,
 } from './constants';
 
 export interface Project { id: string; name: string; slug: string; vision: string; aboutMd: string; }
@@ -227,4 +227,27 @@ export interface DashboardResponse {
   nextActions: NextAction[];
   myWork: MyWorkItem[];
   activity: DashboardActivityItem[];
+}
+
+// --- E2a In-app notifications ---
+export interface NotificationItem {
+  id: string;
+  kind: NotificationKind;
+  projectId: string;
+  projectSlug: string;
+  actorId: string | null;
+  actorName: string | null;
+  actorColor: string | null;
+  featureId: string | null;
+  documentId: string | null;
+  commentId: string | null;
+  payload: Record<string, unknown> | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export type NotificationPrefs = Record<NotificationKind, boolean>;
+
+export interface UnreadCount {
+  count: number;
 }

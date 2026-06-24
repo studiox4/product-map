@@ -123,6 +123,13 @@ const server = setupServer(
   http.get(`/api/projects/${TEST_PROJECT_ID}/comments`, () => HttpResponse.json(threads)),
   // Decision extraction gates on AI status; enabled by default in tests.
   http.get('/api/ai/status', () => HttpResponse.json({ enabled: true })),
+  // Members endpoint — needed by CommentComposer mention typeahead.
+  http.get(`/api/projects/${TEST_PROJECT_ID}/members`, () =>
+    HttpResponse.json([
+      { userId: 'u1', name: 'Corban', color: '#2b557e', role: 'member' },
+      { userId: 'u2', name: 'Ada', color: '#3c6b46', role: 'member' },
+    ]),
+  ),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -349,5 +356,44 @@ describe('CommentsSection', () => {
     await waitFor(() => expect(deleted).toBe('c1'));
     // optimistic removal
     expect(screen.queryByText('Root by Corban')).toBeNull();
+  });
+
+  it('renders mention tokens as @Name chips with surrounding plain text intact', async () => {
+    threads = [
+      comment({
+        id: 'c-chip',
+        body: 'Hey @[Alice](u-alice) check this out',
+      }),
+    ];
+    renderSection();
+    // The chip shows the visible @Name label (exercises segmentMentions)
+    const chip = await screen.findByText('@Alice');
+    expect(chip).toBeTruthy();
+    // Plain text segments before and after are in the same paragraph as the chip
+    const para = chip.closest('p')!;
+    expect(para.textContent).toContain('Hey');
+    expect(para.textContent).toContain('check this out');
+    // The chip text is not the raw token — the raw @[Alice](u-alice) string should not appear
+    expect(para.textContent).not.toContain('@[Alice]');
+  });
+
+  it('@mention typeahead: typing @Bo shows Bob Lee, clicking inserts token', async () => {
+    threads = [];
+    // Override members with Bob Lee for this test.
+    server.use(
+      http.get(`/api/projects/${TEST_PROJECT_ID}/members`, () =>
+        HttpResponse.json([{ userId: 'u-2', name: 'Bob Lee', color: '#000', role: 'editor' }]),
+      ),
+    );
+    renderSection();
+    const box = await screen.findByPlaceholderText('Add a comment…');
+    await user().type(box, '@Bo');
+    // Dropdown should appear with Bob Lee
+    expect(await screen.findByRole('listbox', { name: 'mention suggestions' })).toBeTruthy();
+    expect(await screen.findByRole('option', { name: /Bob Lee/ })).toBeTruthy();
+    // Click the suggestion
+    await user().click(screen.getByRole('option', { name: /Bob Lee/ }));
+    // Textarea should contain the mention token
+    expect((box as HTMLTextAreaElement).value).toContain('@[Bob Lee](');
   });
 });

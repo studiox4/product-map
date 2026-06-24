@@ -15,6 +15,7 @@ import { adminRoutes } from './routes/admin';
 import { publicShareRoutes } from './routes/share';
 import { projectScopedContent } from './routes/project-scoped';
 import { invitesRoutes } from './routes/invites';
+import { notificationsRoutes } from './routes/notifications';
 
 export const app = new Hono()
   .get('/api/healthz', (c) => c.json({ ok: true }))
@@ -55,7 +56,8 @@ export const app = new Hono()
   // publicShareRoutes: GET /:token/data is public (allowlist: GET /api/share/*);
   // DELETE /:token is NOT in the public allowlist — requireAuth runs for it via the
   // /api/* middleware, then the handler enforces membership on tokenRow.projectId.
-  .route('/api/share', publicShareRoutes);
+  .route('/api/share', publicShareRoutes)
+  .route('/api/notifications', notificationsRoutes);
 
 app.notFound((c) => c.json({ error: 'not_found' }, 404));
 

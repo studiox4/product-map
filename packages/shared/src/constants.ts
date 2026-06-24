@@ -43,6 +43,9 @@ export const ACTIVITY_KINDS = [
 ] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 
+export const NOTIFICATION_KINDS = ['mention', 'comment', 'reply', 'project_invite'] as const;
+export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
+
 export const DOC_TYPE_COLORS: Record<DocType, { chip: string; edge: string }> = {
   prd:           { chip: 'bg-action-soft text-action', edge: '#4338ca' },
   tech_spec:     { chip: 'bg-[var(--pm-grape-soft)] text-[var(--pm-grape)]', edge: '#6d3f9e' },

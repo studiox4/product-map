@@ -161,6 +161,43 @@ export const comments = pgTable(
     check('comments_body_check', sql`char_length(${t.body}) BETWEEN 1 AND 4000`),
   ],
 );
+const NOTIFICATION_KIND_VALUES = ['mention', 'comment', 'reply', 'project_invite'] as const;
+const kindCheckList = NOTIFICATION_KIND_VALUES.map((v) => `'${v}'`).join(', ');
+
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull().$type<(typeof NOTIFICATION_KIND_VALUES)[number]>(),
+    actorId: uuid('actor_id').references(() => users.id, { onDelete: 'set null' }),
+    featureId: uuid('feature_id').references(() => features.id, { onDelete: 'cascade' }),
+    documentId: uuid('document_id').references(() => documents.id, { onDelete: 'cascade' }),
+    commentId: uuid('comment_id').references(() => comments.id, { onDelete: 'cascade' }),
+    payload: jsonb('payload'),
+    readAt: timestamp('read_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check('notifications_kind_check', sql`${t.kind} IN (${sql.raw(kindCheckList)})`),
+    index('notifications_user_unread_idx').on(t.userId, t.readAt),
+    index('notifications_user_created_idx').on(t.userId, t.createdAt.desc(), t.id),
+  ],
+);
+
+export const notificationMutes = pgTable(
+  'notification_mutes',
+  {
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull().$type<(typeof NOTIFICATION_KIND_VALUES)[number]>(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.kind] }),
+    check('notification_mutes_kind_check', sql`${t.kind} IN (${sql.raw(kindCheckList)})`),
+  ],
+);
+
 export const votes = pgTable(
   'votes',
   {
