@@ -54,6 +54,10 @@ structure stay; we add choreography and brand-tied graphics.
 - **Motion tech:** `framer-motion`, accepting ~45kb gzip on the marketing bundle,
   with explicit SSR/prerender guarding.
 - **Story SVGs:** keep all three (board→roadmap, docs, AI copilot).
+  - *Implementation note (2026-06-23):* the AI-copilot pulse is delivered by the
+    animated `CopilotIcon` in the FeatureHighlights grid (no AI screenshot row
+    exists to host a separate accent), so the standalone `CopilotPulse` story SVG
+    was dropped as redundant rather than left unwired.
 
 ## Architecture
 

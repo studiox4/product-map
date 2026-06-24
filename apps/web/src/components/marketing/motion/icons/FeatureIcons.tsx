@@ -57,7 +57,7 @@ export function ReleasesIcon({ className }: IconProps) {
   );
 }
 
-/** AI copilot — pulsing spark (same language as CopilotPulse). */
+/** AI copilot — pulsing spark. */
 export function CopilotIcon({ className }: IconProps) {
   const animate = useIconAnimate();
   return (
