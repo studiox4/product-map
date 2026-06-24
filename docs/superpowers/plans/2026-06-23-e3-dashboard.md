@@ -36,7 +36,8 @@
 - `apps/web/src/components/dashboard/NextActions.tsx`, `MyProjects.tsx`, `MyWork.tsx`, `DashboardFeed.tsx` — sub-components.
 - `apps/web/src/routes/Dashboard.test.tsx` — page render + empty-state + favorite tests.
 - `apps/web/src/routes/ProjectOverview.tsx` — slug-resolving wrapper around the existing Landing.
-- `packages/db/migrations/0014_*.sql` — generated then hand-edited.
+- `packages/db/migrations/0014_*.sql` — expand (nullable cols + backfill), generated then hand-edited.
+- `packages/db/migrations/0015_*.sql` — contract (flip slug + activity.projectId to NOT NULL).
 
 **Modify:**
 - `packages/db/src/schema.ts` — add `projectFavorites`, `projects.slug`, `activity.projectId`.
@@ -92,11 +93,13 @@ interface DashboardResponse { projects: DashboardProject[]; nextActions: NextAct
 
 Add `slug` to `projects` (line ~44), add `projectId` to `activity` (line ~119), and add a new `projectFavorites` table after `memberships`. Use the existing imports (`pgTable`, `uuid`, `text`, `timestamp`, `primaryKey`, `index`).
 
+> **EXPAND/CONTRACT.** Task 0 adds `slug` and `activity.projectId` **NULLABLE** (+ backfill existing rows). They stay nullable — and all old inserts keep working — until **Task 5** (the contract migration) flips both to `NOT NULL`, after every writer (Task 1) and the raw test seeds are updated. A `NOT NULL` here would fail this task's own Step 4. (`UNIQUE` on a nullable column is fine — Postgres permits multiple NULLs.)
+
 ```ts
 export const projects = pgTable('projects', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: text('name').notNull(),
-  slug: text('slug').notNull().unique(),
+  slug: text('slug').unique(),                 // NULLABLE in Task 0; NOT NULL in Task 5
   vision: text('vision').notNull().default(''),
   aboutMd: text('about_md').notNull().default(''),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -115,7 +118,7 @@ export const projectFavorites = pgTable(
 export const activity = pgTable('activity', {
   id: uuid('id').defaultRandom().primaryKey(),
   featureId: uuid('feature_id').notNull().references(() => features.id, { onDelete: 'cascade' }),
-  projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }),  // NULLABLE in Task 0; NOT NULL in Task 5
   actorId: uuid('actor_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   kind: text('kind').notNull(),
   payload: jsonb('payload'),
@@ -145,7 +148,7 @@ ALTER TABLE "project_favorites" ADD CONSTRAINT "project_favorites_user_id_users_
 ALTER TABLE "project_favorites" ADD CONSTRAINT "project_favorites_project_id_projects_id_fk"
   FOREIGN KEY ("project_id") REFERENCES "projects"("id") ON DELETE cascade;
 
--- projects.slug: add nullable, backfill, dedupe, then enforce
+-- projects.slug: add NULLABLE, backfill, dedupe. (NOT NULL deferred to Task 5.)
 ALTER TABLE "projects" ADD COLUMN "slug" text;
 UPDATE "projects" SET "slug" =
   regexp_replace(regexp_replace(lower("name"), '[^a-z0-9]+', '-', 'g'), '(^-+|-+$)', '', 'g');
@@ -157,13 +160,11 @@ WITH ranked AS (
 )
 UPDATE "projects" p SET "slug" = p."slug" || '-' || r.rn
   FROM ranked r WHERE p.id = r.id AND r.rn > 1;
-ALTER TABLE "projects" ALTER COLUMN "slug" SET NOT NULL;
-ALTER TABLE "projects" ADD CONSTRAINT "projects_slug_unique" UNIQUE("slug");
+ALTER TABLE "projects" ADD CONSTRAINT "projects_slug_unique" UNIQUE("slug");  -- nullable-unique OK
 
--- activity.projectId: add nullable, backfill from features, enforce
+-- activity.projectId: add NULLABLE, backfill from features. (NOT NULL deferred to Task 5.)
 ALTER TABLE "activity" ADD COLUMN "project_id" uuid;
 UPDATE "activity" a SET "project_id" = f."project_id" FROM "features" f WHERE a."feature_id" = f.id;
-ALTER TABLE "activity" ALTER COLUMN "project_id" SET NOT NULL;
 ALTER TABLE "activity" ADD CONSTRAINT "activity_project_id_projects_id_fk"
   FOREIGN KEY ("project_id") REFERENCES "projects"("id") ON DELETE cascade;
 CREATE INDEX "activity_project_id_idx" ON "activity" ("project_id");
@@ -172,7 +173,7 @@ CREATE INDEX "activity_project_id_idx" ON "activity" ("project_id");
 - [ ] **Step 4: Apply + verify migration on test DB**
 
 Run: `pnpm --filter @productmap/api test -- src/routes/activity.test.ts` (its `setupTestDb` runs all migrations; green = migration applies clean). Also run `pnpm --filter @productmap/db exec drizzle-kit migrate` against dev if a dev DB exists.
-Expected: migration runs with zero errors; existing activity tests still pass.
+Expected: migration runs with zero errors; existing activity tests **still pass** — because the new columns are nullable, the old raw inserts (which omit slug/projectId) remain valid until the Task 5 contract flip.
 
 - [ ] **Step 5: Add shared types**
 
@@ -197,7 +198,7 @@ In `apps/api/src/app.ts`: import `dashboardRoutes` and register it among the aut
 - [ ] **Step 7: queryKeys + Project type propagation**
 
 In `apps/web/src/lib/api.ts` `queryKeys` object: add `dashboard: ['dashboard'] as const,`.
-In `apps/web/src/lib/project.tsx`: extend `ProjectListItem` to `extends Project` already carries `slug` now; add `favorite: boolean` to it (`export interface ProjectListItem extends Project { role: MemberRole; favorite: boolean; }`). (Server side wired in Task 2/4.)
+In `apps/web/src/lib/project.tsx`: `ProjectListItem extends Project` now automatically carries `slug` (added to `Project` in Step 5) — no other change. **Do NOT add `favorite` here** — `GET /api/projects` does not return it; favorite state lives only in the dashboard payload (`DashboardProject.favorite`). Adding it to `ProjectListItem` would be a field that's never populated.
 
 - [ ] **Step 8: Typecheck + commit**
 
@@ -265,6 +266,7 @@ export async function recordActivity(
   - `documents.ts`, `comments.ts`, `decisions.ts`, `deps.ts`, `releases.ts`, `ideas.ts`: use `c.get('currentProjectId')` (these are project-scoped routes) — verify each handler has it; if a handler only has a featureId, select the feature's projectId or thread it from the surrounding scope.
   - `ideas.ts:363`, `plans.ts:216/227/234`: raw `tx.insert(activity).values({...})` — add `projectId` to the values object (available as `c.get('currentProjectId')`).
   - `apps/api/src/lib/ai.ts`: if it records activity, thread projectId through.
+  - **Raw activity seeds in tests** — `activity.test.ts` (`seedHistory` ~line 58, and the isolation insert ~line 171), `features.test.ts:362`, `ai.test.ts:284` insert activity rows directly with no `projectId`. Add `projectId` (the seeded feature's project) to each so they remain valid after the Task 5 `NOT NULL` flip. (Harmless now while nullable; required before Task 5.)
 
 - [ ] **Step 5: Run the test + the full API suite** — expect PASS for the new test and no regressions.
 
@@ -279,14 +281,16 @@ git commit -m "feat(dashboard): activity writes carry projectId via recordActivi
 
 ---
 
-## Task 2 — Slug on project routes (after Task 0; parallel with 1/3/4)
+## Task 2 — `projects.ts`: slug + favorites (after Task 0; parallel with 1 & 3)
+
+> **Merged** (slug + favorite) because both edit `apps/api/src/routes/projects.ts` — splitting them into parallel worktrees would merge-thrash. One agent owns this file. File-disjoint from Task 1 (lib/activity + other routes) and Task 3 (new dashboard.ts), so all three run in parallel after Task 0.
 
 **Files:**
-- Create: `apps/api/src/lib/slug.ts`, `apps/api/src/lib/slug.test.ts`
+- Create: `apps/api/src/lib/slug.ts`, `apps/api/src/lib/slug.test.ts`, `apps/api/src/routes/favorites.test.ts`
 - Modify: `apps/api/src/routes/projects.ts`
 - Test: extend `apps/api/src/routes/projects.test.ts` (create if absent)
 
-**Interfaces — Produces:** `slugify(name): string`, `uniqueSlug(name, exists): Promise<string>`; `GET/POST/PATCH /api/projects` payloads include `slug`.
+**Interfaces — Produces:** `slugify(name): string`, `uniqueSlug(name, exists): Promise<string>`; `GET/POST/PATCH /api/projects` payloads include `slug`; `POST /api/projects/:projectId/favorite` → `{ favorite: true }`, `DELETE` → `{ favorite: false }`.
 
 - [ ] **Step 1: Failing unit test for slug helpers**
 
@@ -352,9 +356,48 @@ git add apps/api/src/lib/slug.ts apps/api/src/lib/slug.test.ts apps/api/src/rout
 git commit -m "feat(dashboard): project slugs (generate, validate, expose in payloads)"
 ```
 
+- [ ] **Step 9: Failing favorite test**
+
+Create `apps/api/src/routes/favorites.test.ts` (same auth/db setup as `projects.test.ts`):
+```ts
+it('POST then DELETE toggles favorite; idempotent; admin works without membership', async () => {
+  const post = await app.request(`/api/projects/${projectId}/favorite`, { method: 'POST', headers: auth });
+  expect(await post.json()).toEqual({ favorite: true });
+  const again = await app.request(`/api/projects/${projectId}/favorite`, { method: 'POST', headers: auth });
+  expect(again.status).toBe(200); // onConflictDoNothing → still favorite:true
+  const del = await app.request(`/api/projects/${projectId}/favorite`, { method: 'DELETE', headers: auth });
+  expect(await del.json()).toEqual({ favorite: false });
+});
+it('non-member gets 404', async () => { /* different non-admin user without membership → 404 */ });
+```
+
+- [ ] **Step 10: Run — expect FAIL.**
+
+- [ ] **Step 11: Add favorite routes to `projectsRoutes`** (guard `requireMembership('viewer')`, which admits admins):
+```ts
+.post('/:projectId/favorite', requireMembership('viewer'), async (c) => {
+  await db.insert(projectFavorites)
+    .values({ userId: c.get('currentUser').id, projectId: c.req.param('projectId') })
+    .onConflictDoNothing();
+  return c.json({ favorite: true });
+})
+.delete('/:projectId/favorite', requireMembership('viewer'), async (c) => {
+  await db.delete(projectFavorites)
+    .where(and(eq(projectFavorites.userId, c.get('currentUser').id), eq(projectFavorites.projectId, c.req.param('projectId'))));
+  return c.json({ favorite: false });
+})
+```
+(Import `projectFavorites`, `and`.)
+
+- [ ] **Step 12: Run — expect PASS. Commit.**
+```bash
+git add apps/api/src/routes/projects.ts apps/api/src/routes/favorites.test.ts
+git commit -m "feat(dashboard): per-user project favorite endpoints"
+```
+
 ---
 
-## Task 3 — `GET /api/dashboard` aggregator (after Task 0; parallel with 1/2/4)
+## Task 3 — `GET /api/dashboard` aggregator (after Task 0; parallel with 1 & 2)
 
 **Files:**
 - Modify: `apps/api/src/routes/dashboard.ts`
@@ -426,60 +469,13 @@ git commit -m "feat(dashboard): GET /api/dashboard aggregator with isolation gua
 
 ---
 
-## Task 4 — Favorite endpoints (after Task 0; small, parallel)
-
-**Files:**
-- Modify: `apps/api/src/routes/projects.ts`
-- Test: `apps/api/src/routes/favorites.test.ts` (create)
-
-**Interfaces — Produces:** `POST /api/projects/:projectId/favorite` → `{ favorite: true }`; `DELETE` → `{ favorite: false }`.
-
-- [ ] **Step 1: Failing test**
-```ts
-it('POST then DELETE toggles favorite; idempotent; admin works without membership', async () => {
-  const post = await app.request(`/api/projects/${projectId}/favorite`, { method: 'POST', headers: auth });
-  expect(await post.json()).toEqual({ favorite: true });
-  const again = await app.request(`/api/projects/${projectId}/favorite`, { method: 'POST', headers: auth });
-  expect(again.status).toBe(200); // onConflictDoNothing → still favorite:true
-  const del = await app.request(`/api/projects/${projectId}/favorite`, { method: 'DELETE', headers: auth });
-  expect(await del.json()).toEqual({ favorite: false });
-});
-it('non-member gets 404', async () => { /* different user without membership → 404 */ });
-```
-
-- [ ] **Step 2: Run — expect FAIL.**
-
-- [ ] **Step 3: Add routes to `projectsRoutes`** (guard `requireMembership('viewer')`, which admits admins):
-```ts
-.post('/:projectId/favorite', requireMembership('viewer'), async (c) => {
-  await db.insert(projectFavorites)
-    .values({ userId: c.get('currentUser').id, projectId: c.req.param('projectId') })
-    .onConflictDoNothing();
-  return c.json({ favorite: true });
-})
-.delete('/:projectId/favorite', requireMembership('viewer'), async (c) => {
-  await db.delete(projectFavorites)
-    .where(and(eq(projectFavorites.userId, c.get('currentUser').id), eq(projectFavorites.projectId, c.req.param('projectId'))));
-  return c.json({ favorite: false });
-})
-```
-(Import `projectFavorites`, `and`.)
-
-- [ ] **Step 4: Run — expect PASS. Commit.**
-```bash
-git add apps/api/src/routes/projects.ts apps/api/src/routes/favorites.test.ts
-git commit -m "feat(dashboard): per-user project favorite endpoints"
-```
-
----
-
-## Task 5 — Frontend: Dashboard, hooks, Overview move, settings slug (after Tasks 0+3 contract)
+## Task 4 — Frontend: Dashboard, hooks, Overview move, settings slug (after Tasks 0, 2, 3)
 
 **Files:**
 - Create: `apps/web/src/routes/Dashboard.tsx`, `apps/web/src/routes/ProjectOverview.tsx`, `apps/web/src/components/dashboard/{NextActions,MyProjects,MyWork,DashboardFeed}.tsx`, `apps/web/src/routes/Dashboard.test.tsx`
 - Modify: `apps/web/src/lib/api.ts`, `apps/web/src/lib/routes.ts`, `apps/web/src/App.tsx`, `apps/web/src/components/AppShell.tsx`, `apps/web/src/components/settings/ProjectTab.tsx`
 
-**Interfaces — Consumes:** `DashboardResponse` (Task 0), favorite endpoints (Task 4), slug payloads (Task 2). **Produces:** `useDashboard()`, `useToggleFavorite()`.
+**Interfaces — Consumes:** `DashboardResponse` (Task 0), favorite endpoints + slug payloads (Task 2), dashboard endpoint (Task 3). **Produces:** `useDashboard()`, `useToggleFavorite()`. **Dependency:** needs `slug` in `GET /api/projects` (Task 2) for `ProjectOverview` to resolve — do not dispatch before Tasks 2 & 3 land.
 
 - [ ] **Step 1: Add hooks to `apps/web/src/lib/api.ts`**
 ```ts
@@ -559,6 +555,35 @@ git commit -m "feat(dashboard): cross-project Dashboard page, hooks, /app/p/:slu
 
 ---
 
+## Task 5 — Contract migration: flip NOT NULL (SERIAL, after Tasks 1 & 2)
+
+> The closing bookend of expand/contract. Runs only after **Task 1** (all activity writers + raw test seeds carry projectId) and **Task 2** (`POST /api/projects` always writes slug). At this point zero rows have a null `slug`/`projectId`, so the flips are safe — satisfying goal #6.
+
+**Files:**
+- Modify: `packages/db/src/schema.ts` (drop the `// NULLABLE` qualifier)
+- Create: `packages/db/migrations/0015_*.sql`
+
+- [ ] **Step 1: Pre-flight — assert zero nulls.** Run the full API suite first (`pnpm --filter @productmap/api test`) so every writer path has exercised. Confirm no test seeds a null slug/projectId (Task 1 Step 4 + Task 2 fixed them).
+
+- [ ] **Step 2: Update schema** — change `slug: text('slug').unique()` → `.notNull().unique()` and `projectId: uuid('project_id').references(...)` → add `.notNull()`.
+
+- [ ] **Step 3: Generate + hand-verify migration** — `pnpm --filter @productmap/db exec drizzle-kit generate`. It should emit exactly:
+```sql
+ALTER TABLE "projects" ALTER COLUMN "slug" SET NOT NULL;
+ALTER TABLE "activity" ALTER COLUMN "project_id" SET NOT NULL;
+```
+(If drizzle-kit also tries to re-add the unique/index/FK, trim it to just the two `SET NOT NULL` lines.)
+
+- [ ] **Step 4: Run the full suite** — `pnpm -r test`. Expected: green (the flip succeeds because every row is backfilled/written). A failure here means a writer or seed still omits the column — fix it in Task 1/2, not by reverting the flip.
+
+- [ ] **Step 5: Commit**
+```bash
+git add packages/db
+git commit -m "feat(dashboard): contract migration — slug + activity.projectId NOT NULL"
+```
+
+---
+
 ## Task 6 — Integration sweep & acceptance (after 1–5)
 
 **Files:** none new — verification + gap-fill.
@@ -573,6 +598,8 @@ git commit -m "feat(dashboard): cross-project Dashboard page, hooks, /app/p/:slu
 
 ## Self-Review (completed by plan author)
 
-- **Spec coverage:** schema (§3 → Task 0), activity write-path (§3.3 → Task 1), dashboard endpoint (§4.1 → Task 3), favorite (§4.2 → Task 4), slug routes (§4.3 → Task 2), frontend incl. Overview move + settings slug (§5 → Task 5), tests (§6 → folded into each task + Task 6), strong goals (§7a → Task 6 audit). All mapped.
+- **Spec coverage:** schema expand (§3 → Task 0), activity write-path (§3.3 → Task 1), slug routes + favorite (§4.2/§4.3 → Task 2), dashboard endpoint (§4.1 → Task 3), frontend incl. Overview move + settings slug (§5 → Task 4), schema contract / NOT NULL (§3 migration-safety → Task 5), tests (§6 → folded into each task + Task 6), strong goals (§7a → Task 6 audit). All mapped.
 - **Placeholders:** endpoint bodies in Task 3 are deliberately sketched (real Drizzle queries to be written against the live schema) but the contract, query-count rule, and every test assertion are concrete; all other steps carry real code.
-- **Type consistency:** `recordActivity(featureId, projectId, actorId, kind, payload?)` used identically in Task 1; `DashboardResponse`/sub-types defined once in Task 0 and consumed verbatim in Tasks 3 & 5; `appRoutes.projectOverview(slug)` consistent across Tasks 5 steps.
+- **Type consistency:** `recordActivity(featureId, projectId, actorId, kind, payload?)` used identically in Task 1; `DashboardResponse`/sub-types defined once in Task 0 and consumed verbatim in Tasks 3 & 4; `appRoutes.projectOverview(slug)` consistent across Task 4 steps.
+- **Expand/contract:** new columns land nullable in Task 0, all writers + raw test seeds updated in Tasks 1–2, NOT NULL flipped in Task 5 — the suite stays green throughout and the parallel window (Tasks 1/2/3, file-disjoint) never hits a constraint violation.
+- **Parallelism:** after Task 0 commits → Tasks 1 (lib/activity + non-projects routes), 2 (projects.ts + lib/slug), 3 (new dashboard.ts) run in parallel (disjoint files). Task 4 (web) after 2 & 3. Task 5 (contract) after 1 & 2. Task 6 last.
