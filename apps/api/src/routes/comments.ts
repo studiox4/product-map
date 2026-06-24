@@ -8,6 +8,7 @@ import { type MembershipEnv } from '../middleware/membership';
 import { loadUser } from '../middleware/auth';
 import { recordActivity, addCollaborator } from '../lib/activity';
 import { loadScoped, loadScopedComment } from '../lib/scope';
+import { fanOutCommentNotifications } from '../lib/notifications';
 
 const commentColumns = {
   id: comments.id,
@@ -128,6 +129,9 @@ export const commentsRoutes = new Hono<MembershipEnv>()
         });
         await addCollaborator(activityFeatureId, user.id);
       }
+      // Best-effort: generate notifications after the comment is committed.
+      // Must never fail the comment write (the helper swallows its own errors).
+      await fanOutCommentNotifications(row, pid);
       return c.json({ ...row, authorName: fullUser?.name ?? '', authorColor: fullUser?.color ?? '' }, 201);
     },
   )
