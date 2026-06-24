@@ -123,6 +123,8 @@ export const dashboardRoutes = new Hono<AuthEnv>().get('/', async (c) => {
     .sort((a, b) => Number(b.favorite) - Number(a.favorite) || a.name.localeCompare(b.name));
 
   // (6) myWork: features the caller collaborates on, across the project set.
+  // Also carry start/end dates so feature_missing_dates is derived in JS below
+  // (no extra query, no duplicate fetch of the same rows).
   const myWorkRows = await db
     .select({
       featureId: features.id,
@@ -130,6 +132,8 @@ export const dashboardRoutes = new Hono<AuthEnv>().get('/', async (c) => {
       title: features.title,
       status: features.status,
       horizon: features.horizon,
+      startDate: features.startDate,
+      endDate: features.endDate,
     })
     .from(featureCollaborators)
     .innerJoin(features, eq(featureCollaborators.featureId, features.id))
@@ -189,24 +193,10 @@ export const dashboardRoutes = new Hono<AuthEnv>().get('/', async (c) => {
     });
   }
 
-  // 7b) feature_missing_dates: features the caller collaborates on (in scope)
-  // missing a start or end date. Derived from myWorkRows + a dateless filter —
-  // reuse the collaborator set already loaded, one extra query for the dates.
-  if (myFeatureIds.size > 0) {
-    const datelessRows = await db
-      .select({
-        featureId: features.id,
-        projectId: features.projectId,
-        title: features.title,
-      })
-      .from(features)
-      .where(
-        and(
-          inArray(features.id, [...myFeatureIds]),
-          or(isNull(features.startDate), isNull(features.endDate)),
-        ),
-      );
-    for (const f of datelessRows) {
+  // 7b) feature_missing_dates: collaborated features (in scope) missing a start
+  // or end date. Derived from myWorkRows already loaded above — no extra query.
+  for (const f of myWorkRows) {
+    if (!f.startDate || !f.endDate) {
       nextActions.push({
         kind: 'feature_missing_dates',
         projectId: f.projectId,

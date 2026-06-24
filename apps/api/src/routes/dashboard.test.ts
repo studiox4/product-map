@@ -64,14 +64,19 @@ describe('GET /api/dashboard — isolation (goal #1)', () => {
     await db.insert(comments).values({ authorId: u.id, featureId: fA.id, body: 'open thread A' });
     await db.insert(activity).values({ featureId: fA.id, projectId: A.id, actorId: u.id, kind: 'feature_created', payload: { to: 'A feature' } });
 
-    // Project B data — caller is NOT a member, must never surface.
+    // Project B data — caller is NOT a member of B. Critically, U IS involved
+    // with B's feature (collaborator, doc author, comment author) so that the
+    // nextActions/myWork *involvement* filters WOULD admit these rows; only the
+    // pids project-scoping must hold them back. This makes all four isolation
+    // assertions load-bearing rather than vacuously passing on the involvement
+    // filter alone.
     const fB = await makeFeature(B.id, 'B feature', { startDate: null, endDate: null });
-    await db.insert(featureCollaborators).values({ featureId: fB.id, userId: ownerB.id });
+    await db.insert(featureCollaborators).values({ featureId: fB.id, userId: u.id });
     await db
       .insert(documents)
-      .values({ projectId: B.id, featureId: fB.id, type: 'prd', title: 'B doc', status: 'in_review', createdBy: ownerB.id });
-    await db.insert(comments).values({ authorId: ownerB.id, featureId: fB.id, body: 'open thread B' });
-    await db.insert(activity).values({ featureId: fB.id, projectId: B.id, actorId: ownerB.id, kind: 'feature_created', payload: { to: 'B feature' } });
+      .values({ projectId: B.id, featureId: fB.id, type: 'prd', title: 'B doc', status: 'in_review', createdBy: u.id });
+    await db.insert(comments).values({ authorId: u.id, featureId: fB.id, body: 'open thread B' });
+    await db.insert(activity).values({ featureId: fB.id, projectId: B.id, actorId: u.id, kind: 'feature_created', payload: { to: 'B feature' } });
 
     const res = await app.request('/api/dashboard', { headers: auth });
     expect(res.status).toBe(200);
