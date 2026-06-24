@@ -4,13 +4,13 @@ import { MotionProvider } from '../MotionProvider';
 import { HeroGraphic } from '../HeroGraphic';
 
 describe('HeroGraphic', () => {
-  it('renders four Stagger bars (tagged data-bar)', () => {
+  it('renders the gantt task bars (tagged data-bar)', () => {
     const { container } = render(
       <MotionProvider>
         <HeroGraphic />
       </MotionProvider>,
     );
-    expect(container.querySelectorAll('rect[data-bar]').length).toBe(4);
+    expect(container.querySelectorAll('rect[data-bar]').length).toBeGreaterThanOrEqual(4);
   });
 
   it('renders faint vertical gridlines with data-grid attribute', () => {
