@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { hc } from 'hono/client';
 import {
   useMutation,
@@ -147,7 +148,6 @@ export const queryKeys = {
   notifications: ['notifications'] as const,
   unreadCount: ['notifications', 'unread-count'] as const,
   notificationPrefs: ['notifications', 'prefs'] as const,
-  projectMembers: (pid: string) => ['p', pid, 'members'] as const,
 };
 
 // ---- queries ----
@@ -2012,6 +2012,7 @@ export function useMarkNotificationRead() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => fetchJson<void>(`/api/notifications/${id}/read`, { method: 'POST' }),
+    onError: () => toast.error("Couldn't update notifications"),
     onSettled: () => {
       qc.invalidateQueries({ queryKey: queryKeys.unreadCount });
       qc.invalidateQueries({ queryKey: queryKeys.notifications });
@@ -2023,6 +2024,7 @@ export function useMarkAllNotificationsRead() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => fetchJson<void>('/api/notifications/read-all', { method: 'POST' }),
+    onError: () => toast.error("Couldn't update notifications"),
     onSettled: () => {
       qc.invalidateQueries({ queryKey: queryKeys.unreadCount });
       qc.invalidateQueries({ queryKey: queryKeys.notifications });
@@ -2042,6 +2044,7 @@ export function useUpdateNotificationPref() {
   return useMutation({
     mutationFn: (vars: { kind: keyof NotificationPrefs; enabled: boolean }) =>
       fetchJson<void>('/api/notifications/prefs', { method: 'PUT', body: JSON.stringify(vars) }),
+    onError: () => toast.error("Couldn't update notification settings"),
     onSettled: () => qc.invalidateQueries({ queryKey: queryKeys.notificationPrefs }),
   });
 }

@@ -10,6 +10,7 @@ function summarize(n: NotificationItem): string {
     case 'reply': return `${who} replied in a thread`;
     case 'comment': return `${who} commented on your work`;
     case 'project_invite': return `${who} invited you to a project`;
+    default: return 'New notification';
   }
 }
 
