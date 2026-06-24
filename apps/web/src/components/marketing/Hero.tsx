@@ -12,11 +12,14 @@ export default function Hero() {
         <p className="max-w-xl text-lg text-muted-foreground">{HERO_SUBHEAD}</p>
         <div className="flex flex-wrap items-center gap-3">
           <Button asChild size="lg">
+            <a href="/demo">Try the live demo</a>
+          </Button>
+          <Button asChild size="lg" variant="outline">
             <a href={REPO_URL} target="_blank" rel="noreferrer noopener">
               Deploy your own
             </a>
           </Button>
-          <Button asChild size="lg" variant="outline">
+          <Button asChild size="lg" variant="ghost">
             <a href="/login">Sign in</a>
           </Button>
         </div>

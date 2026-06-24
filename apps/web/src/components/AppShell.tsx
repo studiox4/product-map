@@ -26,6 +26,7 @@ import { useTrackRecents } from '@/components/command/recents';
 import { useAiStatus } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { appRoutes } from '@/lib/routes';
+import DemoBanner from '@/demo/DemoBanner';
 
 const NAV_LINKS: { to: string; label: string; end: boolean; icon?: typeof Lightbulb }[] = [
   { to: appRoutes.dashboard, label: 'Overview', end: true },
@@ -79,6 +80,7 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen text-foreground">
+      <DemoBanner />
       <header className="bg-transparent">
         <nav className="mx-auto flex h-16 max-w-screen-xl items-center gap-3 px-4 md:gap-6 md:px-6">
           {/* Mobile menu (hamburger → left drawer with all destinations) */}

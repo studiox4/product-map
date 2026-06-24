@@ -3,7 +3,7 @@
 import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { templates } from '@productmap/db';
+import { templates } from '@productmap/db/schema';
 import { eq } from 'drizzle-orm';
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 

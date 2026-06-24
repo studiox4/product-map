@@ -3,7 +3,7 @@
 import { setupTestDb, truncateAll, closeTestDb, createTestUser, createTestProject, addMembership, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { projects, features, users, activity, featureCollaborators, templates, ideas, releases, documents } from '@productmap/db';
+import { projects, features, users, activity, featureCollaborators, templates, ideas, releases, documents } from '@productmap/db/schema';
 import { asc, eq } from 'drizzle-orm';
 import AdmZip from 'adm-zip';
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';

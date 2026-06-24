@@ -6,7 +6,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { and, asc, eq, ne, sql } from 'drizzle-orm';
 import { planCreate, planUpdate, planEntryUpdate } from '@productmap/shared';
-import { plans, planEntries, features, activity } from '@productmap/db';
+import { plans, planEntries, features, activity } from '@productmap/db/schema';
 import { db } from '../db';
 import { type MembershipEnv } from '../middleware/membership';
 import { loadScoped } from '../lib/scope';

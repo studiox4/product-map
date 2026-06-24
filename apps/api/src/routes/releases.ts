@@ -3,7 +3,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { and, asc, count, eq, inArray, isNull, notInArray, sql } from 'drizzle-orm';
 import { releaseCreate, releaseUpdate, releaseFeaturesPut } from '@productmap/shared';
-import { releases, features, documents, templates } from '@productmap/db';
+import { releases, features, documents, templates } from '@productmap/db/schema';
 import { db } from '../db';
 import { type MembershipEnv } from '../middleware/membership';
 import { loadScoped } from '../lib/scope';

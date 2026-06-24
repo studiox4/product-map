@@ -2,6 +2,52 @@
 
 Demo shipped (see `docs/superpowers/specs/2026-06-09-product-map-demo-design.md`). This is the v2+ queue, ordered roughly by dependency and value. The seed data mirrors the top of this list on the in-app roadmap (Later column) — the app dogfoods its own future.
 
+## Must — committed next (added 2026-06-23)
+
+The three epics below are the committed priorities. Auth + multi-project core already shipped (see E1), so this is now finishers + two new surfaces. Build order: **E3 Dashboard first** (fixes the multi-project discoverability pain + anchors next-actions), then **E1 gaps** and **E2 notifications** (E3 surfaces both). E2 is the only **L**; E1 ≈ **M**, E3 ≈ **M**.
+
+### E1 — Multi-project: gaps + discoverability
+
+**Core is already SHIPPED** (migrations 0010–0012, `routes/projects.ts`, `ProjectSwitcher.tsx`, `settings/ProjectTab.tsx`): `projects` table, full project-scoping FK on 8 tables + membership-gated routes, roles owner/editor/viewer, email invites (create/revoke/accept API + TTL), public roadmap share tokens (mint/revoke/read), switcher dropdown + settings UI. The problem is users **can't find it** and a few finishers are missing.
+
+Remaining work:
+
+- **Discoverability (the real pain)** — switcher is buried; surface project context + switching prominently. Mostly solved by **E3 Dashboard** (home that shows all your projects). Cross-link the two.
+- **Favorite / pin** — add `favorite` (schema + `/favorite` route + switcher UI); pin to top.
+- **Archive** — soft-delete: add `archivedAt` (hidden, restorable, read-only); today delete is **hard-delete only** — add trash + restore window.
+- **Public share polish** — currently `kind: 'roadmap'` only, all-or-nothing, manual-revoke. Add: selective section visibility (docs/board/roadmap), `noindex`, optional time-bound expiry. (Folds **D8 Broadcast** link.)
+- **Invite accept UI** — accept API exists, no frontend component.
+- **Activity scoping** — `activity` is feature-scoped, not project-scoped; add `projectId` so E3 cross-project feed works.
+- Stretch: 4th `admin` role, ownership transfer, duplicate-project. (Defer — owner/editor/viewer covers most.)
+
+### E2 — Notifications
+
+A notifications panel plus multi-channel delivery and per-user/admin settings.
+
+- **Event model** — `notifications` per user with read/unread + mark-all-read; bell badge + toast (in-app).
+- **Event types** — comments to me, **@mentions**, new docs on followed projects, status changes, assigned-to-you, project invite, comment resolved, release published.
+- **Channels** — in-app, **email digest**, **Slack**, **MS Teams**; per-user **channel × event-type preference matrix**.
+- **Digest** — cadence (instant / daily / weekly), quiet hours, timezone.
+- **Email infra** — SES (matches v2.5 AWS deploy), templates, unsubscribe, bounce handling.
+- **Integrations** — Slack OAuth app (DM + channel routing); Teams connector/webhook; **admin** workspace-level integration config + secrets + enable/disable.
+- **Anti-spam** — batching / grouping; generic outbound webhooks for extensibility.
+
+### E3 — Dashboard
+
+A personal home: what to do next and status across the projects you care about.
+
+- **Next actions** — derived from notifications (awaiting your review, @mentions, open comments on you).
+- **Follow ≠ favorite** — *follow* = subscribe to a project's notifications; *favorite* = pin for quick access.
+- **My work** — items assigned to me, awaiting my review, my open comment threads.
+- **Project status** — rollup across followed/favorited projects: features by status, upcoming releases, stale / blocked / overdue items.
+- **Glue** — cross-project activity feed, recent-projects jump-back-in, global search entry (#13), quick-create, empty/onboarding states.
+
+### E4 — Marketing: multi-project feature section
+
+Multi-project is shipped but under-sold externally. Add a homepage section (and/or `Roadmap.tsx` marketing route) showing it in detail: many projects, roles/invites, public share links. Use real screenshots (switcher, members, share). **S** — content/design, no backend. Pairs with E1 discoverability so in-app matches the pitch.
+
+---
+
 ## v2 — Team-ready
 
 | # | Feature | What it is | Approach / why it's quick | Effort |
@@ -29,7 +75,7 @@ Demo shipped (see `docs/superpowers/specs/2026-06-09-product-map-demo-design.md`
 | 11 | Doc wiki-links & backlinks | `[[doc]]` mentions via Tiptap suggestion (same machinery as slash menu); backlink index queryable from contentJson. | M |
 | 12 | Gantt dependencies & milestones | `feature_dependencies` table; arrow rendering in the existing SVG layer; milestone = zero-length bar. | M |
 | 13 | Search | Postgres full-text over `content_md` (it's maintained on every save precisely for this). | S |
-| 14 | Multi-product workspaces | `products` table already plural; add product switcher + scope queries. | M |
+| 14 | ~~Multi-product workspaces~~ | **Absorbed into E1 — Multi-project (Must section).** | → E1 |
 
 Effort: S ≈ a day, M ≈ 2–4 days, L ≈ 1–2 weeks (single dev + agents).
 
@@ -44,7 +90,7 @@ Effort: S ≈ a day, M ≈ 2–4 days, L ≈ 1–2 weeks (single dev + agents).
 | D5 | AI PM copilot | PRD rubric grading, cross-doc contradiction detection, split suggestions, stale nudges, workspace-grounded chat (RAG over content_md) | Bedrock + AI SDK tool calling | L |
 | D6 | Capacity honesty | S/M/L sizing + capacity line on Gantt + overcommit warnings | gantt, features | S/M |
 | D7 | Releases & changelog | Milestones grouping shipped features; auto-assembled release notes; changelog page | templates, statuses | M |
-| D8 | Broadcast | Read-only shareable roadmap link + "what changed" markdown email/export | digest, export | S/M |
+| D8 | Broadcast | Read-only shareable roadmap link (→ folded into E1 public sharing) + "what changed" markdown email/export (→ E2 digest) | digest, export | → E1/E2 |
 | D9 | Outcomes (OKR-lite) | Objectives w/ target metrics; features ladder up; outcome-grouped views | features | M |
 
 Recommended first three: D1 (completes the funnel), D3 (unique — nobody has it), D5 review-mode slice (scribe → colleague).

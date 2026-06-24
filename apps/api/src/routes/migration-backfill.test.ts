@@ -1,6 +1,7 @@
 import { setupTestDb, truncateAll, closeTestDb, createTestUser, TEST_DATABASE_URL } from '../test/helpers';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import { createDb, projects, ideas, releases, memberships } from '@productmap/db';
+import { createDb } from '@productmap/db';
+import { projects, ideas, releases, memberships } from '@productmap/db/schema';
 import { sql } from 'drizzle-orm';
 
 const db = createDb(TEST_DATABASE_URL).db;

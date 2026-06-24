@@ -7,7 +7,7 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 const uuidSchema = z.string().uuid();
 import { decisionCreate, suggestDecisionBody } from '@productmap/shared';
-import { comments, decisions, features, users } from '@productmap/db';
+import { comments, decisions, features, users } from '@productmap/db/schema';
 import { db } from '../db';
 import { type MembershipEnv } from '../middleware/membership';
 import { loadUser } from '../middleware/auth';
@@ -119,7 +119,7 @@ export const decisionsRoutes = new Hono<MembershipEnv>()
       }
     }),
     async (c) => {
-      const model = createAiModel();
+      const model = await createAiModel();
       if (!model) return c.json({ error: 'ai_disabled' }, 503);
 
       const { commentId } = c.req.valid('json');

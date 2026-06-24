@@ -5,7 +5,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { asc, eq } from 'drizzle-orm';
 import { evidenceCreate } from '@productmap/shared';
-import { evidence, features, users } from '@productmap/db';
+import { evidence, features, users } from '@productmap/db/schema';
 import { db } from '../db';
 import { loadUser } from '../middleware/auth';
 import { type MembershipEnv } from '../middleware/membership';

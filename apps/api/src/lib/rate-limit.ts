@@ -1,5 +1,4 @@
 import type { Context } from 'hono';
-import { getConnInfo } from '@hono/node-server/conninfo';
 import { config } from '../config';
 
 interface Bucket { count: number; resetAt: number; }
@@ -32,7 +31,7 @@ export class RateLimiter {
  * share one egress IP — size limits accordingly and never put automated calls
  * (e.g. /refresh) in the same bucket as interactive login (see auth route).
  */
-export function clientIp(c: Context): string {
+export async function clientIp(c: Context): Promise<string> {
   if (config.trustProxy) {
     const xff = c.req.header('x-forwarded-for');
     if (xff) return xff.split(',')[0]!.trim();
@@ -40,6 +39,10 @@ export function clientIp(c: Context): string {
     if (xri) return xri.trim();
   }
   try {
+    // Lazy + @vite-ignore: this node-only adapter must stay off the browser
+    // demo graph (app → authRoutes imports this module). The demo never calls
+    // clientIp, so the import never executes in-browser.
+    const { getConnInfo } = await import(/* @vite-ignore */ '@hono/node-server/conninfo');
     return getConnInfo(c).remote.address ?? 'unknown';
   } catch {
     return 'unknown';

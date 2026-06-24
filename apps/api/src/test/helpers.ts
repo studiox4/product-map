@@ -3,7 +3,9 @@ import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { users, projects, memberships, invites } from '@productmap/db';
+import { createDb } from '@productmap/db';
+import { users, projects, memberships, invites } from '@productmap/db/schema';
+import { configureDb } from '../db';
 import { signAccess } from '../lib/auth/tokens';
 import { ACCESS_COOKIE } from '../lib/auth/cookies';
 import { hashPassword } from '../lib/auth/password';
@@ -13,9 +15,12 @@ const PG_BASE = process.env.TEST_PG_BASE ?? 'postgres://localhost:5432';
 
 export const TEST_DATABASE_URL = `${PG_BASE}/${TEST_DB_NAME}`;
 
-// Must run before `../db` (the app's shared pool) is evaluated. Test files
-// import this module first, so the app pool picks up the test database.
+// Test files import this module first, so this runs before any request is
+// dispatched. Replicate the node entry (index.ts): build the app's pg pool over
+// the test database and inject it into the driver-agnostic db handle.
 process.env.DATABASE_URL = TEST_DATABASE_URL;
+const { db: appDb, pool: appPool } = createDb(TEST_DATABASE_URL);
+configureDb(appDb);
 
 const migrationsFolder = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -62,7 +67,6 @@ export async function closeTestDb(): Promise<void> {
     await pool.end();
     pool = null;
   }
-  const { pool: appPool } = await import('../db');
   await appPool.end().catch(() => {});
 }
 

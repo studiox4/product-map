@@ -1,6 +1,6 @@
 import type { Context } from 'hono';
 import { and, eq, inArray, sql } from 'drizzle-orm';
-import { votes } from '@productmap/db';
+import { votes } from '@productmap/db/schema';
 import type { VoteSummary } from '@productmap/shared';
 import { db } from '../db';
 

@@ -1,4 +1,4 @@
-import { activity, featureCollaborators } from '@productmap/db';
+import { activity, featureCollaborators } from '@productmap/db/schema';
 import type { ActivityKind } from '@productmap/shared';
 import { db } from '../db';
 

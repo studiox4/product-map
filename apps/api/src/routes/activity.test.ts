@@ -11,7 +11,7 @@ import {
 } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { projects, features, users, activity } from '@productmap/db';
+import { projects, features, users, activity } from '@productmap/db/schema';
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 
 let userId: string;

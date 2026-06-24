@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { getCookie } from 'hono/cookie';
 import { eq, sql } from 'drizzle-orm';
 import { registerInput, loginInput, changePasswordInput, USER_COLORS } from '@productmap/shared';
-import { users } from '@productmap/db';
+import { users } from '@productmap/db/schema';
 import { db } from '../db';
 import { config } from '../config';
 import { hashPassword, verifyPassword } from '../lib/auth/password';
@@ -31,7 +31,7 @@ export const authRoutes = new Hono<AuthEnv>()
       if (!isSameOrigin(c)) return c.json({ error: 'forbidden_origin' }, 403);
       const isRefresh = c.req.path.endsWith('/refresh');
       const limiter = isRefresh ? refreshLimiter : credLimiter;
-      if (!limiter.hit(clientIp(c))) return c.json({ error: 'rate_limited' }, 429);
+      if (!limiter.hit(await clientIp(c))) return c.json({ error: 'rate_limited' }, 429);
     }
     await next();
   })
