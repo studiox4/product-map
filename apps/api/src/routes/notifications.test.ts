@@ -76,6 +76,19 @@ describe('comment generation', () => {
     const rows = await db.select().from(notifications);
     expect(rows).toHaveLength(0);
   });
+
+  it('generates a mention notification for a feature-less (release_notes) document', async () => {
+    // Insert a release_notes document with no featureId (feature-less doc).
+    const [doc] = await db
+      .insert(documents)
+      .values({ projectId, featureId: null, type: 'release_notes', title: 'Release Notes' })
+      .returning();
+    // Alice posts a comment on the feature-less doc that @mentions Bob.
+    await addComment({ documentId: doc.id, body: `hey @[Bob](${bob.id})` }, aliceAuth);
+    const rows = await db.select().from(notifications).where(eq(notifications.userId, bob.id));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ userId: bob.id, kind: 'mention', actorId: alice.id });
+  });
 });
 
 describe('routes', () => {

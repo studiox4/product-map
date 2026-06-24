@@ -42,7 +42,6 @@ async function mutedAmong(userIds: string[], kind: NotificationKind): Promise<Se
 export async function fanOutCommentNotifications(comment: CommentRow, projectId: string): Promise<void> {
   try {
     const featureId = await featureIdFor(comment);
-    if (!featureId) return;
 
     // mention: re-resolve embedded ids against project membership (never trust the body).
     const { parseMentionIds } = await import('./mentions');
@@ -66,12 +65,14 @@ export async function fanOutCommentNotifications(comment: CommentRow, projectId:
       replyIds = rows.map((r) => r.authorId).filter((id) => id !== comment.authorId);
     }
 
-    // comment: feature collaborators.
-    const collabRows = await db
-      .select({ userId: featureCollaborators.userId })
-      .from(featureCollaborators)
-      .where(eq(featureCollaborators.featureId, featureId));
-    const commentIds = collabRows.map((r) => r.userId).filter((id) => id !== comment.authorId);
+    // comment: feature collaborators (only applicable when the doc belongs to a feature).
+    const commentIds = featureId
+      ? (await db
+          .select({ userId: featureCollaborators.userId })
+          .from(featureCollaborators)
+          .where(eq(featureCollaborators.featureId, featureId))
+        ).map((r) => r.userId).filter((id) => id !== comment.authorId)
+      : [];
 
     // Apply precedence: a recipient gets exactly one kind.
     const assigned = new Map<string, NotificationKind>();
