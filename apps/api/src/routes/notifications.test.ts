@@ -125,4 +125,24 @@ describe('routes', () => {
     const res = await app.request('/api/notifications/unread-count');
     expect(res.status).toBe(401);
   });
+
+  it('list returns items newest-first with joined fields and no nextCursor for small result', async () => {
+    // seed two notifications; second inserted later so it has a newer createdAt
+    await seed('comment');
+    await seed('mention');
+    const res = await app.request('/api/notifications', { headers: bobAuth });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.nextCursor).toBeNull();
+    expect(body.items).toHaveLength(2);
+    // newest first
+    expect(body.items[0].kind).toBe('mention');
+    expect(body.items[1].kind).toBe('comment');
+    // joined fields
+    expect(body.items[0].projectSlug).toBe('pm');
+    expect(body.items[0].actorName).toBe('Alice');
+    expect(body.items[0].actorColor).toBe('#2b557e');
+    expect(body.items[0].readAt).toBeNull();
+    expect(typeof body.items[0].createdAt).toBe('string');
+  });
 });
