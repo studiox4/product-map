@@ -28,6 +28,7 @@ const ProfileTab = lazy(() => import('@/components/settings/ProfileTab'));
 const TemplatesTab = lazy(() => import('@/components/settings/TemplatesTab'));
 const UsersTab = lazy(() => import('@/components/settings/UsersTab'));
 const ProjectTab = lazy(() => import('@/components/settings/ProjectTab'));
+const NotificationsTab = lazy(() => import('@/components/settings/NotificationsTab'));
 const TemplateEditorPage = lazy(() => import('@/routes/TemplateEditor'));
 const SharePage = lazy(() => import('@/routes/SharePage'));
 // Accept-invite page — sibling of /share/:token; does its own auth check + redirect.
@@ -224,6 +225,7 @@ export default function App() {
                 <Route path="workspace" element={<WorkspaceTab />} />
                 <Route path="profile" element={<ProfileTab />} />
                 <Route path="project" element={<ProjectTab />} />
+                <Route path="notifications" element={<NotificationsTab />} />
                 <Route path="users" element={<UsersTab />} />
                 {/* Unknown tabs fall back to Templates. */}
                 <Route path="*" element={<Navigate to="/app/settings/templates" replace />} />

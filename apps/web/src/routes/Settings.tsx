@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { FolderKanban, LayoutTemplate, Settings as SettingsIcon, UserRound, Users, Wrench } from 'lucide-react';
+import { Bell, FolderKanban, LayoutTemplate, Settings as SettingsIcon, UserRound, Users, Wrench } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
@@ -11,6 +11,7 @@ const BASE_TABS = [
   { to: appRoutes.settingsTab('workspace'), label: 'Workspace', icon: Wrench },
   { to: appRoutes.settingsTab('project'), label: 'Project', icon: FolderKanban },
   { to: appRoutes.settingsTab('profile'), label: 'Profile', icon: UserRound },
+  { to: appRoutes.settingsTab('notifications'), label: 'Notifications', icon: Bell },
 ];
 
 const ADMIN_TABS = [
