@@ -43,7 +43,7 @@ export const notificationsRoutes = new Hono<AuthEnv>()
     const page = rows.slice(0, PAGE);
     const items: NotificationItem[] = page.map((r) => ({
       id: r.id,
-      kind: r.kind as NotificationItem['kind'],
+      kind: r.kind,
       projectId: r.projectId,
       projectSlug: r.projectSlug ?? '',
       actorId: r.actorId,
@@ -95,7 +95,7 @@ export const notificationsRoutes = new Hono<AuthEnv>()
     const mutedSet = new Set(muted.map((m) => m.kind));
     const prefs = Object.fromEntries(
       NOTIFICATION_KINDS.map((k) => [k, !mutedSet.has(k)]),
-    ) as unknown as NotificationPrefs;
+    ) as NotificationPrefs;
     return c.json(prefs);
   })
   .put(

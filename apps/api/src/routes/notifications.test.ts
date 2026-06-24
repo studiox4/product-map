@@ -3,7 +3,7 @@ import { setupTestDb, truncateAll, closeTestDb, createTestUser, addMembership, a
 import { app } from '../app';
 import { db } from '../db';
 import { projects, features, documents, comments, featureCollaborators, notifications, notificationMutes } from '@productmap/db/schema';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 
 let projectId: string;
 let alice: { id: string }; // author/actor
@@ -34,7 +34,6 @@ beforeEach(async () => {
   await db.insert(featureCollaborators).values({ featureId, userId: bob.id });
 });
 
-const commentUrl = `/api/projects/`;
 async function addComment(body: object, auth: Record<string, string>) {
   return app.request(`/api/projects/${projectId}/comments`, post(body, auth));
 }
@@ -89,6 +88,78 @@ describe('comment generation', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ userId: bob.id, kind: 'mention', actorId: alice.id });
   });
+
+  describe('reply fan-out', () => {
+    it('Carol replying notifies both Alice (root author) and Bob (sibling) with kind=reply, not Carol', async () => {
+      const carol = await createTestUser({ role: 'member', name: 'Carol', email: 'carol@test.co', color: '#9a6428' });
+      const carolAuth = { cookie: await authCookie(carol), origin: 'http://localhost', host: 'localhost' };
+      await addMembership(carol.id, projectId, 'editor');
+
+      // Alice posts root comment
+      const rootRes = await addComment({ featureId, body: 'root comment' }, aliceAuth);
+      const rootBody = await rootRes.json();
+      const rootId = rootBody.id as string;
+
+      // Bob replies — seeds Bob as thread participant
+      await addComment({ body: 'bob reply', parentId: rootId }, bobAuth);
+
+      // Clear notifications so far; Carol's reply is what we're testing
+      await db.delete(notifications);
+
+      // Carol replies to the root thread
+      const carolRes = await addComment({ body: 'carol reply', parentId: rootId }, carolAuth);
+      expect(carolRes.status).toBe(201);
+
+      const rows = await db.select().from(notifications);
+      // Alice and Bob should each get a reply notification; Carol should not
+      const aliceRows = rows.filter((r) => r.userId === alice.id);
+      const bobRows = rows.filter((r) => r.userId === bob.id);
+      const carolRows = rows.filter((r) => r.userId === carol.id);
+
+      expect(aliceRows).toHaveLength(1);
+      expect(aliceRows[0].kind).toBe('reply');
+      expect(bobRows).toHaveLength(1);
+      expect(bobRows[0].kind).toBe('reply');
+      expect(carolRows).toHaveLength(0);
+    });
+
+    it('reply>comment: thread participant who is also a collaborator gets exactly one reply row', async () => {
+      // Bob is already a featureCollaborator (from beforeEach); Alice posts root, Bob replies,
+      // then Alice replies again — Bob should get reply (not comment) and only one row.
+      const rootRes = await addComment({ featureId, body: 'root' }, aliceAuth);
+      const rootId = (await rootRes.json()).id as string;
+
+      // Bob replies
+      await addComment({ body: 'bob reply', parentId: rootId }, bobAuth);
+
+      // Clear; now Alice replies — Bob is both thread participant and collaborator
+      await db.delete(notifications);
+      await addComment({ body: 'alice reply 2', parentId: rootId }, aliceAuth);
+
+      const rows = await db.select().from(notifications).where(eq(notifications.userId, bob.id));
+      expect(rows).toHaveLength(1);
+      expect(rows[0].kind).toBe('reply');
+    });
+
+    it('mention>reply: user mentioned in a reply gets kind=mention, not reply', async () => {
+      const carol = await createTestUser({ role: 'member', name: 'Carol', email: 'carol2@test.co', color: '#9a6428' });
+      const carolAuth = { cookie: await authCookie(carol), origin: 'http://localhost', host: 'localhost' };
+      await addMembership(carol.id, projectId, 'editor');
+
+      // Alice posts root; Carol replies
+      const rootRes = await addComment({ featureId, body: 'root' }, aliceAuth);
+      const rootId = (await rootRes.json()).id as string;
+      await addComment({ featureId, body: 'carol reply', parentId: rootId }, carolAuth);
+
+      // Clear; Bob replies to same thread AND mentions Carol (who is already a thread participant)
+      await db.delete(notifications);
+      await addComment({ body: `reply with mention @[Carol](${carol.id})`, parentId: rootId }, bobAuth);
+
+      const carolRows = await db.select().from(notifications).where(eq(notifications.userId, carol.id));
+      expect(carolRows).toHaveLength(1);
+      expect(carolRows[0].kind).toBe('mention');
+    });
+  });
 });
 
 describe('routes', () => {
@@ -117,10 +188,23 @@ describe('routes', () => {
   });
 
   it('read-all clears only the caller rows', async () => {
+    // Seed an unread notification for Alice as well as Bob
+    await db.insert(notifications).values({ userId: alice.id, projectId, kind: 'comment', actorId: bob.id });
     await seed(); await seed();
+
+    // Bob reads all
     await app.request('/api/notifications/read-all', { method: 'POST', headers: bobAuth });
-    const res = await app.request('/api/notifications/unread-count', { headers: bobAuth });
-    expect(await res.json()).toEqual({ count: 0 });
+
+    // Bob's unread count should be 0
+    const bobRes = await app.request('/api/notifications/unread-count', { headers: bobAuth });
+    expect(await bobRes.json()).toEqual({ count: 0 });
+
+    // Alice's unread row must still exist (read-all must be user-scoped)
+    const aliceUnread = await db
+      .select()
+      .from(notifications)
+      .where(and(eq(notifications.userId, alice.id), isNull(notifications.readAt)));
+    expect(aliceUnread.length).toBeGreaterThanOrEqual(1);
   });
 
   it('prefs default all-on, and a mute round-trips', async () => {
@@ -157,5 +241,60 @@ describe('routes', () => {
     expect(body.items[0].actorColor).toBe('#2b557e');
     expect(body.items[0].readAt).toBeNull();
     expect(typeof body.items[0].createdAt).toBe('string');
+  });
+});
+
+describe('fanOutInviteNotification via invite route', () => {
+  // The invite route is owner-gated. We need an owner user.
+  let owner: { id: string; role: 'admin' | 'member' };
+  let ownerAuth: Record<string, string>;
+
+  beforeEach(async () => {
+    owner = await createTestUser({ role: 'member', name: 'Owner', email: 'owner@test.co', color: '#0e7490' });
+    ownerAuth = { cookie: await authCookie(owner), origin: 'http://localhost', host: 'localhost' };
+    await addMembership(owner.id, projectId, 'owner');
+  });
+
+  const postInvite = (body: object, auth: Record<string, string>) =>
+    app.request(`/api/projects/${projectId}/invites`, post(body, auth));
+
+  it('invited email matching an existing user → one project_invite notification', async () => {
+    // Bob already exists with bob@test.co; owner invites him
+    const res = await postInvite({ role: 'editor', email: 'bob@test.co' }, ownerAuth);
+    expect(res.status).toBe(201);
+    const rows = await db.select().from(notifications).where(eq(notifications.userId, bob.id));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].kind).toBe('project_invite');
+  });
+
+  it('invited email with no account → zero notifications', async () => {
+    const res = await postInvite({ role: 'editor', email: 'stranger@example.com' }, ownerAuth);
+    expect(res.status).toBe(201);
+    const rows = await db.select().from(notifications);
+    expect(rows).toHaveLength(0);
+  });
+
+  it('self-invite (owner invites their own email) → notification suppressed', async () => {
+    const res = await postInvite({ role: 'editor', email: 'owner@test.co' }, ownerAuth);
+    expect(res.status).toBe(201);
+    const rows = await db.select().from(notifications).where(eq(notifications.userId, owner.id));
+    expect(rows).toHaveLength(0);
+  });
+
+  it('recipient who muted project_invite → no notification', async () => {
+    await db.insert(notificationMutes).values({ userId: bob.id, kind: 'project_invite' });
+    const res = await postInvite({ role: 'editor', email: 'bob@test.co' }, ownerAuth);
+    expect(res.status).toBe(201);
+    const rows = await db.select().from(notifications).where(eq(notifications.userId, bob.id));
+    expect(rows).toHaveLength(0);
+  });
+
+  it('mixed-case email still matches an existing lower-case account → notification created', async () => {
+    // bob@test.co is stored lowercase; invite with BOB@TEST.CO should still match
+    const res = await postInvite({ role: 'editor', email: 'BOB@TEST.CO' }, ownerAuth);
+    expect(res.status).toBe(201);
+    const rows = await db.select().from(notifications).where(eq(notifications.userId, bob.id));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].kind).toBe('project_invite');
   });
 });

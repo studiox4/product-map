@@ -246,12 +246,7 @@ export interface NotificationItem {
   createdAt: string;
 }
 
-export interface NotificationPrefs {
-  mention: boolean;
-  comment: boolean;
-  reply: boolean;
-  project_invite: boolean;
-}
+export type NotificationPrefs = Record<NotificationKind, boolean>;
 
 export interface UnreadCount {
   count: number;

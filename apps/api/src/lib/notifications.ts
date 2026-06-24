@@ -105,7 +105,7 @@ export async function fanOutCommentNotifications(comment: CommentRow, projectId:
     }
     if (rows.length > 0) await db.insert(notifications).values(rows);
   } catch (err) {
-    console.error('[notifications] comment fan-out failed (swallowed):', err);
+    console.error('[notifications] comment fan-out failed (swallowed):', { commentId: comment.id, projectId, authorId: comment.authorId }, err);
   }
 }
 
@@ -140,6 +140,6 @@ export async function fanOutInviteNotification(
       payload: null,
     });
   } catch (err) {
-    console.error('[notifications] invite fan-out failed (swallowed):', err);
+    console.error('[notifications] invite fan-out failed (swallowed):', { projectId: invite.projectId, email: invite.email }, err);
   }
 }
