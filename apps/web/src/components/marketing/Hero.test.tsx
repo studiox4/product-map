@@ -21,13 +21,15 @@ describe('Hero', () => {
     expect(screen.getByRole('link', { name: /deploy your own/i }).getAttribute('href')).toBe(REPO_URL);
   });
 
-  it('secondary CTA "Sign in" points at /login', () => {
+  it('has no login CTA — the public site routes to the demo, not auth', () => {
     render(<Hero />);
-    expect(screen.getByRole('link', { name: /sign in/i }).getAttribute('href')).toBe('/login');
+    expect(screen.queryByRole('link', { name: /sign in/i })).toBeNull();
   });
 
-  it('renders the framed screenshot', () => {
-    render(<Hero />);
-    expect(screen.getByRole('img', { name: /productmap/i }).getAttribute('src')).toBe('/marketing/hero.png');
+  it('leads with the animated Stagger hero graphic (screenshot moved to the proof strip)', () => {
+    const { container } = render(<Hero />);
+    // Right column is now the animated SVG, not the static hero.png img.
+    expect(container.querySelector('svg')).toBeTruthy();
+    expect(screen.queryByRole('img', { name: /productmap roadmap board/i })).toBeNull();
   });
 });

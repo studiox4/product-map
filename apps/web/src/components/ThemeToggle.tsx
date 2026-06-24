@@ -16,9 +16,13 @@ const THEME_META: Record<Theme, { icon: typeof Sun; label: string }> = {
 };
 
 export function ThemeToggle() {
-  const [theme, setLocalTheme] = useState<Theme>(() => getStoredTheme());
+  // Start from a stable default so the server-rendered / prerendered markup and
+  // the first client render agree (no hydration mismatch on the marketing page);
+  // read the persisted choice after mount.
+  const [theme, setLocalTheme] = useState<Theme>('system');
 
   useEffect(() => {
+    setLocalTheme(getStoredTheme());
     const offChange = onThemeChange(setLocalTheme);
     const offSystem = initSystemThemeListener();
     return () => {

@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { HERO_HEADLINE, HERO_SUBHEAD, REPO_URL } from '@/lib/marketing';
+import { HeroGraphic } from '@/components/marketing/motion/HeroGraphic';
 
 export default function Hero() {
   return (
@@ -18,18 +19,11 @@ export default function Hero() {
               Deploy your own
             </a>
           </Button>
-          <Button asChild size="lg" variant="ghost">
-            <a href="/login">Sign in</a>
-          </Button>
         </div>
       </div>
-      <div className="rounded-xl border border-border bg-card p-2 shadow-lg">
-        <img
-          src="/marketing/hero.png"
-          alt="ProductMap roadmap board"
-          className="w-full rounded-lg"
-          loading="eager"
-        />
+      {/* right column */}
+      <div className="relative mx-auto w-full max-w-md md:max-w-none">
+        <HeroGraphic className="h-auto w-full" />
       </div>
     </section>
   );
