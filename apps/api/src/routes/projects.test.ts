@@ -101,9 +101,10 @@ describe('project CRUD', () => {
     const res = await app.request(`/api/projects/${p.id}`, json('PATCH', { name: 'X' }, await auth(u)));
     expect(res.status).toBe(403);
   });
-  it('DELETE /api/projects/:id (owner) returns 204', async () => {
+  it('DELETE /api/projects/:id (owner, archived) returns 204', async () => {
     const u = await createTestUser({ role: 'member' }); const p = await createTestProject();
     await addMembership(u.id, p.id, 'owner');
+    await app.request(`/api/projects/${p.id}/archive`, { method: 'POST', headers: await auth(u) });
     const res = await app.request(`/api/projects/${p.id}`, { method: 'DELETE', headers: await auth(u) });
     expect(res.status).toBe(204);
   });
@@ -376,6 +377,30 @@ describe('project archive/restore', () => {
     const editorAuth = { cookie: await authCookie(editor), origin: 'http://localhost', host: 'localhost' };
     const res = await app.request(`/api/projects/${projectId}/archive`, { method: 'POST', headers: editorAuth });
     expect(res.status).toBe(403);
+  });
+
+  it('purge (DELETE) on an active project is rejected 409 not_archived', async () => {
+    const res = await app.request(`/api/projects/${projectId}`, { method: 'DELETE', headers: adminAuth });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ error: 'not_archived' });
+  });
+
+  it('purge after archive hard-deletes the project', async () => {
+    await app.request(`/api/projects/${projectId}/archive`, { method: 'POST', headers: adminAuth });
+    const res = await app.request(`/api/projects/${projectId}`, { method: 'DELETE', headers: adminAuth });
+    expect(res.status).toBe(204);
+    const archived = await (await app.request('/api/projects?archived=1', { headers: adminAuth })).json();
+    expect(archived.find((p: any) => p.id === projectId)).toBeUndefined();
+  });
+
+  it('content write to an archived project is rejected 409 project_archived', async () => {
+    await app.request(`/api/projects/${projectId}/archive`, { method: 'POST', headers: adminAuth });
+    const res = await app.request(`/api/projects/${projectId}/features`, {
+      method: 'POST', headers: { 'content-type': 'application/json', ...adminAuth },
+      body: JSON.stringify({ title: 'x', horizon: 'now' }),
+    });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ error: 'project_archived' });
   });
 });
 

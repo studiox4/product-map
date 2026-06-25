@@ -64,8 +64,11 @@ export const projectsRoutes = new Hono<MembershipEnv>()
     return c.json({ id: row.id, name: row.name, slug: row.slug ?? '', vision: row.vision, aboutMd: row.aboutMd });
   })
   .delete('/:projectId', requireMembership('owner'), async (c) => {
-    const deleted = await db.delete(projects).where(eq(projects.id, c.req.param('projectId'))).returning({ id: projects.id });
-    if (!deleted.length) return c.json({ error: 'not_found' }, 404);
+    const id = c.req.param('projectId');
+    const [p] = await db.select({ archivedAt: projects.archivedAt }).from(projects).where(eq(projects.id, id));
+    if (!p) return c.json({ error: 'not_found' }, 404);
+    if (p.archivedAt === null) return c.json({ error: 'not_archived' }, 409);
+    await db.delete(projects).where(eq(projects.id, id));
     return c.body(null, 204);
   })
   .post('/:projectId/archive', requireMembership('owner'), async (c) => {

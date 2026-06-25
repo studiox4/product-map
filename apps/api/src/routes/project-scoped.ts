@@ -1,4 +1,7 @@
 import { Hono } from 'hono';
+import { eq } from 'drizzle-orm';
+import { projects } from '@productmap/db/schema';
+import { db } from '../db';
 import { requireMembership, type MembershipEnv } from '../middleware/membership';
 import { objectivesRoutes } from './objectives';
 import { releasesRoutes } from './releases';
@@ -24,6 +27,14 @@ export const projectScopedContent = new Hono<MembershipEnv>()
   .use('*', async (c, next) => {
     const min = ['GET', 'HEAD'].includes(c.req.method) ? 'viewer' : 'editor';
     return requireMembership(min)(c as never, next);
+  })
+  .use('*', async (c, next) => {
+    if (!['GET', 'HEAD'].includes(c.req.method)) {
+      const pid = c.get('currentProjectId');
+      const [p] = await db.select({ archivedAt: projects.archivedAt }).from(projects).where(eq(projects.id, pid));
+      if (p?.archivedAt) return c.json({ error: 'project_archived' }, 409);
+    }
+    return next();
   })
   .route('/objectives', objectivesRoutes)
   .route('/releases', releasesRoutes)
