@@ -640,3 +640,48 @@ describe('features cross-project isolation', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('POST /api/projects/:projectId/features/:id/archive + /restore', () => {
+  it('archived feature is hidden from the board and shown under ?archived=1', async () => {
+    const created = await (await app.request(`/api/projects/${projectId}/features`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...auth },
+      body: JSON.stringify({ title: 'Archivable', horizon: 'now' }),
+    })).json();
+    const fid = created.id;
+
+    const archRes = await app.request(`/api/projects/${projectId}/features/${fid}/archive`, { method: 'POST', headers: auth });
+    expect(archRes.status).toBe(200);
+    const archBody = await archRes.json();
+    expect(archBody.archivedAt).not.toBeNull();
+
+    const board = await (await app.request(`/api/projects/${projectId}/features`, { headers: auth })).json();
+    expect(board.find((f: { id: string }) => f.id === fid)).toBeUndefined();
+
+    const archived = await (await app.request(`/api/projects/${projectId}/features?archived=1`, { headers: auth })).json();
+    expect(archived.find((f: { id: string }) => f.id === fid)).toBeDefined();
+  });
+
+  it('restore returns the feature to the board', async () => {
+    const created = await (await app.request(`/api/projects/${projectId}/features`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...auth },
+      body: JSON.stringify({ title: 'F2', horizon: 'now' }),
+    })).json();
+
+    await app.request(`/api/projects/${projectId}/features/${created.id}/archive`, { method: 'POST', headers: auth });
+    const restoreRes = await app.request(`/api/projects/${projectId}/features/${created.id}/restore`, { method: 'POST', headers: auth });
+    expect(restoreRes.status).toBe(200);
+    const restoreBody = await restoreRes.json();
+    expect(restoreBody.archivedAt).toBeNull();
+
+    const board = await (await app.request(`/api/projects/${projectId}/features`, { headers: auth })).json();
+    expect(board.find((f: { id: string }) => f.id === created.id)).toBeDefined();
+  });
+
+  it('404 on archive/restore of unknown feature', async () => {
+    const missing = '00000000-0000-4000-8000-000000000000';
+    const res = await app.request(`/api/projects/${projectId}/features/${missing}/archive`, { method: 'POST', headers: auth });
+    expect(res.status).toBe(404);
+  });
+});

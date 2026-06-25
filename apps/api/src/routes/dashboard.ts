@@ -74,7 +74,7 @@ export const dashboardRoutes = new Hono<AuthEnv>().get('/', async (c) => {
       stale: sql<number>`count(*) filter (where ${features.endDate} < ${todayStr} and ${features.status} <> 'shipped')::int`,
     })
     .from(features)
-    .where(inArray(features.projectId, pids))
+    .where(and(inArray(features.projectId, pids), isNull(features.archivedAt)))
     .groupBy(features.projectId);
   const aggByPid = new Map(featureAgg.map((a) => [a.projectId, a]));
 
@@ -137,7 +137,7 @@ export const dashboardRoutes = new Hono<AuthEnv>().get('/', async (c) => {
     })
     .from(featureCollaborators)
     .innerJoin(features, eq(featureCollaborators.featureId, features.id))
-    .where(and(eq(featureCollaborators.userId, user.id), inArray(features.projectId, pids)))
+    .where(and(eq(featureCollaborators.userId, user.id), inArray(features.projectId, pids), isNull(features.archivedAt)))
     .orderBy(features.createdAt);
   const myWork: MyWorkItem[] = myWorkRows.map((w) => ({
     featureId: w.featureId,

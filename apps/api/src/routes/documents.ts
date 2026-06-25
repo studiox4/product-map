@@ -71,7 +71,7 @@ export const documentsRoutes = new Hono<MembershipEnv>()
         .leftJoin(features, eq(documents.featureId, features.id))
         .leftJoin(ideas, eq(documents.ideaId, ideas.id))
         .leftJoin(releases, eq(releases.notesDocId, documents.id))
-        .where(eq(documents.projectId, pid))
+        .where(and(eq(documents.projectId, pid), isNull(features.archivedAt)))
         .orderBy(asc(documents.createdAt));
       return c.json(
         rows.map(({ contentMd, ideaTitle, releaseId, releaseName, ...item }) => {

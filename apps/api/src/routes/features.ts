@@ -1,7 +1,7 @@
 // Mounted at /api/projects/:projectId/features (project-scoped.ts).
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import { featureCreate, featureUpdate, collaboratorsPut, voteBody } from '@productmap/shared';
 import { features, documents, activity, featureCollaborators, users, votes, featureDependencies, objectives, releases } from '@productmap/db/schema';
 import { db } from '../db';
@@ -61,10 +61,11 @@ async function blockerIdsForFeatures(featureIds: string[], pid: string) {
 export const featuresRoutes = new Hono<MembershipEnv>()
   .get('/', async (c) => {
     const pid = c.get('currentProjectId');
+    const archived = c.req.query('archived') === '1';
     const rows = await db
       .select()
       .from(features)
-      .where(eq(features.projectId, pid))
+      .where(and(eq(features.projectId, pid), archived ? isNotNull(features.archivedAt) : isNull(features.archivedAt)))
       .orderBy(horizonOrder, asc(features.sortOrder), asc(features.createdAt));
     const ids = rows.map((f) => f.id);
     const docs = await docsForFeatures(ids, pid);
@@ -263,6 +264,28 @@ export const featuresRoutes = new Hono<MembershipEnv>()
       return c.body(null, 204);
     },
   )
+  .post('/:id/archive', async (c) => {
+    const id = c.req.param('id');
+    const pid = c.get('currentProjectId');
+    await loadScoped(features, id, pid);
+    const [row] = await db
+      .update(features)
+      .set({ archivedAt: sql`now()` })
+      .where(eq(features.id, id))
+      .returning({ id: features.id, archivedAt: features.archivedAt });
+    return c.json({ id: row.id, archivedAt: row.archivedAt });
+  })
+  .post('/:id/restore', async (c) => {
+    const id = c.req.param('id');
+    const pid = c.get('currentProjectId');
+    await loadScoped(features, id, pid);
+    const [row] = await db
+      .update(features)
+      .set({ archivedAt: null })
+      .where(eq(features.id, id))
+      .returning({ id: features.id, archivedAt: features.archivedAt });
+    return c.json({ id: row.id, archivedAt: row.archivedAt });
+  })
   .delete('/:id', async (c) => {
     const id = c.req.param('id');
     const pid = c.get('currentProjectId');
