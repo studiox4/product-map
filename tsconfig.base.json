@@ -17,7 +17,9 @@
       "@productmap/db": ["packages/db/src/index.ts"],
       "@productmap/db/*": ["packages/db/src/*"],
       "@productmap/templates": ["packages/templates/src/index.ts"],
-      "@productmap/templates/*": ["packages/templates/src/*"]
+      "@productmap/templates/*": ["packages/templates/src/*"],
+      "@productmap/sdk": ["packages/sdk/src/index.ts"],
+      "@productmap/sdk/*": ["packages/sdk/src/*"]
     }
   }
 }
