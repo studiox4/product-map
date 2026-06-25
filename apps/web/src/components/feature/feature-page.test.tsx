@@ -237,20 +237,20 @@ describe('FeaturePage', () => {
     expect(patched).toMatchObject({ descriptionMd: 'New plan' });
   });
 
-  it('delete requires confirmation, then navigates to the board', async () => {
-    let deleted = false;
+  it('archive requires confirmation, then navigates to the board', async () => {
+    let archived = false;
     server.use(
-      http.delete(`/api/projects/${TEST_PROJECT_ID}/features/f1`, () => {
-        deleted = true;
+      http.post(`/api/projects/${TEST_PROJECT_ID}/features/f1/archive`, () => {
+        archived = true;
         return new HttpResponse(null, { status: 204 });
       }),
     );
     renderPage();
     await screen.findByDisplayValue('Rich markdown editor');
-    await user().click(screen.getByRole('button', { name: 'Delete feature' }));
-    const dialog = await screen.findByRole('dialog', { name: /delete feature/i });
-    await user().click(within(dialog).getByRole('button', { name: 'Delete' }));
-    await waitFor(() => expect(deleted).toBe(true));
+    await user().click(screen.getByRole('button', { name: 'Archive feature' }));
+    const dialog = await screen.findByRole('dialog', { name: /archive feature/i });
+    await user().click(within(dialog).getByRole('button', { name: 'Archive' }));
+    await waitFor(() => expect(archived).toBe(true));
     expect(await screen.findByText('board page')).toBeTruthy();
   });
 
@@ -269,7 +269,7 @@ describe('FeaturePage', () => {
     expect((screen.getByRole('combobox', { name: 'Status' }) as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByRole('combobox', { name: 'Horizon' }) as HTMLButtonElement).disabled).toBe(true);
     // Pure actions are hidden.
-    expect(screen.queryByRole('button', { name: 'Delete feature' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Archive feature' })).toBeNull();
     expect(screen.queryByRole('button', { name: /add evidence/i })).toBeNull();
     // Dependencies rail's edit trigger is gated too.
     const depRail = screen.getByRole('region', { name: 'Dependencies' });
@@ -287,7 +287,7 @@ describe('FeaturePage', () => {
     renderPage();
     const title = (await screen.findByLabelText('Feature title')) as HTMLInputElement;
     expect(title.readOnly).toBe(false);
-    expect(screen.getByRole('button', { name: 'Delete feature' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Archive feature' })).toBeTruthy();
     expect(screen.getByRole('button', { name: /add evidence/i })).toBeTruthy();
   });
 });

@@ -2107,3 +2107,62 @@ export function usePurgeProject() {
 }
 
 // =============== END APPEND BLOCK (project archive / restore / purge) ========
+
+// ============================================================================
+// APPEND BLOCK — feature archive / restore / purge (E1-archive).
+// Owned by this task; keep additions inside this block.
+// ============================================================================
+
+/** GET /api/projects/:pid/features?archived=1 — features archived in this project. */
+export function useArchivedFeatures() {
+  const pid = useProjectId();
+  return useQuery({
+    queryKey: ['p', pid, 'features', 'archived'] as const,
+    queryFn: () => fetchJson<FeatureWithDocs[]>(`${apiPath(pid, 'features')}?archived=1`),
+    enabled: !!pid,
+  });
+}
+
+/** POST /api/projects/:pid/features/:id/archive — soft-delete; feature is restorable. */
+export function useArchiveFeature() {
+  const pid = useProjectId();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      fetchJson<void>(apiPath(pid, 'features', id, 'archive'), { method: 'POST' }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
+      qc.invalidateQueries({ queryKey: ['p', pid, 'features', 'archived'] });
+    },
+  });
+}
+
+/** POST /api/projects/:pid/features/:id/restore — un-archive a soft-deleted feature. */
+export function useRestoreFeature() {
+  const pid = useProjectId();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      fetchJson<void>(apiPath(pid, 'features', id, 'restore'), { method: 'POST' }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
+      qc.invalidateQueries({ queryKey: ['p', pid, 'features', 'archived'] });
+    },
+  });
+}
+
+/** DELETE /api/projects/:pid/features/:id — permanent purge (only valid on archived features). */
+export function usePurgeFeature() {
+  const pid = useProjectId();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      fetchJson<void>(apiPath(pid, 'features', id), { method: 'DELETE' }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
+      qc.invalidateQueries({ queryKey: ['p', pid, 'features', 'archived'] });
+    },
+  });
+}
+
+// =============== END APPEND BLOCK (feature archive / restore / purge) ========

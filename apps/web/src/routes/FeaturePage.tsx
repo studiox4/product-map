@@ -6,7 +6,7 @@ import {
   HORIZONS,
   type FeatureWithDocs,
 } from '@productmap/shared';
-import { useDeleteFeature, useFeature, useUpdateFeature } from '@/lib/api';
+import { useArchiveFeature, useFeature, useUpdateFeature } from '@/lib/api';
 import { useCanEdit } from '@/lib/project';
 import { Button } from '@/components/ui/button';
 import {
@@ -91,7 +91,7 @@ const READ_ONLY_HINT = 'Read-only — you have viewer access.';
 function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
   const navigate = useNavigate();
   const updateFeature = useUpdateFeature();
-  const deleteFeature = useDeleteFeature();
+  const archiveFeature = useArchiveFeature();
   const canEdit = useCanEdit();
 
   const [startDate, setStartDate] = useState(feature.startDate ?? '');
@@ -108,14 +108,14 @@ function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
     );
   };
 
-  const confirmDelete = () => {
-    deleteFeature.mutate(feature.id, {
+  const confirmArchive = () => {
+    archiveFeature.mutate(feature.id, {
       onSuccess: () => {
-        toast.success(`Deleted '${feature.title}'`);
+        toast.success(`Feature archived`);
         setConfirmDeleteOpen(false);
         navigate(appRoutes.board);
       },
-      onError: () => toast.error(`Couldn't delete '${feature.title}'`),
+      onError: () => toast.error(`Couldn't archive '${feature.title}'`),
     });
   };
 
@@ -280,7 +280,7 @@ function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
                 className="rounded-full"
                 onClick={() => setConfirmDeleteOpen(true)}
               >
-                Delete feature
+                Archive feature
               </Button>
             </div>
           ) : null}
@@ -290,21 +290,17 @@ function FeatureBody({ feature }: { feature: FeatureWithDocs }) {
       <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete feature?</DialogTitle>
+            <DialogTitle>Archive feature?</DialogTitle>
             <DialogDescription>
-              This will permanently delete '{feature.title}'
-              {feature.documents.length > 0
-                ? ` and its ${feature.documents.length} doc${feature.documents.length === 1 ? '' : 's'}`
-                : ''}
-              .
+              Archive this feature? You can restore it from the board's Archived view.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmDeleteOpen(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" disabled={deleteFeature.isPending} onClick={confirmDelete}>
-              Delete
+            <Button variant="destructive" disabled={archiveFeature.isPending} onClick={confirmArchive}>
+              Archive
             </Button>
           </DialogFooter>
         </DialogContent>
