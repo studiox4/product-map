@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { eq, and, isNull, desc } from 'drizzle-orm';
+import { eq, and, isNull, isNotNull, desc, sql } from 'drizzle-orm';
 import { projectCreate, projectUpdate, memberAdd, memberUpdate, inviteCreate, INVITE_TTL_SEC } from '@productmap/shared';
 import { projects, memberships, users, invites, projectFavorites } from '@productmap/db/schema';
 import { nanoid } from 'nanoid';
@@ -19,15 +19,17 @@ const bad = (r: { success: boolean; error?: { issues: unknown } }, c: any) =>
 export const projectsRoutes = new Hono<MembershipEnv>()
   .get('/', async (c) => {
     const user = c.get('currentUser');
+    const archived = c.req.query('archived') === '1';
+    const archFilter = archived ? isNotNull(projects.archivedAt) : isNull(projects.archivedAt);
     if (user.role === 'admin') {
-      const rows = await db.select().from(projects);
+      const rows = await db.select().from(projects).where(archFilter);
       return c.json(rows.map((p) => ({ id: p.id, name: p.name, slug: p.slug ?? '', vision: p.vision, aboutMd: p.aboutMd, role: 'owner' as const })));
     }
     const rows = await db
       .select({ id: projects.id, name: projects.name, slug: projects.slug, vision: projects.vision, aboutMd: projects.aboutMd, role: memberships.role })
       .from(memberships)
       .innerJoin(projects, eq(projects.id, memberships.projectId))
-      .where(eq(memberships.userId, user.id));
+      .where(and(eq(memberships.userId, user.id), archFilter));
     return c.json(rows.map((r) => ({ ...r, slug: r.slug ?? '' })));
   })
   .post('/', zValidator('json', projectCreate, bad), async (c) => {
@@ -65,6 +67,18 @@ export const projectsRoutes = new Hono<MembershipEnv>()
     const deleted = await db.delete(projects).where(eq(projects.id, c.req.param('projectId'))).returning({ id: projects.id });
     if (!deleted.length) return c.json({ error: 'not_found' }, 404);
     return c.body(null, 204);
+  })
+  .post('/:projectId/archive', requireMembership('owner'), async (c) => {
+    const [row] = await db.update(projects).set({ archivedAt: sql`now()` })
+      .where(eq(projects.id, c.req.param('projectId'))).returning({ id: projects.id, archivedAt: projects.archivedAt });
+    if (!row) return c.json({ error: 'not_found' }, 404);
+    return c.json({ id: row.id, archivedAt: row.archivedAt });
+  })
+  .post('/:projectId/restore', requireMembership('owner'), async (c) => {
+    const [row] = await db.update(projects).set({ archivedAt: null })
+      .where(eq(projects.id, c.req.param('projectId'))).returning({ id: projects.id });
+    if (!row) return c.json({ error: 'not_found' }, 404);
+    return c.json({ id: row.id, archivedAt: null });
   })
   // Per-user favorite (pin). Membership-gated, so admins pass (no membership row
   // needed — the flag lives in project_favorites, not memberships).

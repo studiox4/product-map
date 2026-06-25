@@ -351,6 +351,34 @@ describe('project invites (create/revoke)', () => {
   });
 });
 
+describe('project archive/restore', () => {
+  it('archive hides the project from the active list and shows it under ?archived=1', async () => {
+    // adminAuth + projectId set up by beforeEach
+    const arch = await app.request(`/api/projects/${projectId}/archive`, { method: 'POST', headers: adminAuth });
+    expect(arch.status).toBe(200);
+    const active = await (await app.request('/api/projects', { headers: adminAuth })).json() as Array<{ id: string }>;
+    expect(active.find((p) => p.id === projectId)).toBeUndefined();
+    const archived = await (await app.request('/api/projects?archived=1', { headers: adminAuth })).json() as Array<{ id: string }>;
+    expect(archived.find((p) => p.id === projectId)).toBeDefined();
+  });
+
+  it('restore returns the project to the active list', async () => {
+    await app.request(`/api/projects/${projectId}/archive`, { method: 'POST', headers: adminAuth });
+    const res = await app.request(`/api/projects/${projectId}/restore`, { method: 'POST', headers: adminAuth });
+    expect(res.status).toBe(200);
+    const active = await (await app.request('/api/projects', { headers: adminAuth })).json() as Array<{ id: string }>;
+    expect(active.find((p) => p.id === projectId)).toBeDefined();
+  });
+
+  it('non-owner cannot archive (403)', async () => {
+    const editor = await createTestUser({ role: 'member', name: 'Ed', email: 'ed@test.co' });
+    await addMembership(editor.id, projectId, 'editor');
+    const editorAuth = { cookie: await authCookie(editor), origin: 'http://localhost', host: 'localhost' };
+    const res = await app.request(`/api/projects/${projectId}/archive`, { method: 'POST', headers: editorAuth });
+    expect(res.status).toBe(403);
+  });
+});
+
 describe('project slugs', () => {
   const post = (body: unknown) => ({
     method: 'POST',
