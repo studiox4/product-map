@@ -51,6 +51,7 @@ export const projects = pgTable('projects', {
   vision: text('vision').notNull().default(''),
   aboutMd: text('about_md').notNull().default(''),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  archivedAt: timestamp('archived_at', { withTimezone: true }),
 });
 export const memberships = pgTable(
   'memberships',
@@ -89,6 +90,7 @@ export const features = pgTable('features', {
   updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  archivedAt: timestamp('archived_at', { withTimezone: true }),
 }, (t) => [index('features_project_id_idx').on(t.projectId)]);
 export const documents = pgTable(
   'documents',
