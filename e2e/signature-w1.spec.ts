@@ -109,8 +109,9 @@ test('W1-2: create-feature-in-Later via palette works end-to-end', async ({
   expect(created.horizon).toBe('later');
 
   // Clean up so the seeded board stays pristine for later specs.
+  // Delete is now archive (soft); archiving hides it from the board.
   const pid = await getProjectId(request);
-  const res = await request.delete(`/api/projects/${pid}/features/${created.id}`);
+  const res = await request.post(`/api/projects/${pid}/features/${created.id}/archive`);
   expect(res.ok()).toBe(true);
 });
 

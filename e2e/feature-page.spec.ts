@@ -112,15 +112,15 @@ test('AC2: people rail lists the creator and supports add/remove collaborator', 
   await expect(people.getByText('Sasha Verify')).toBeHidden();
 });
 
-test('delete lives on the full page: confirm dialog → back to board, card gone', async ({
+test('archive lives on the full page: confirm dialog → back to board, card gone', async ({
   page,
 }) => {
   await page.goto(`/app/features/${featureId}`);
-  await page.getByRole('button', { name: 'Delete feature' }).click();
+  await page.getByRole('button', { name: 'Archive feature' }).click();
 
-  const dialog = page.getByRole('dialog', { name: 'Delete feature?' });
+  const dialog = page.getByRole('dialog', { name: 'Archive feature?' });
   await expect(dialog).toBeVisible();
-  await dialog.getByRole('button', { name: 'Delete', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Archive', exact: true }).click();
 
   await expect(page).toHaveURL(/\/app\/board$/);
   await expect(page.getByRole('button', { name: FEATURE_TITLE, exact: true })).toBeHidden();

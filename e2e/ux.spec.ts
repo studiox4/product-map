@@ -86,8 +86,9 @@ test('AC-UX3: an empty column shows an empty state with an Add feature action', 
   const pid = await getProjectId(request);
   const nowFeatures = (await getFeatures(request)).filter((f) => f.horizon === 'now');
   for (const f of nowFeatures) {
-    const res = await request.delete(`/api/projects/${pid}/features/${f.id}`);
-    expect(res.status()).toBe(204);
+    // Archive hides the feature from the board (delete is now archive-then-purge).
+    const res = await request.post(`/api/projects/${pid}/features/${f.id}/archive`);
+    expect(res.ok()).toBe(true);
   }
 
   await page.goto('/app/board');
