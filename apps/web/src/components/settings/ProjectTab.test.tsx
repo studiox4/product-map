@@ -49,6 +49,8 @@ function projectsHandler() {
   );
 }
 
+let archiveCalled = false;
+
 const server = setupServer(
   projectsHandler(),
   http.get('/api/projects/:id/members', () =>
@@ -58,6 +60,15 @@ const server = setupServer(
     ]),
   ),
   http.get('/api/projects/:id/invites', () => HttpResponse.json([])),
+  http.get('/api/projects', ({ request }) => {
+    const url = new URL(request.url);
+    if (url.searchParams.get('archived') === '1') return HttpResponse.json([]);
+    return HttpResponse.json([{ id: 'p1', name: 'Alpha', vision: '', aboutMd: '', role: activeRole }]);
+  }),
+  http.post('/api/projects/:id/archive', () => {
+    archiveCalled = true;
+    return new HttpResponse(null, { status: 204 });
+  }),
   http.post('/api/projects/:id/members', async ({ request }) => {
     addMemberBody = await request.json();
     if (memberMutationStatus !== 200) {
@@ -90,6 +101,7 @@ beforeEach(() => {
   addMemberBody = null;
   createInviteBody = null;
   memberMutationStatus = 200;
+  archiveCalled = false;
   localStorage.clear();
   vi.clearAllMocks();
 });
@@ -112,7 +124,7 @@ function renderTab() {
 }
 
 describe('ProjectTab', () => {
-  it('owner sees rename, members, invite generator, and Delete', async () => {
+  it('owner sees rename, members, invite generator, and Archive', async () => {
     renderTab();
     expect(await screen.findByLabelText('Name')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy();
@@ -120,7 +132,7 @@ describe('ProjectTab', () => {
     await screen.findByText('Owner One');
     expect(screen.getByLabelText('Role for Editor Two')).toBeTruthy();
     expect(screen.getByText('Generate invite')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /delete project/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /archive project/i })).toBeTruthy();
   });
 
   it('viewer sees a read-only notice and NO mutation controls', async () => {
@@ -129,9 +141,9 @@ describe('ProjectTab', () => {
     await screen.findByText('Only owners can manage this project.');
     // Members list still renders (GET members is viewer-allowed).
     await screen.findByText('Owner One');
-    // No rename input, no Delete, no invite generator, no member role selects.
+    // No rename input, no Archive, no invite generator, no member role selects.
     expect(screen.queryByLabelText('Name')).toBeNull();
-    expect(screen.queryByRole('button', { name: /delete project/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /archive project/i })).toBeNull();
     expect(screen.queryByText('Generate invite')).toBeNull();
     expect(screen.queryByLabelText('Role for Editor Two')).toBeNull();
     expect(screen.queryByRole('button', { name: /remove/i })).toBeNull();
@@ -197,6 +209,15 @@ describe('ProjectTab', () => {
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('last_owner')),
     );
+  });
+
+  it('Archive project button calls the archive endpoint (not purge)', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderTab();
+    const btn = await screen.findByRole('button', { name: /archive project/i });
+    await userEvent.click(btn);
+    await waitFor(() => expect(archiveCalled).toBe(true));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Project archived'));
   });
 
   it('lists pending invites (bound-email + link-only branches) and revokes one', async () => {

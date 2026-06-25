@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Copy, Mail, Send, Trash2, UserPlus } from 'lucide-react';
+import { Archive, Copy, Mail, Send, UserPlus } from 'lucide-react';
 import { useActiveProject } from '@/lib/project';
 import {
   apiErrorMessage,
   projectsListKey,
   useAddMember,
+  useArchiveProject,
   useCreateInvite,
-  useDeleteProject,
   useProjectInvites,
   useProjectMembers,
   useRemoveMember,
@@ -583,14 +583,14 @@ function InviteRow({ projectId, invite }: { projectId: string; invite: Invite })
 }
 
 function DangerZone({ projectId, name }: { projectId: string; name: string }) {
-  const deleteProject = useDeleteProject(projectId);
+  const archiveProject = useArchiveProject();
 
-  function handleDelete() {
-    if (deleteProject.isPending) return;
-    if (!window.confirm(`Delete "${name}"? This cannot be undone.`)) return;
-    deleteProject.mutate(undefined, {
-      onSuccess: () => toast.success('Project deleted'),
-      onError: (err) => toast.error(apiErrorMessage(err, 'Could not delete project.')),
+  function handleArchive() {
+    if (archiveProject.isPending) return;
+    if (!window.confirm(`Archive "${name}"? You can restore it from the dashboard.`)) return;
+    archiveProject.mutate(projectId, {
+      onSuccess: () => toast.success('Project archived'),
+      onError: (err) => toast.error(apiErrorMessage(err, 'Could not archive project.')),
     });
   }
 
@@ -601,17 +601,17 @@ function DangerZone({ projectId, name }: { projectId: string; name: string }) {
           Danger zone
         </CardTitle>
         <CardDescription>
-          Deleting a project removes all of its data permanently.
+          Archiving a project hides it from your dashboard. You can restore it any time.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Button
           variant="destructive"
-          disabled={deleteProject.isPending}
-          onClick={handleDelete}
+          disabled={archiveProject.isPending}
+          onClick={handleArchive}
         >
-          <Trash2 className="mr-1.5 h-4 w-4" aria-hidden />
-          Delete project
+          <Archive className="mr-1.5 h-4 w-4" aria-hidden />
+          Archive project
         </Button>
       </CardContent>
     </Card>

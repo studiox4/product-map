@@ -2050,3 +2050,58 @@ export function useUpdateNotificationPref() {
 }
 
 // ================= END APPEND BLOCK (notifications) ========================
+
+// ============================================================================
+// APPEND BLOCK — project archive / restore / purge (E1-archive).
+// Owned by this task; keep additions inside this block.
+// ============================================================================
+
+/** GET /api/projects?archived=1 — projects archived by the current user. */
+export function useArchivedProjects() {
+  return useQuery({
+    queryKey: ['projects', 'archived'] as const,
+    queryFn: () => fetchJson<Project[]>('/api/projects?archived=1'),
+  });
+}
+
+/** POST /api/projects/:id/archive — soft-delete; project is restorable. */
+export function useArchiveProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (projectId: string) =>
+      fetchJson<void>(`/api/projects/${projectId}/archive`, { method: 'POST' }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.dashboard });
+      qc.invalidateQueries({ queryKey: ['projects', 'archived'] });
+      qc.invalidateQueries({ queryKey: projectsListKey });
+    },
+  });
+}
+
+/** POST /api/projects/:id/restore — un-archive a soft-deleted project. */
+export function useRestoreProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (projectId: string) =>
+      fetchJson<void>(`/api/projects/${projectId}/restore`, { method: 'POST' }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.dashboard });
+      qc.invalidateQueries({ queryKey: ['projects', 'archived'] });
+      qc.invalidateQueries({ queryKey: projectsListKey });
+    },
+  });
+}
+
+/** DELETE /api/projects/:id — permanent purge (owner-gated; only valid on archived projects). */
+export function usePurgeProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (projectId: string) =>
+      fetchJson<void>(`/api/projects/${projectId}`, { method: 'DELETE' }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['projects', 'archived'] });
+    },
+  });
+}
+
+// =============== END APPEND BLOCK (project archive / restore / purge) ========
