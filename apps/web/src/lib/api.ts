@@ -354,18 +354,6 @@ export function useCreateFeature() {
   });
 }
 
-export function useDeleteFeature() {
-  const pid = useProjectId();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) =>
-      fetchJson<void>(apiPath(pid, 'features', id), { method: 'DELETE' }),
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
-      qc.invalidateQueries({ queryKey: queryKeys.overview(pid) });
-    },
-  });
-}
 
 export interface UpdateDocumentVars extends DocumentUpdateInput {
   id: string;
@@ -1839,15 +1827,6 @@ export function useCreateProject() {
         method: 'POST',
         body: JSON.stringify(input),
       }),
-    onSettled: () => qc.invalidateQueries({ queryKey: projectsListKey }),
-  });
-}
-
-/** DELETE /api/projects/:projectId (owner-gated, 204). Refreshes the project list. */
-export function useDeleteProject(projectId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: () => fetchJson<void>(`/api/projects/${projectId}`, { method: 'DELETE' }),
     onSettled: () => qc.invalidateQueries({ queryKey: projectsListKey }),
   });
 }
