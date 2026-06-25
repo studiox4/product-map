@@ -247,6 +247,22 @@ export const inviteCreate = z.object({
   email: z.string().email().optional(),
 });
 
+// --- E1 public-share polish: selective sections + optional expiry ---
+export const SHARE_EXPIRY_DAYS = [7, 30, 90] as const;
+export const shareMint = z.object({
+  sections: z
+    .object({ roadmap: z.boolean(), board: z.boolean(), changelog: z.boolean() })
+    .refine((s) => s.roadmap || s.board || s.changelog, {
+      message: 'at least one section must be visible',
+    })
+    .default({ roadmap: true, board: true, changelog: true }),
+  // 7/30/90-day window, or null = never expires.
+  expiresInDays: z
+    .union([z.literal(7), z.literal(30), z.literal(90)])
+    .nullable()
+    .default(null),
+});
+
 // --- E2a In-app notifications ---
 export const notificationPrefUpdate = z.object({
   kind: z.enum(NOTIFICATION_KINDS),

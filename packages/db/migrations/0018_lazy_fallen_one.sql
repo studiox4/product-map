@@ -1,0 +1,2 @@
+ALTER TABLE "share_tokens" ADD COLUMN "sections" jsonb DEFAULT '{"roadmap":true,"board":true,"changelog":true}'::jsonb NOT NULL;--> statement-breakpoint
+ALTER TABLE "share_tokens" ADD COLUMN "expires_at" timestamp with time zone;

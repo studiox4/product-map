@@ -1019,14 +1019,24 @@ export function apiErrorMessage(err: unknown, fallback: string): string {
 // ============================================================================
 
 type ShareData = import('@productmap/shared').ShareData;
+type ShareSections = import('@productmap/shared').ShareSections;
+type ShareMintResult = import('@productmap/shared').ShareMintResult;
 
-/** POST /api/projects/:projectId/share/roadmap → { url: "/share/:token" }.
- * Nested under the project — editor-gated by the method gate. */
+export interface CreateShareVars {
+  sections: ShareSections;
+  expiresInDays: 7 | 30 | 90 | null;
+}
+
+/** POST /api/projects/:projectId/share/roadmap → mint a link with chosen
+ * sections + optional expiry. Nested under the project — editor-gated. */
 export function useCreateShare() {
   const pid = useProjectId();
   return useMutation({
-    mutationFn: () =>
-      fetchJson<{ url: string }>(apiPath(pid, 'share', 'roadmap'), { method: 'POST' }),
+    mutationFn: (input: CreateShareVars) =>
+      fetchJson<ShareMintResult>(apiPath(pid, 'share', 'roadmap'), {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
   });
 }
 

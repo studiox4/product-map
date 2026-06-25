@@ -342,6 +342,13 @@ export const shareTokens = pgTable('share_tokens', {
   projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
   token: text('token').notNull().unique(),
   kind: text('kind').notNull().default('roadmap'),
+  // Which sections the public page exposes. Default = the legacy all-on share.
+  sections: jsonb('sections')
+    .$type<{ roadmap: boolean; board: boolean; changelog: boolean }>()
+    .notNull()
+    .default({ roadmap: true, board: true, changelog: true }),
+  // Optional time-bound expiry. Null = never expires (legacy behaviour).
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
 }, (t) => [index('share_tokens_project_id_idx').on(t.projectId)]);

@@ -15,6 +15,7 @@ import { projects, features, documents, releases, shareTokens, memberships } fro
 import type { AuthEnv } from '../middleware/auth';
 import type { MembershipEnv } from '../middleware/membership';
 import type { DocumentMeta, FeatureWithDocs, Horizon, ShareData } from '@productmap/shared';
+import { shareMint } from '@productmap/shared';
 import { EMPTY_VOTE_SUMMARY, voteSummaries } from '../lib/votes';
 
 const HORIZON_ORDER: Record<Horizon, number> = { now: 0, next: 1, later: 2 };
@@ -32,6 +33,10 @@ export const publicShareRoutes = new Hono<AuthEnv>()
       .from(shareTokens)
       .where(and(eq(shareTokens.token, c.req.param('token')), isNull(shareTokens.revokedAt)));
     if (!tokenRow) return c.json({ error: 'not_found' }, 404);
+    // Expired links read as not-found — same opaque 404 as revoked, no leak.
+    if (tokenRow.expiresAt && tokenRow.expiresAt.getTime() < Date.now()) {
+      return c.json({ error: 'not_found' }, 404);
+    }
 
     const [project] = await db.select().from(projects).where(eq(projects.id, tokenRow.projectId));
     if (!project) return c.json({ error: 'not_found' }, 404);
@@ -105,6 +110,28 @@ export const publicShareRoutes = new Hono<AuthEnv>()
         a.createdAt.getTime() - b.createdAt.getTime(),
     );
 
+    // Section enforcement happens server-side — hidden sections never leave the
+    // server. The changelog renders its per-release feature lists from `features`,
+    // so a changelog-only link still needs the features that belong to shipped
+    // releases (but none of the future roadmap).
+    const sections = tokenRow.sections;
+    const wantBoardOrRoadmap = sections.roadmap || sections.board;
+    const shippedReleaseIds = new Set(
+      releaseRows.filter((r) => r.status === 'shipped').map((r) => r.id),
+    );
+    const visibleFeatures = wantBoardOrRoadmap
+      ? featuresWithDocs
+      : sections.changelog
+        ? featuresWithDocs.filter((f) => f.releaseId && shippedReleaseIds.has(f.releaseId))
+        : [];
+    // Mirror the feature rule: when the roadmap is hidden, planned releases are
+    // forward-looking roadmap data and must not leak — only shipped ones ship.
+    const visibleReleases = !sections.changelog
+      ? []
+      : wantBoardOrRoadmap
+        ? releaseRows
+        : releaseRows.filter((r) => r.status === 'shipped');
+
     const response: ShareData = {
       project: {
         id: project.id,
@@ -113,12 +140,13 @@ export const publicShareRoutes = new Hono<AuthEnv>()
         vision: project.vision,
         aboutMd: project.aboutMd,
       },
-      features: featuresWithDocs,
-      releases: releaseRows.map((r) => ({
+      features: visibleFeatures,
+      releases: visibleReleases.map((r) => ({
         ...r,
         shippedAt: r.shippedAt?.toISOString() ?? null,
         createdAt: r.createdAt.toISOString(),
       })),
+      sections,
     };
     return c.json(response);
   })
@@ -159,10 +187,23 @@ export const publicShareRoutes = new Hono<AuthEnv>()
 // ---------------------------------------------------------------------------
 
 export const shareMintRoutes = new Hono<MembershipEnv>()
-  // POST /api/projects/:projectId/share/roadmap → mint a share link.
+  // POST /api/projects/:projectId/share/roadmap → mint a share link with the
+  // chosen sections + optional expiry. A missing/empty body defaults to the
+  // legacy all-on, never-expires link (the schema defaults every field).
   .post('/roadmap', async (c) => {
+    const raw = await c.req.json().catch(() => ({}));
+    const parsed = shareMint.safeParse(raw);
+    if (!parsed.success) {
+      return c.json({ error: 'bad_request', issues: parsed.error.issues }, 400);
+    }
+    const { sections, expiresInDays } = parsed.data;
     const token = nanoid();
     const projectId = c.get('currentProjectId');
-    await db.insert(shareTokens).values({ projectId, token, kind: 'roadmap' });
-    return c.json({ url: `/share/${token}` }, 201);
+    const expiresAt =
+      expiresInDays != null ? new Date(Date.now() + expiresInDays * 86_400_000) : null;
+    await db.insert(shareTokens).values({ projectId, token, kind: 'roadmap', sections, expiresAt });
+    return c.json(
+      { url: `/share/${token}`, sections, expiresAt: expiresAt?.toISOString() ?? null },
+      201,
+    );
   });

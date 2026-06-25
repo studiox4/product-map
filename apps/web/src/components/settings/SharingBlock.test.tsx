@@ -31,6 +31,7 @@ Object.defineProperty(globalThis, 'localStorage', {
 
 let createCalls = 0;
 let revokedToken: string | null = null;
+let lastMintBody: unknown = null;
 
 const server = setupServer(
   // ProjectProvider calls GET /api/projects to resolve the active project id.
@@ -38,9 +39,13 @@ const server = setupServer(
     HttpResponse.json([{ id: 'p-test', name: 'Test Project', role: 'owner' }]),
   ),
   // Mint route is now nested under /api/projects/:projectId/share/roadmap.
-  http.post('/api/projects/:projectId/share/roadmap', () => {
+  http.post('/api/projects/:projectId/share/roadmap', async ({ request }) => {
     createCalls += 1;
-    return HttpResponse.json({ url: '/share/tok-abc' }, { status: 201 });
+    lastMintBody = await request.json().catch(() => null);
+    return HttpResponse.json(
+      { url: '/share/tok-abc', sections: { roadmap: true, board: true, changelog: true }, expiresAt: null },
+      { status: 201 },
+    );
   }),
   http.delete('/api/share/:token', ({ params }) => {
     revokedToken = params.token as string;
@@ -52,6 +57,7 @@ beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
   createCalls = 0;
   revokedToken = null;
+  lastMintBody = null;
   localStorage.clear();
 });
 afterEach(() => {
@@ -83,6 +89,39 @@ describe('SharingBlock', () => {
     expect((input as HTMLInputElement).value).toContain('/share/tok-abc');
     expect(createCalls).toBe(1);
     expect(localStorage.getItem(SHARE_URL_KEY)).toBe('/share/tok-abc');
+  });
+
+  it('sends the chosen sections + expiry in the mint request', async () => {
+    const user = userEvent.setup();
+    renderBlock();
+
+    // Hide everything except the changelog, expire in 30 days.
+    await user.click(await screen.findByRole('checkbox', { name: /Roadmap timeline/ }));
+    await user.click(screen.getByRole('checkbox', { name: /Now \/ Next \/ Later/ }));
+    await user.selectOptions(screen.getByLabelText('Expiry'), '30');
+
+    await user.click(screen.getByRole('button', { name: 'Create share link' }));
+
+    await screen.findByRole('textbox', { name: 'Share link' });
+    expect(lastMintBody).toEqual({
+      sections: { roadmap: false, board: false, changelog: true },
+      expiresInDays: 30,
+    });
+  });
+
+  it('disables create until at least one section is selected', async () => {
+    const user = userEvent.setup();
+    renderBlock();
+
+    await screen.findByRole('checkbox', { name: /Roadmap timeline/ });
+    await user.click(screen.getByRole('checkbox', { name: /Roadmap timeline/ }));
+    await user.click(screen.getByRole('checkbox', { name: /Now \/ Next \/ Later/ }));
+    await user.click(screen.getByRole('checkbox', { name: /Changelog/ }));
+
+    const createBtn = screen.getByRole('button', { name: 'Create share link' });
+    expect((createBtn as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText('Pick at least one section.')).toBeDefined();
+    expect(createCalls).toBe(0);
   });
 
   it('revokes the link and returns to the create state', async () => {

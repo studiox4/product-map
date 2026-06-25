@@ -17,8 +17,8 @@ describe('demo runtime (real app + PGlite)', () => {
     pid = getDemoProjectId();
   }, 60_000);
 
-  it('bundled all 18 migration SQL files', () => {
-    expect(migrationCount()).toBe(18);
+  it('bundled all 19 migration SQL files', () => {
+    expect(migrationCount()).toBe(19);
   });
 
   it('GET features for the seeded project returns a non-empty list', async () => {

@@ -52,6 +52,19 @@ export default function SharePage() {
     return () => mql?.removeEventListener?.('change', apply);
   }, []);
 
+  // Public share pages must never be indexed. No SSR here, so inject the robots
+  // meta at runtime and remove it on unmount so it can't leak to other SPA
+  // routes. robots.txt is the belt-and-suspenders for JS-less crawlers.
+  useEffect(() => {
+    const meta = document.createElement('meta');
+    meta.name = 'robots';
+    meta.content = 'noindex, nofollow';
+    document.head.appendChild(meta);
+    return () => {
+      document.head.removeChild(meta);
+    };
+  }, []);
+
   if (query.isLoading) {
     return (
       <ShareFrame>
@@ -82,7 +95,7 @@ export default function SharePage() {
     );
   }
 
-  const { project, features, releases } = query.data;
+  const { project, features, releases, sections } = query.data;
   const shipped = releases.filter((r) => r.status === 'shipped');
 
   return (
@@ -96,23 +109,27 @@ export default function SharePage() {
         )}
       </header>
 
-      <section aria-label="Roadmap timeline" className="mt-8">
-        <ShareGantt features={features} />
-      </section>
+      {sections.roadmap && (
+        <section aria-label="Roadmap timeline" className="mt-8">
+          <ShareGantt features={features} />
+        </section>
+      )}
 
-      <section aria-label="Now, next, later" className="mt-10">
-        <div className="grid gap-6 md:grid-cols-3">
-          {HORIZONS.map((horizon) => (
-            <HorizonColumn
-              key={horizon}
-              horizon={horizon}
-              features={features.filter((f) => f.horizon === horizon)}
-            />
-          ))}
-        </div>
-      </section>
+      {sections.board && (
+        <section aria-label="Now, next, later" className="mt-10">
+          <div className="grid gap-6 md:grid-cols-3">
+            {HORIZONS.map((horizon) => (
+              <HorizonColumn
+                key={horizon}
+                horizon={horizon}
+                features={features.filter((f) => f.horizon === horizon)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
-      {shipped.length > 0 && (
+      {sections.changelog && shipped.length > 0 && (
         <section aria-label="Changelog" className="mt-10">
           <h2 className="font-display text-xl font-bold tracking-tight text-ink">
             Changelog
