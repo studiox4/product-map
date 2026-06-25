@@ -22,7 +22,9 @@ Every task's requirements implicitly include this section. Copied verbatim from 
 - **SEAM ID TYPES ARE A CONTRACT.** `Feature`, `LimitKey`, and `SlotId` union types are the public seam vocabulary. Extend them deliberately; never rename existing members.
 - **Package versions:** match the repo — `hono@^4.6.14`, `drizzle-orm@^0.38.2`, `zod@^3.24.1`, `typescript@^5.7.2`, `vitest@^2.1.8`, React 18. New packages use `"type": "module"` and extend `tsconfig.base.json`.
 - **Community free-tier caps (tunable product values, not enforced by core yet):** `projects: 3`, `members: 10`, `seats: 10`. `-1` means unlimited.
-- **Test database:** api/db Postgres-backed tests need a running Postgres and are blocked by the command sandbox. Run them with the sandbox disabled (see `[[test-db-sandbox]]`). Default DB `productmap_test` at `postgres://localhost:5432`.
+- **Test database:** api/db Postgres-backed tests need a running Postgres and are blocked by the command sandbox. Run them with the sandbox disabled (see `[[test-db-sandbox]]`). Default DB `productmap_test` at `postgres://localhost:5432`. (Only Task 7's plugin test is DB-backed; Tasks 6, 10 do not need a DB.)
+- **Vitest module isolation:** the slot/plugin registries are module singletons. Tests rely on Vitest's default per-file isolation so registrations in one file don't leak into another. Do not set `isolate: false`.
+- **Boot path is intentionally thin + untested:** `apps/api/src/index.ts`'s `setEntitlementProvider` + `installServerPlugins(app)` wiring has no direct test (tests import `app`, which never installs). Keep that wiring trivial; the singleton/registerAll mechanics are what the tests cover.
 
 ---
 
@@ -57,7 +59,7 @@ Every task's requirements implicitly include this section. Copied verbatim from 
 
 **Done when:** `pnpm --filter @productmap/sdk test` runs (one trivial passing test), `@productmap/sdk` resolves in tsconfig paths, and the root `pnpm -r build` still passes.
 
-**Guardrails:** Do not add React, drizzle, pg, or node-only deps to this package — it must stay importable from both server and browser. Only `hono` (type-only) and `zod` are allowed deps.
+**Guardrails:** Do not add React, drizzle, pg, or node-only runtime deps to this package — it must stay importable from both server and browser. Only `hono` (type-only, devDep) is needed. Add a runtime dep only if a seam genuinely requires it.
 
 **Files:**
 - Create: `packages/sdk/package.json`, `packages/sdk/tsconfig.json`, `packages/sdk/src/index.ts`, `packages/sdk/src/smoke.test.ts`
@@ -98,7 +100,6 @@ Expected: FAIL — package/test runner not yet set up (no `vitest` script / miss
   "types": "src/index.ts",
   "exports": { ".": "./src/index.ts" },
   "scripts": { "build": "tsc -p tsconfig.json", "test": "vitest run" },
-  "dependencies": { "zod": "^3.24.1" },
   "devDependencies": { "hono": "^4.6.14", "typescript": "^5.7.2", "vitest": "^2.1.8" }
 }
 ```
@@ -710,7 +711,9 @@ git commit -m "feat(api): server entitlement gate (requireFeature)"
 
 **Goal:** The core wires the registry + community provider at boot and mounts any registered plugins under `/api/ee/<name>`. With zero plugins (the core default) `/api/ee/*` 404s and every existing route still works.
 
-**Done when:** (a) a new integration test proves `/api/ee/anything` → 404 and `/api/healthz` → 200 with zero plugins; (b) adding a fake plugin then calling `installServerPlugins` mounts `/api/ee/fake/ping` → 200; (c) the **full api suite passes** (`pnpm --filter @productmap/api test`).
+**Done when:** (a) a new integration test proves an **authenticated** `/api/ee/anything` → 404 (unmounted) and `/api/healthz` → 200 with zero plugins; (b) a unit test proves `serverPlugins.registerAll` invokes a registered plugin's `register` so it mounts `/api/ee/fake/ping` → 200 on a probe app (full singleton→real-`app` integration is deferred to F4, where a real plugin exists); (c) the **full api suite passes** (`pnpm --filter @productmap/api test`).
+
+> Why authed: `app.ts`'s global `/api/*` middleware runs `requireAuth` on everything outside the public allowlist (`/api/auth/*`, `/api/healthz`, `GET /api/share/*`). An *unauthenticated* `/api/ee/*` returns **401** (never reaching `notFound`). With a valid cookie, `requireAuth` passes, no `/api/ee` route matches, and it falls through to `notFound` → **404** — which is the real proof: paid namespace is auth-gated by default AND unmounted in core.
 
 **Guardrails:** Do NOT call `installServerPlugins` from `app.ts` — the app module must stay plugin-free so tests of the zero-plugins state are honest and the private edition controls install order. `app.ts`'s existing `notFound`/`onError` stay last. Touch `app.ts` minimally. Boot wiring goes in `index.ts` only. The `/api/*` auth middleware already covers `/api/ee/*` — confirm a paid route is auth-gated by default (it is, via the existing global gate).
 
@@ -728,31 +731,38 @@ git commit -m "feat(api): server entitlement gate (requireFeature)"
 
 ```ts
 // apps/api/src/plugins.test.ts
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { setupTestDb, closeTestDb } from './test/helpers';
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
+import {
+  setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie,
+} from './test/helpers';
 import { Hono } from 'hono';
-import type { ServerPlugin } from '@productmap/sdk';
+import { createCommunityProvider, type ServerPlugin } from '@productmap/sdk';
 import { serverPlugins, installServerPlugins } from './plugins';
 import { app } from './app';
 
 beforeAll(async () => { await setupTestDb(); });
 afterAll(async () => { await closeTestDb(); });
+beforeEach(async () => { await truncateAll(); });
 
 describe('plugin seam', () => {
-  it('core boots with zero plugins: /api/ee/* is 404, core routes work', async () => {
+  it('core boots with zero plugins: authed /api/ee/* is 404, core routes work', async () => {
     expect(serverPlugins.list()).toHaveLength(0);
-    expect((await app.request('/api/ee/anything')).status).toBe(404);
+    const user = await createTestUser({ role: 'member' });
+    const headers = { cookie: await authCookie(user) };
+    // Authed → passes requireAuth → no /api/ee route → notFound → 404.
+    expect((await app.request('/api/ee/anything', { headers })).status).toBe(404);
+    // Public route works without auth.
     expect((await app.request('/api/healthz')).status).toBe(200);
   });
 
-  it('a registered plugin mounts under /api/ee/<name>', async () => {
+  it('registerAll mounts a registered plugin under /api/ee/<name>', async () => {
     const fake: ServerPlugin = {
       name: 'fake',
       register: (a) => { a.get('/api/ee/fake/ping', (c) => c.json({ pong: true })); },
     };
     const probe = new Hono();
     serverPlugins.add(fake);
-    serverPlugins.registerAll(probe, { entitlements: (await import('@productmap/sdk')).createCommunityProvider() });
+    serverPlugins.registerAll(probe, { entitlements: createCommunityProvider() });
     expect((await probe.request('/api/ee/fake/ping')).status).toBe(200);
   });
 });
@@ -957,9 +967,11 @@ git commit -m "feat(web): <Slot> component + entitlements context seams"
 
 **Guardrails:** DEMO PATH UNTOUCHED — `AppShell` is shared, so verify the demo still mounts (run the web suite; do not alter demo files). Place the slot at a sensible nav location but keep the change tiny. Do not wrap it in anything that changes layout when empty (`<Slot>` returns `null`).
 
+> **No AppShell test exists yet** (verified). `AppShell` reads `useActiveProject()` (`@/lib/project`), `useAiStatus()` (`@/lib/api`, which hits the network), `useGlobalShortcuts`, `useTrackRecents`, and router hooks (`useLocation`). To avoid standing up the full provider tree, **mock the two data hooks** and wrap in `QueryClientProvider` + `MemoryRouter` — exact harness below. Do not try to render the real `ActiveProjectProvider`/`AuthProvider` (they fetch).
+
 **Files:**
 - Modify: `apps/web/src/components/AppShell.tsx` (add import + one `<Slot id="nav.analytics" />`)
-- Create/Modify test: `apps/web/src/components/AppShell.slot.test.tsx`
+- Create test: `apps/web/src/components/AppShell.slot.test.tsx`
 
 **Interfaces:**
 - Consumes: `Slot` (Task 8).
@@ -968,16 +980,29 @@ git commit -m "feat(web): <Slot> component + entitlements context seams"
 
 ```tsx
 // apps/web/src/components/AppShell.slot.test.tsx
-import { describe, it, expect } from 'vitest';
-import { slotRegistry } from '@productmap/sdk';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
+import { slotRegistry } from '@productmap/sdk';
+
+// AppShell's data hooks fetch — mock them so the shell renders in isolation.
+vi.mock('@/lib/project', () => ({
+  useActiveProject: () => ({ projects: [{ id: 'p1', slug: 'p1', name: 'P1' }], projectId: 'p1' }),
+}));
+vi.mock('@/lib/api', () => ({ useAiStatus: () => ({ data: { enabled: false } }) }));
+
 import AppShell from './AppShell';
 
-// NOTE: if AppShell needs providers/router to render, wrap accordingly here —
-// mirror the wrappers used by the existing AppShell test in this directory.
 function renderShell() {
-  return render(<MemoryRouter><AppShell /></MemoryRouter>);
+  const qc = new QueryClient();
+  return render(
+    <QueryClientProvider client={qc}>
+      <MemoryRouter initialEntries={['/app']}>
+        <AppShell />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
 }
 
 describe('AppShell nav.analytics slot', () => {
@@ -992,7 +1017,7 @@ describe('AppShell nav.analytics slot', () => {
 });
 ```
 
-> Before writing this test, open the existing AppShell test in `apps/web/src/components/` (or `routes/`) and copy its exact provider/router wrappers — AppShell reads project/auth context. Adjust `renderShell()` to match. Do not invent wrappers.
+> If `AppShell` renders `<Outlet/>`-dependent children that throw without a route context, the `MemoryRouter initialEntries={['/app']}` above is enough (AppShell itself renders without a matched child). If a *different* hook also fetches, mock it the same way — keep mocks to data hooks only.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -1024,12 +1049,12 @@ git commit -m "feat(web): mount nav.analytics slot in AppShell"
 
 **Goal:** A reusable Drizzle migration runner that applies a folder of migrations tracked in a caller-named table, so the paid edition's `ee` migrations run on their own ledger without colliding with core's.
 
-**Done when:** `migrateStream(db, { folder, table })` applies migrations recorded in `table`; a test proves two independent streams (core default table + a custom `ee_migrations` table) coexist without one re-running or dropping the other. Tests green (DB-backed → sandbox disabled).
+**Done when:** `migrateStream(db, { folder, table })` is a thin passthrough to Drizzle's `migrate` with the caller's folder + ledger table; a unit test (mocking `migrate`) proves it forwards `{ migrationsFolder, migrationsTable }` exactly. The real cross-stream DB proof (an actual `ee` migration coexisting with core's ledger) lands in **F4**, where a real `ee` migration exists — no hand-authored drizzle fixture here.
 
-**Guardrails:** `ee` migrations are additive-only (Global Constraints) — the helper itself must not pass any destructive option and the test's `ee` migration must only `CREATE` objects, never touch core tables. Do NOT change `packages/db/src/migrate.ts`'s core behavior (no `migrationsTable` override there) — changing the core ledger would break existing deployments. `migrateStream` is a new, separate export.
+**Guardrails:** `ee` migrations are additive-only (Global Constraints) — document it in the helper; the helper passes no destructive option. Do NOT change `packages/db/src/migrate.ts`'s core behavior (no `migrationsTable` override there) — changing the core ledger would break existing deployments. `migrateStream` is a new, separate export. No DB or drizzle fixture needed for this test (it mocks `migrate`), so it runs **without** the sandbox-disabled DB setup.
 
 **Files:**
-- Create: `packages/db/src/migrate-stream.ts`, `packages/db/src/migrate-stream.test.ts`, and a tiny test fixture migration folder `packages/db/src/__fixtures__/ee-migrations/0000_ee_probe.sql` + its drizzle journal (`meta/_journal.json`) — see step 3.
+- Create: `packages/db/src/migrate-stream.ts`, `packages/db/src/migrate-stream.test.ts`
 
 **Interfaces:**
 - Produces: `function migrateStream(db: NodePgDatabase, opts: { folder: string; table: string }): Promise<void>`
@@ -1038,41 +1063,31 @@ git commit -m "feat(web): mount nav.analytics slot in AppShell"
 
 ```ts
 // packages/db/src/migrate-stream.test.ts
-import { describe, it, expect, afterAll } from 'vitest';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import pg from 'pg';
-import { createDb } from './index';
+import { describe, it, expect, vi } from 'vitest';
+
+const migrateSpy = vi.fn(async () => {});
+vi.mock('drizzle-orm/node-postgres/migrator', () => ({ migrate: migrateSpy }));
+
 import { migrateStream } from './migrate-stream';
 
-const url = process.env.DATABASE_URL ?? 'postgres://localhost:5432/productmap_test';
-const here = path.dirname(fileURLToPath(import.meta.url));
-const eeFolder = path.join(here, '__fixtures__', 'ee-migrations');
-
-const { db, pool } = createDb(url);
-afterAll(async () => { await pool.end(); });
-
 describe('migrateStream', () => {
-  it('applies an ee stream into its own ledger table', async () => {
-    await migrateStream(db, { folder: eeFolder, table: 'ee_migrations' });
-    const admin = new pg.Pool({ connectionString: url });
-    // the ee migration created its own table
-    const probe = await admin.query("SELECT to_regclass('public.ee_probe') AS t");
-    expect(probe.rows[0].t).toBe('ee_probe');
-    // the ee ledger exists and is separate from core's __drizzle_migrations
-    const ledger = await admin.query("SELECT to_regclass('public.ee_migrations') AS t");
-    expect(ledger.rows[0].t).toBe('ee_migrations');
-    await admin.end();
+  it('forwards folder + ledger table to drizzle migrate', async () => {
+    const db = {} as never;
+    await migrateStream(db, { folder: '/abs/ee-migrations', table: 'ee_migrations' });
+    expect(migrateSpy).toHaveBeenCalledWith(db, {
+      migrationsFolder: '/abs/ee-migrations',
+      migrationsTable: 'ee_migrations',
+    });
   });
 });
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @productmap/db exec vitest run src/migrate-stream.test.ts` (DB-backed → sandbox disabled)
+Run: `pnpm --filter @productmap/db exec vitest run src/migrate-stream.test.ts`
 Expected: FAIL — `./migrate-stream` does not exist.
 
-- [ ] **Step 3: Write the helper + fixture**
+- [ ] **Step 3: Write the helper**
 
 ```ts
 // packages/db/src/migrate-stream.ts
@@ -1090,35 +1105,15 @@ export async function migrateStream(
 }
 ```
 
-Create the fixture migration `packages/db/src/__fixtures__/ee-migrations/0000_ee_probe.sql`:
-
-```sql
-CREATE TABLE IF NOT EXISTS "ee_probe" ("id" serial PRIMARY KEY);
-```
-
-Create the drizzle journal `packages/db/src/__fixtures__/ee-migrations/meta/_journal.json` (mirror the shape used in `packages/db/migrations/meta/_journal.json`; copy that file and reduce to one entry):
-
-```json
-{
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    { "idx": 0, "version": "7", "when": 0, "tag": "0000_ee_probe", "breakpoints": true }
-  ]
-}
-```
-
-> If the drizzle migrator requires a `0000_ee_probe.snapshot`/meta snapshot for this version, inspect `packages/db/migrations/meta/` and replicate the minimal files the runner reads. The goal is one applied migration; keep the fixture as small as the runner allows.
-
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `pnpm --filter @productmap/db exec vitest run src/migrate-stream.test.ts`
-Expected: PASS — `ee_probe` + `ee_migrations` exist; core ledger untouched.
+Expected: PASS — `migrate` called with the forwarded options.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add packages/db/src/migrate-stream.ts packages/db/src/migrate-stream.test.ts packages/db/src/__fixtures__
+git add packages/db/src/migrate-stream.ts packages/db/src/migrate-stream.test.ts
 git commit -m "feat(db): migrateStream helper for namespaced ee migrations"
 ```
 
@@ -1184,10 +1179,10 @@ git commit -m "docs(sdk): seam contract README + foundation green-gate"
 ## Self-Review (completed by plan author)
 
 - **Spec coverage:** Seam 1 (server plugins) → Tasks 3, 7. Seam 2 (jobs) → Task 4. Seam 3 (slots) → Tasks 5, 8, 9. Seam 4 (entitlements) → Tasks 2, 6, 8. Seam 5 (migration namespacing) → Task 10. "Boots with zero plugins" invariant → Task 7 + 11. CommunityProvider → Task 2. Marketing migration (F5), private repo + license key + gated stub (F4), CI/dual-repo (F3) are explicitly OUT of this plan — separate plans.
-- **Placeholder scan:** none — every code/test step has concrete content. Two steps direct the implementer to mirror existing fixtures (AppShell test wrappers, drizzle journal) rather than guess; the existing files are named.
+- **Placeholder scan:** none — every code/test step has concrete content. The AppShell test ships a full mock harness (no existing AppShell test to copy — verified). Task 10 mocks drizzle's `migrate` (no hand-authored migration fixture); the real DB-backed cross-stream proof is deferred to F4.
 - **Type consistency:** `Feature`/`LimitKey`/`SlotId` unions, `EntitlementProvider`, `ServerPlugin`/`PluginContext`, `JobQueue`, `SlotRegistration`, `serverPlugins`/`installServerPlugins`, `setEntitlementProvider`/`getEntitlements`/`requireFeature`, `migrateStream` — all defined once and referenced consistently across tasks.
 
 ## Out of scope (separate plans)
 - **F3** — CI pipelines + submodule/git-dep dual-repo wiring.
-- **F4** — private `productmap-cloud` repo skeleton, `LicenseKeyProvider` + key-signing tooling, one trivial gated stub exercising all five seams end-to-end.
+- **F4** — private `productmap-cloud` repo skeleton, `LicenseKeyProvider` + key-signing tooling, one trivial gated stub exercising all five seams end-to-end, **and the real DB-backed cross-stream migration proof** (an actual `ee` migration coexisting with core's ledger via `migrateStream`).
 - **F5** — marketing migration to private + `web-ui` shared-package extraction.
