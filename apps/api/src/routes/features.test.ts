@@ -331,19 +331,55 @@ describe('PATCH /api/projects/:projectId/features/:id', () => {
   });
 });
 
-describe('DELETE /api/projects/:projectId/features/:id', () => {
-  it('204, then GET 404, and cascades documents', async () => {
-    const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now' }).returning();
+describe('DELETE /api/projects/:projectId/features/:id (purge — owner-only, archived-only)', () => {
+  it('409 not_archived when feature is active', async () => {
+    const created = await (await app.request(`/api/projects/${projectId}/features`, {
+      method: 'POST', headers: { 'content-type': 'application/json', ...auth },
+      body: JSON.stringify({ title: 'P', horizon: 'now' }),
+    })).json();
+    const res = await app.request(`/api/projects/${projectId}/features/${created.id}`, { method: 'DELETE', headers: auth });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ error: 'not_archived' });
+  });
+
+  it('archive then owner-purge → 204; editor cannot purge → 403', async () => {
+    const created = await (await app.request(`/api/projects/${projectId}/features`, {
+      method: 'POST', headers: { 'content-type': 'application/json', ...auth },
+      body: JSON.stringify({ title: 'P2', horizon: 'now' }),
+    })).json();
+    await app.request(`/api/projects/${projectId}/features/${created.id}/archive`, { method: 'POST', headers: auth });
+
+    // Editor cannot purge
+    const editor = await createTestUser({ role: 'member', name: 'Ed', email: 'ed@test.co' });
+    await addMembership(editor.id, projectId, 'editor');
+    const editorAuth = { cookie: await authCookie(editor), origin: 'http://localhost', host: 'localhost' };
+    const editorTry = await app.request(`/api/projects/${projectId}/features/${created.id}`, { method: 'DELETE', headers: editorAuth });
+    expect(editorTry.status).toBe(403);
+
+    // Owner can purge
+    const res = await app.request(`/api/projects/${projectId}/features/${created.id}`, { method: 'DELETE', headers: auth });
+    expect(res.status).toBe(204);
+
+    // Feature is gone
+    const get = await app.request(`/api/projects/${projectId}/features/${created.id}`, { headers: auth });
+    expect(get.status).toBe(404);
+  });
+
+  it('purge cascades documents and cleans votes + featureCollaborators', async () => {
+    const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now', archivedAt: new Date() }).returning();
     await db.insert(documents).values({ projectId, featureId: f.id, type: 'prd', title: 'doc' });
+    await db.insert(votes).values({ userId, featureId: f.id, value: 1 });
+    await db.insert(featureCollaborators).values({ featureId: f.id, userId });
 
     const del = await app.request(`/api/projects/${projectId}/features/${f.id}`, { method: 'DELETE', headers: auth });
     expect(del.status).toBe(204);
 
-    const get = await app.request(`/api/projects/${projectId}/features/${f.id}`, { headers: auth });
-    expect(get.status).toBe(404);
-
     const docs = await db.select().from(documents).where(eq(documents.featureId, f.id));
     expect(docs).toHaveLength(0);
+    const voteRows = await db.select().from(votes).where(eq(votes.featureId, f.id));
+    expect(voteRows).toHaveLength(0);
+    const collabs = await db.select().from(featureCollaborators).where(eq(featureCollaborators.featureId, f.id));
+    expect(collabs).toHaveLength(0);
   });
 
   it('404 on unknown id', async () => {
@@ -540,9 +576,9 @@ describe('features cross-project isolation', () => {
     expect(res.status).toBe(404);
   });
 
-  it('member-of-A DELETE /api/projects/A/features/:featureInB → 404 (path-id IDOR on DELETE)', async () => {
+  it('member-of-A DELETE /api/projects/A/features/:featureInB → 403 owner-only (purge gate)', async () => {
     const projectB = await createTestProject('Project B');
-    const [featureInB] = await db.insert(features).values({ projectId: projectB.id, title: 'B Feature', horizon: 'now' }).returning();
+    const [featureInB] = await db.insert(features).values({ projectId: projectB.id, title: 'B Feature', horizon: 'now', archivedAt: new Date() }).returning();
 
     const memberA = await createTestUser({ role: 'member' });
     await addMembership(memberA.id, projectId, 'editor');
@@ -552,7 +588,8 @@ describe('features cross-project isolation', () => {
       method: 'DELETE',
       headers: memberAAuth,
     });
-    expect(res.status).toBe(404);
+    // Editor is rejected before scope check (owner-only gate)
+    expect(res.status).toBe(403);
     // Row still exists in project B
     const [row] = await db.select().from(features).where(eq(features.id, featureInB.id));
     expect(row).toBeDefined();
@@ -637,6 +674,51 @@ describe('features cross-project isolation', () => {
     const [featureInB] = await db.insert(features).values({ projectId: projectB.id, title: 'B Feature', horizon: 'now' }).returning();
 
     const res = await app.request(`/api/projects/${projectId}/features/${featureInB.id}/activity`, { headers: auth });
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('POST /api/projects/:projectId/features/:id/archive + /restore', () => {
+  it('archived feature is hidden from the board and shown under ?archived=1', async () => {
+    const created = await (await app.request(`/api/projects/${projectId}/features`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...auth },
+      body: JSON.stringify({ title: 'Archivable', horizon: 'now' }),
+    })).json();
+    const fid = created.id;
+
+    const archRes = await app.request(`/api/projects/${projectId}/features/${fid}/archive`, { method: 'POST', headers: auth });
+    expect(archRes.status).toBe(200);
+    const archBody = await archRes.json();
+    expect(archBody.archivedAt).not.toBeNull();
+
+    const board = await (await app.request(`/api/projects/${projectId}/features`, { headers: auth })).json();
+    expect(board.find((f: { id: string }) => f.id === fid)).toBeUndefined();
+
+    const archived = await (await app.request(`/api/projects/${projectId}/features?archived=1`, { headers: auth })).json();
+    expect(archived.find((f: { id: string }) => f.id === fid)).toBeDefined();
+  });
+
+  it('restore returns the feature to the board', async () => {
+    const created = await (await app.request(`/api/projects/${projectId}/features`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...auth },
+      body: JSON.stringify({ title: 'F2', horizon: 'now' }),
+    })).json();
+
+    await app.request(`/api/projects/${projectId}/features/${created.id}/archive`, { method: 'POST', headers: auth });
+    const restoreRes = await app.request(`/api/projects/${projectId}/features/${created.id}/restore`, { method: 'POST', headers: auth });
+    expect(restoreRes.status).toBe(200);
+    const restoreBody = await restoreRes.json();
+    expect(restoreBody.archivedAt).toBeNull();
+
+    const board = await (await app.request(`/api/projects/${projectId}/features`, { headers: auth })).json();
+    expect(board.find((f: { id: string }) => f.id === created.id)).toBeDefined();
+  });
+
+  it('404 on archive/restore of unknown feature', async () => {
+    const missing = '00000000-0000-4000-8000-000000000000';
+    const res = await app.request(`/api/projects/${projectId}/features/${missing}/archive`, { method: 'POST', headers: auth });
     expect(res.status).toBe(404);
   });
 });

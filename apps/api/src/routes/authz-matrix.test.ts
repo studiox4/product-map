@@ -490,9 +490,11 @@ describe('(b) path-id IDOR', () => {
     expect(res.status).toBe(404);
   });
 
-  it('features: DELETE B resource via A path → 404', async () => {
+  it('features: DELETE B resource via A path → 403 (purge is owner-only; role gate precedes scope check)', async () => {
+    // DELETE is now permanent purge, gated owner-only BEFORE the scope check.
+    // editorA is an editor in A, so they get 403 without leaking whether B exists.
     const res = await del(`/api/projects/${projectA}/features/${featureIdB}`, authEditorA);
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(403);
   });
 
   it('ideas: GET B resource via A path → 404', async () => {

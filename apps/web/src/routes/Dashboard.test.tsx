@@ -1,12 +1,17 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import type { DashboardResponse } from '@productmap/shared';
+import type { DashboardResponse, Project } from '@productmap/shared';
 import Dashboard from './Dashboard';
+
+vi.mock('sonner', () => ({
+  toast: { error: vi.fn(), success: vi.fn() },
+}));
+import { toast } from 'sonner';
 
 function fixture(overrides: Partial<DashboardResponse> = {}): DashboardResponse {
   return {
@@ -36,11 +41,17 @@ function fixture(overrides: Partial<DashboardResponse> = {}): DashboardResponse 
 }
 
 let payload: DashboardResponse = fixture();
+let archivedPayload: Project[] = [];
 function setFavorite(id: string, favorite: boolean) {
   payload = { ...payload, projects: payload.projects.map((p) => (p.id === id ? { ...p, favorite } : p)) };
 }
 const server = setupServer(
   http.get('/api/dashboard', () => HttpResponse.json(payload)),
+  http.get('/api/projects', ({ request }) => {
+    const url = new URL(request.url);
+    if (url.searchParams.get('archived') === '1') return HttpResponse.json(archivedPayload);
+    return HttpResponse.json([]);
+  }),
   http.post('/api/projects/:id/favorite', ({ params }) => {
     setFavorite(params.id as string, true);
     return HttpResponse.json({ favorite: true });
@@ -63,7 +74,7 @@ function renderDashboard() {
 }
 
 beforeAll(() => server.listen());
-afterEach(() => { server.resetHandlers(); cleanup(); payload = fixture(); });
+afterEach(() => { server.resetHandlers(); cleanup(); payload = fixture(); archivedPayload = []; vi.clearAllMocks(); });
 afterAll(() => server.close());
 
 describe('Dashboard', () => {
@@ -100,5 +111,78 @@ describe('Dashboard', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Favorite project' })); // Zeta
     // Optimistic update flips Zeta without waiting for the network → both pinned.
     expect(await screen.findAllByRole('button', { name: 'Unfavorite project' })).toHaveLength(2);
+  });
+
+  it('renders archived projects section with Restore and Delete permanently buttons', async () => {
+    archivedPayload = [
+      { id: 'pa', name: 'Archived Alpha', slug: 'archived-alpha', vision: '', aboutMd: '', role: 'owner' } as Project,
+    ];
+    server.use(
+      http.post('/api/projects/pa/restore', () => new HttpResponse(null, { status: 204 })),
+    );
+    renderDashboard();
+    expect(await screen.findByTestId('archived-projects')).toBeTruthy();
+    expect(screen.getByText('Archived Alpha')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Restore Archived Alpha' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Delete Archived Alpha permanently' })).toBeTruthy();
+  });
+
+  it('Restore button calls the restore endpoint', async () => {
+    let restoreCalled = false;
+    archivedPayload = [
+      { id: 'pa', name: 'Archived Alpha', slug: 'archived-alpha', vision: '', aboutMd: '', role: 'owner' } as Project,
+    ];
+    server.use(
+      http.post('/api/projects/pa/restore', () => {
+        restoreCalled = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    renderDashboard();
+    await screen.findByTestId('archived-projects');
+    await userEvent.click(screen.getByRole('button', { name: 'Restore Archived Alpha' }));
+    await waitFor(() => expect(restoreCalled).toBe(true));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('"Archived Alpha" restored'));
+  });
+
+  it('Delete permanently button fires DELETE /api/projects/:id and shows success toast', async () => {
+    let purgeCalled = false;
+    archivedPayload = [
+      { id: 'pa', name: 'Archived Alpha', slug: 'archived-alpha', vision: '', aboutMd: '', role: 'owner' } as Project,
+    ];
+    server.use(
+      http.delete('/api/projects/pa', () => {
+        purgeCalled = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderDashboard();
+    await screen.findByTestId('archived-projects');
+    await userEvent.click(screen.getByRole('button', { name: 'Delete Archived Alpha permanently' }));
+    await waitFor(() => expect(purgeCalled).toBe(true));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('"Archived Alpha" deleted permanently'));
+  });
+
+  it('archived section is hidden when there are no archived projects', async () => {
+    archivedPayload = [];
+    renderDashboard();
+    await screen.findByText('Zeta'); // wait for dashboard to render
+    expect(screen.queryByTestId('archived-projects')).toBeNull();
+  });
+
+  it('archived section is reachable even when all active projects are gone (EmptyState path)', async () => {
+    payload = fixture({ projects: [], nextActions: [], myWork: [], activity: [] });
+    archivedPayload = [
+      { id: 'pa', name: 'Archived Alpha', slug: 'archived-alpha', vision: '', aboutMd: '', role: 'owner' } as Project,
+    ];
+    server.use(
+      http.post('/api/projects/pa/restore', () => new HttpResponse(null, { status: 204 })),
+    );
+    renderDashboard();
+    // EmptyState renders alongside the archived section.
+    expect(await screen.findByTestId('dashboard-empty')).toBeTruthy();
+    expect(await screen.findByTestId('archived-projects')).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Restore Archived Alpha' })).toBeTruthy();
   });
 });

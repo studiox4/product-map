@@ -56,11 +56,18 @@ export const dashboardRoutes = new Hono<AuthEnv>().get('/', async (c) => {
 
   const todayStr = new Date().toISOString().slice(0, 10);
 
-  // (3) Project rows.
+  // (3) Project rows — exclude archived projects so every downstream section
+  // (activity, featureAgg, releases, myWork, nextActions) is automatically
+  // scoped to ACTIVE projects only. We rebuild the effective pids from the
+  // surviving rows so the original candidate set (memberships ∪ favorites)
+  // never lets archived projects leak into any section.
   const projectRows = await db
     .select({ id: projects.id, name: projects.name, slug: projects.slug })
     .from(projects)
-    .where(inArray(projects.id, pids));
+    .where(and(inArray(projects.id, pids), isNull(projects.archivedAt)));
+  // Rebuild pids from non-archived project rows so all sections below use it.
+  const activePids = projectRows.map((p) => p.id);
+  if (activePids.length === 0) return c.json(EMPTY);
   const slugByPid = new Map(projectRows.map((p) => [p.id, p.slug ?? '']));
 
   // (4) Status rollup + staleCount, one grouped scan over features in scope.
@@ -74,7 +81,7 @@ export const dashboardRoutes = new Hono<AuthEnv>().get('/', async (c) => {
       stale: sql<number>`count(*) filter (where ${features.endDate} < ${todayStr} and ${features.status} <> 'shipped')::int`,
     })
     .from(features)
-    .where(inArray(features.projectId, pids))
+    .where(and(inArray(features.projectId, activePids), isNull(features.archivedAt)))
     .groupBy(features.projectId);
   const aggByPid = new Map(featureAgg.map((a) => [a.projectId, a]));
 
@@ -88,7 +95,7 @@ export const dashboardRoutes = new Hono<AuthEnv>().get('/', async (c) => {
       date: releases.targetDate,
     })
     .from(releases)
-    .where(and(inArray(releases.projectId, pids), eq(releases.status, 'planned')))
+    .where(and(inArray(releases.projectId, activePids), eq(releases.status, 'planned')))
     .orderBy(
       releases.projectId,
       sql`${releases.targetDate} asc nulls last`,
@@ -137,7 +144,7 @@ export const dashboardRoutes = new Hono<AuthEnv>().get('/', async (c) => {
     })
     .from(featureCollaborators)
     .innerJoin(features, eq(featureCollaborators.featureId, features.id))
-    .where(and(eq(featureCollaborators.userId, user.id), inArray(features.projectId, pids)))
+    .where(and(eq(featureCollaborators.userId, user.id), inArray(features.projectId, activePids), isNull(features.archivedAt)))
     .orderBy(features.createdAt);
   const myWork: MyWorkItem[] = myWorkRows.map((w) => ({
     featureId: w.featureId,
@@ -166,7 +173,7 @@ export const dashboardRoutes = new Hono<AuthEnv>().get('/', async (c) => {
     .from(documents)
     .where(
       and(
-        inArray(documents.projectId, pids),
+        inArray(documents.projectId, activePids),
         eq(documents.status, 'in_review'),
         or(
           eq(documents.createdBy, user.id),
@@ -260,7 +267,7 @@ export const dashboardRoutes = new Hono<AuthEnv>().get('/', async (c) => {
     .from(activity)
     .innerJoin(users, eq(activity.actorId, users.id))
     .innerJoin(features, eq(activity.featureId, features.id))
-    .where(inArray(activity.projectId, pids))
+    .where(inArray(activity.projectId, activePids))
     .orderBy(desc(activity.createdAt), desc(activity.id))
     .limit(200);
   const dashboardActivity: DashboardActivityItem[] = activityRows.map((a) => ({

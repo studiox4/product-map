@@ -10,7 +10,7 @@ import {
 } from '@dnd-kit/core';
 import { HORIZONS, type Horizon } from '@productmap/shared';
 import { toast } from 'sonner';
-import { useFeatures, useUpdateFeature } from '@/lib/api';
+import { useArchivedFeatures, useFeatures, usePurgeFeature, useRestoreFeature, useUpdateFeature } from '@/lib/api';
 import { useCanEdit } from '@/lib/project';
 import { BoardColumn } from '@/components/board/BoardColumn';
 import { FeatureDetailPanel } from '@/components/board/FeatureDetailPanel';
@@ -22,6 +22,76 @@ import { hasOpenOverlay, isEditableTarget } from '@/components/command/useGlobal
 
 export const BOARD_SORT_KEY = 'pmBoardSort';
 type BoardSort = 'manual' | 'score';
+type BoardView = 'active' | 'archived';
+
+function ArchivedView() {
+  const { data: archived, isLoading } = useArchivedFeatures();
+  const restore = useRestoreFeature();
+  const purge = usePurgeFeature();
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3 pt-4">
+        <div className="h-16 w-full animate-pulse rounded-xl bg-surface" />
+        <div className="h-16 w-full animate-pulse rounded-xl bg-surface" />
+      </div>
+    );
+  }
+
+  if (!archived || archived.length === 0) {
+    return (
+      <div className="rounded-2xl border border-transparent bg-surface p-8 text-center shadow-card">
+        <p className="text-sm text-muted-ink">No archived features.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div data-testid="archived-features-list" className="space-y-2 pt-4">
+      {archived.map((feature) => (
+        <div
+          key={feature.id}
+          data-testid={`archived-feature-${feature.id}`}
+          className="flex items-center justify-between rounded-xl bg-surface px-4 py-3 shadow-sm-card"
+        >
+          <span className="text-sm font-medium text-ink">{feature.title}</span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-full"
+              disabled={restore.isPending}
+              onClick={() => {
+                restore.mutate(feature.id, {
+                  onError: () => toast.error(`Couldn't restore '${feature.title}'`),
+                  onSuccess: () => toast.success(`'${feature.title}' restored`),
+                });
+              }}
+            >
+              Restore
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="rounded-full"
+              disabled={purge.isPending}
+              onClick={() => {
+                if (window.confirm(`Permanently delete '${feature.title}'? This cannot be undone.`)) {
+                  purge.mutate(feature.id, {
+                    onError: () => toast.error(`Couldn't delete '${feature.title}'`),
+                    onSuccess: () => toast.success(`'${feature.title}' permanently deleted`),
+                  });
+                }
+              }}
+            >
+              Delete permanently
+            </Button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function getStoredSort(): BoardSort {
   try {
@@ -38,6 +108,7 @@ export default function Board() {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedId = searchParams.get('feature');
   const [sort, setSort] = useState<BoardSort>(getStoredSort);
+  const [view, setView] = useState<BoardView>('active');
   const [dragOverHorizon, setDragOverHorizon] = useState<Horizon | null>(null);
   // Destination column header dot pulses briefly after a drop.
   const [droppedHorizon, setDroppedHorizon] = useState<Horizon | null>(null);
@@ -190,55 +261,87 @@ export default function Board() {
 
   return (
     <div className="mx-auto max-w-[1280px] px-6 py-8">
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex items-center justify-between">
         <div
           role="group"
-          aria-label="Board order"
+          aria-label="Board view"
           className="flex items-center gap-1 rounded-full bg-surface p-1 shadow-card"
         >
-          <span className="pl-3 pr-1 text-xs font-medium text-muted-ink">Order ▾</span>
-          {(['manual', 'score'] as const).map((option) => (
+          {(['active', 'archived'] as const).map((v) => (
             <button
-              key={option}
+              key={v}
               type="button"
-              aria-pressed={sort === option}
-              onClick={() => changeSort(option)}
+              aria-pressed={view === v}
+              onClick={() => setView(v)}
               className={cn(
                 'rounded-full px-3 py-1 text-xs font-medium capitalize',
                 'transition-colors duration-150 ease-out',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                sort === option
+                view === v
                   ? 'bg-action-soft text-action'
                   : 'text-muted-ink hover:bg-wash',
               )}
             >
-              {option}
+              {v === 'active' ? 'Active' : 'Archived'}
             </button>
           ))}
         </div>
+        {view === 'active' && (
+          <div
+            role="group"
+            aria-label="Board order"
+            className="flex items-center gap-1 rounded-full bg-surface p-1 shadow-card"
+          >
+            <span className="pl-3 pr-1 text-xs font-medium text-muted-ink">Order ▾</span>
+            {(['manual', 'score'] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                aria-pressed={sort === option}
+                onClick={() => changeSort(option)}
+                className={cn(
+                  'rounded-full px-3 py-1 text-xs font-medium capitalize',
+                  'transition-colors duration-150 ease-out',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  sort === option
+                    ? 'bg-action-soft text-action'
+                    : 'text-muted-ink hover:bg-wash',
+                )}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-      <DndContext
-        sensors={sensors}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
-        onDragCancel={() => setDragOverHorizon(null)}
-      >
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          {HORIZONS.map((horizon, i) => (
-            <BoardColumn
-              key={horizon}
-              horizon={horizon}
-              features={columnFeatures(horizon)}
-              onOpenFeature={openFeature}
-              isDropTarget={dragOverHorizon === horizon}
-              isDropPulse={droppedHorizon === horizon}
-              staggerIndex={i}
-              activeCardId={activeCardId}
-            />
-          ))}
-        </div>
-      </DndContext>
-      <FeatureDetailPanel featureId={selectedId} onClose={closeFeature} />
+      {view === 'archived' ? (
+        <ArchivedView />
+      ) : (
+        <>
+          <DndContext
+            sensors={sensors}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+            onDragCancel={() => setDragOverHorizon(null)}
+          >
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+              {HORIZONS.map((horizon, i) => (
+                <BoardColumn
+                  key={horizon}
+                  horizon={horizon}
+                  features={columnFeatures(horizon)}
+                  onOpenFeature={openFeature}
+                  isDropTarget={dragOverHorizon === horizon}
+                  isDropPulse={droppedHorizon === horizon}
+                  staggerIndex={i}
+                  activeCardId={activeCardId}
+                />
+              ))}
+            </div>
+          </DndContext>
+          <FeatureDetailPanel featureId={selectedId} onClose={closeFeature} />
+        </>
+      )}
     </div>
   );
 }

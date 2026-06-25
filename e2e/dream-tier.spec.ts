@@ -76,7 +76,7 @@ test('AC1: idea lifecycle — create, vote, promote to Later, feature linked', a
   // Cleanup: remove the promoted feature so later specs see the seeded board.
   const pid = await getProjectId(request);
   const feature = await getFeatureByTitle(request, 'Public API for roadmap data');
-  await request.delete(`/api/projects/${pid}/features/${feature.id}`);
+  await request.post(`/api/projects/${pid}/features/${feature.id}/archive`);
 });
 
 // ---------------------------------------------------------------------------
@@ -239,8 +239,8 @@ test('AC4: dependencies — badge, board chip, gantt arrow, cycle toast, ship cl
     await expect(page.getByRole('region', { name: 'Dependencies' })).toBeVisible();
     await expect(page.getByText('Blocked by 1')).toHaveCount(0);
   } finally {
-    await request.delete(`/api/projects/${pid}/features/${blocked.id}`);
-    await request.delete(`/api/projects/${pid}/features/${blocker.id}`);
+    await request.post(`/api/projects/${pid}/features/${blocked.id}/archive`);
+    await request.post(`/api/projects/${pid}/features/${blocker.id}/archive`);
   }
 });
 
@@ -413,7 +413,7 @@ test('AC9a: copilot chat streams with doc citation links; nudges list real items
     await expect(nudges.getByText('Comments & review — Feature brief')).toBeVisible();
     await expect(nudges.getByText('E2E dateless now feature')).toBeVisible();
   } finally {
-    await request.delete(`/api/projects/${pid}/features/${temp.id}`);
+    await request.post(`/api/projects/${pid}/features/${temp.id}/archive`);
   }
 });
 

@@ -22,7 +22,7 @@ export const overviewRoutes = new Hono<MembershipEnv>().get('/', async (c) => {
   const featureRows = await db
     .select()
     .from(features)
-    .where(eq(features.projectId, pid));
+    .where(and(eq(features.projectId, pid), isNull(features.archivedAt)));
 
   featureRows.sort(
     (a, b) =>

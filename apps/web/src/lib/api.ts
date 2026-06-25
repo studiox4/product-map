@@ -354,18 +354,6 @@ export function useCreateFeature() {
   });
 }
 
-export function useDeleteFeature() {
-  const pid = useProjectId();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) =>
-      fetchJson<void>(apiPath(pid, 'features', id), { method: 'DELETE' }),
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
-      qc.invalidateQueries({ queryKey: queryKeys.overview(pid) });
-    },
-  });
-}
 
 export interface UpdateDocumentVars extends DocumentUpdateInput {
   id: string;
@@ -1843,15 +1831,6 @@ export function useCreateProject() {
   });
 }
 
-/** DELETE /api/projects/:projectId (owner-gated, 204). Refreshes the project list. */
-export function useDeleteProject(projectId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: () => fetchJson<void>(`/api/projects/${projectId}`, { method: 'DELETE' }),
-    onSettled: () => qc.invalidateQueries({ queryKey: projectsListKey }),
-  });
-}
-
 export interface ProjectMember {
   userId: string;
   role: MemberRole;
@@ -2050,3 +2029,125 @@ export function useUpdateNotificationPref() {
 }
 
 // ================= END APPEND BLOCK (notifications) ========================
+
+// ============================================================================
+// APPEND BLOCK — project archive / restore / purge (E1-archive).
+// Owned by this task; keep additions inside this block.
+// ============================================================================
+
+/** GET /api/projects?archived=1 — projects archived by the current user. */
+export function useArchivedProjects() {
+  return useQuery({
+    queryKey: ['projects', 'archived'] as const,
+    queryFn: () => fetchJson<Project[]>('/api/projects?archived=1'),
+  });
+}
+
+/** POST /api/projects/:id/archive — soft-delete; project is restorable. */
+export function useArchiveProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (projectId: string) =>
+      fetchJson<void>(`/api/projects/${projectId}/archive`, { method: 'POST' }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.dashboard });
+      qc.invalidateQueries({ queryKey: ['projects', 'archived'] });
+      qc.invalidateQueries({ queryKey: projectsListKey });
+    },
+  });
+}
+
+/** POST /api/projects/:id/restore — un-archive a soft-deleted project. */
+export function useRestoreProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (projectId: string) =>
+      fetchJson<void>(`/api/projects/${projectId}/restore`, { method: 'POST' }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.dashboard });
+      qc.invalidateQueries({ queryKey: ['projects', 'archived'] });
+      qc.invalidateQueries({ queryKey: projectsListKey });
+    },
+  });
+}
+
+/** DELETE /api/projects/:id — permanent purge (owner-gated; only valid on archived projects). */
+export function usePurgeProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (projectId: string) =>
+      fetchJson<void>(`/api/projects/${projectId}`, { method: 'DELETE' }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.dashboard });
+      qc.invalidateQueries({ queryKey: ['projects', 'archived'] });
+      qc.invalidateQueries({ queryKey: projectsListKey });
+    },
+  });
+}
+
+// =============== END APPEND BLOCK (project archive / restore / purge) ========
+
+// ============================================================================
+// APPEND BLOCK — feature archive / restore / purge (E1-archive).
+// Owned by this task; keep additions inside this block.
+// ============================================================================
+
+/** GET /api/projects/:pid/features?archived=1 — features archived in this project. */
+export function useArchivedFeatures() {
+  const pid = useProjectId();
+  return useQuery({
+    queryKey: ['p', pid, 'features', 'archived'] as const,
+    queryFn: () => fetchJson<FeatureWithDocs[]>(`${apiPath(pid, 'features')}?archived=1`),
+    enabled: !!pid,
+  });
+}
+
+/** POST /api/projects/:pid/features/:id/archive — soft-delete; feature is restorable. */
+export function useArchiveFeature() {
+  const pid = useProjectId();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      fetchJson<void>(apiPath(pid, 'features', id, 'archive'), { method: 'POST' }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
+      qc.invalidateQueries({ queryKey: ['p', pid, 'features', 'archived'] });
+      qc.invalidateQueries({ queryKey: queryKeys.overview(pid) });
+      qc.invalidateQueries({ queryKey: queryKeys.dashboard });
+    },
+  });
+}
+
+/** POST /api/projects/:pid/features/:id/restore — un-archive a soft-deleted feature. */
+export function useRestoreFeature() {
+  const pid = useProjectId();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      fetchJson<void>(apiPath(pid, 'features', id, 'restore'), { method: 'POST' }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
+      qc.invalidateQueries({ queryKey: ['p', pid, 'features', 'archived'] });
+      qc.invalidateQueries({ queryKey: queryKeys.overview(pid) });
+      qc.invalidateQueries({ queryKey: queryKeys.dashboard });
+    },
+  });
+}
+
+/** DELETE /api/projects/:pid/features/:id — permanent purge (only valid on archived features). */
+export function usePurgeFeature() {
+  const pid = useProjectId();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      fetchJson<void>(apiPath(pid, 'features', id), { method: 'DELETE' }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
+      qc.invalidateQueries({ queryKey: ['p', pid, 'features', 'archived'] });
+      qc.invalidateQueries({ queryKey: queryKeys.overview(pid) });
+      qc.invalidateQueries({ queryKey: queryKeys.dashboard });
+    },
+  });
+}
+
+// =============== END APPEND BLOCK (feature archive / restore / purge) ========

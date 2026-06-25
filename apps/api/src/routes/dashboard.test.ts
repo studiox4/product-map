@@ -242,3 +242,46 @@ describe('GET /api/dashboard — content', () => {
     expect(await res.json()).toEqual({ projects: [], nextActions: [], myWork: [], activity: [] });
   });
 });
+
+describe('GET /api/dashboard — archived project exclusion (C1)', () => {
+  it('does NOT include an archived project in projects array or activity feed', async () => {
+    const u = await createTestUser({ role: 'member' });
+    const auth = { cookie: await authCookie(u), origin: 'http://localhost', host: 'localhost' };
+
+    // Active project A (member).
+    const A = await makeProject('Active', 'active');
+    await addMembership(u.id, A.id, 'editor');
+    const fA = await makeFeature(A.id, 'Active feature');
+    await db.insert(activity).values({
+      featureId: fA.id, projectId: A.id, actorId: u.id, kind: 'feature_created',
+      payload: { to: 'Active feature' },
+    });
+
+    // Archived project B — user is a member AND has it favorited to ensure
+    // both membership and favorites paths are covered.
+    const [B] = await db
+      .insert(projects)
+      .values({ name: 'Archived', slug: 'archived', archivedAt: new Date() })
+      .returning();
+    await addMembership(u.id, B.id, 'editor');
+    await db.insert(projectFavorites).values({ userId: u.id, projectId: B.id });
+    const fB = await makeFeature(B.id, 'Archived feature');
+    await db.insert(activity).values({
+      featureId: fB.id, projectId: B.id, actorId: u.id, kind: 'feature_created',
+      payload: { to: 'Archived feature' },
+    });
+
+    const res = await app.request('/api/dashboard', { headers: auth });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+
+    // Archived project must not appear in projects array.
+    expect(body.projects.map((p: { id: string }) => p.id)).not.toContain(B.id);
+    // Active project must still appear.
+    expect(body.projects.map((p: { id: string }) => p.id)).toContain(A.id);
+    // Activity from archived project must not appear in the feed.
+    expect(body.activity.every((a: { projectId: string }) => a.projectId !== B.id)).toBe(true);
+    // Activity from active project IS present.
+    expect(body.activity.some((a: { projectId: string }) => a.projectId === A.id)).toBe(true);
+  });
+});

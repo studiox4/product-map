@@ -101,9 +101,10 @@ describe('project CRUD', () => {
     const res = await app.request(`/api/projects/${p.id}`, json('PATCH', { name: 'X' }, await auth(u)));
     expect(res.status).toBe(403);
   });
-  it('DELETE /api/projects/:id (owner) returns 204', async () => {
+  it('DELETE /api/projects/:id (owner, archived) returns 204', async () => {
     const u = await createTestUser({ role: 'member' }); const p = await createTestProject();
     await addMembership(u.id, p.id, 'owner');
+    await app.request(`/api/projects/${p.id}/archive`, { method: 'POST', headers: await auth(u) });
     const res = await app.request(`/api/projects/${p.id}`, { method: 'DELETE', headers: await auth(u) });
     expect(res.status).toBe(204);
   });
@@ -348,6 +349,58 @@ describe('project invites (create/revoke)', () => {
     const list = await app.request(`/api/projects/${projectA.id}/invites`, { headers: hOwner });
     const invites = await list.json() as Array<{ token: string }>;
     expect(invites.some((i) => i.token === token)).toBe(true);
+  });
+});
+
+describe('project archive/restore', () => {
+  it('archive hides the project from the active list and shows it under ?archived=1', async () => {
+    // adminAuth + projectId set up by beforeEach
+    const arch = await app.request(`/api/projects/${projectId}/archive`, { method: 'POST', headers: adminAuth });
+    expect(arch.status).toBe(200);
+    const active = await (await app.request('/api/projects', { headers: adminAuth })).json() as Array<{ id: string }>;
+    expect(active.find((p) => p.id === projectId)).toBeUndefined();
+    const archived = await (await app.request('/api/projects?archived=1', { headers: adminAuth })).json() as Array<{ id: string }>;
+    expect(archived.find((p) => p.id === projectId)).toBeDefined();
+  });
+
+  it('restore returns the project to the active list', async () => {
+    await app.request(`/api/projects/${projectId}/archive`, { method: 'POST', headers: adminAuth });
+    const res = await app.request(`/api/projects/${projectId}/restore`, { method: 'POST', headers: adminAuth });
+    expect(res.status).toBe(200);
+    const active = await (await app.request('/api/projects', { headers: adminAuth })).json() as Array<{ id: string }>;
+    expect(active.find((p) => p.id === projectId)).toBeDefined();
+  });
+
+  it('non-owner cannot archive (403)', async () => {
+    const editor = await createTestUser({ role: 'member', name: 'Ed', email: 'ed@test.co' });
+    await addMembership(editor.id, projectId, 'editor');
+    const editorAuth = { cookie: await authCookie(editor), origin: 'http://localhost', host: 'localhost' };
+    const res = await app.request(`/api/projects/${projectId}/archive`, { method: 'POST', headers: editorAuth });
+    expect(res.status).toBe(403);
+  });
+
+  it('purge (DELETE) on an active project is rejected 409 not_archived', async () => {
+    const res = await app.request(`/api/projects/${projectId}`, { method: 'DELETE', headers: adminAuth });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ error: 'not_archived' });
+  });
+
+  it('purge after archive hard-deletes the project', async () => {
+    await app.request(`/api/projects/${projectId}/archive`, { method: 'POST', headers: adminAuth });
+    const res = await app.request(`/api/projects/${projectId}`, { method: 'DELETE', headers: adminAuth });
+    expect(res.status).toBe(204);
+    const archived = await (await app.request('/api/projects?archived=1', { headers: adminAuth })).json();
+    expect(archived.find((p: any) => p.id === projectId)).toBeUndefined();
+  });
+
+  it('content write to an archived project is rejected 409 project_archived', async () => {
+    await app.request(`/api/projects/${projectId}/archive`, { method: 'POST', headers: adminAuth });
+    const res = await app.request(`/api/projects/${projectId}/features`, {
+      method: 'POST', headers: { 'content-type': 'application/json', ...adminAuth },
+      body: JSON.stringify({ title: 'x', horizon: 'now' }),
+    });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ error: 'project_archived' });
   });
 });
 

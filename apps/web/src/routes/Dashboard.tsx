@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom';
-import { Search, Plus } from 'lucide-react';
-import { useDashboard } from '@/lib/api';
+import { Search, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { apiErrorMessage, useDashboard, useArchivedProjects, useRestoreProject, usePurgeProject } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import MyProjects from '@/components/dashboard/MyProjects';
 import NextActions from '@/components/dashboard/NextActions';
 import MyWork from '@/components/dashboard/MyWork';
 import DashboardFeed from '@/components/dashboard/DashboardFeed';
+import { toast } from 'sonner';
 
 /** Opens the existing command palette (AppShell listens for ⌘K / Ctrl+K). */
 function openCommandPalette() {
@@ -42,6 +43,69 @@ function EmptyState() {
   );
 }
 
+function ArchivedProjects() {
+  const { data: archived } = useArchivedProjects();
+  const restore = useRestoreProject();
+  const purge = usePurgeProject();
+
+  if (!archived || archived.length === 0) return null;
+
+  function handleRestore(id: string, name: string) {
+    restore.mutate(id, {
+      onSuccess: () => toast.success(`"${name}" restored`),
+      onError: (err) => toast.error(apiErrorMessage(err, 'Could not restore project.')),
+    });
+  }
+
+  function handlePurge(id: string, name: string) {
+    if (!window.confirm(`Permanently delete "${name}"? This cannot be undone.`)) return;
+    purge.mutate(id, {
+      onSuccess: () => toast.success(`"${name}" deleted permanently`),
+      onError: (err) => toast.error(apiErrorMessage(err, 'Could not delete project.')),
+    });
+  }
+
+  return (
+    <section aria-labelledby="archived-heading" data-testid="archived-projects">
+      <h2 id="archived-heading" className="mb-3 font-display text-lg font-bold text-ink">
+        Archived projects
+      </h2>
+      <ul className="space-y-2">
+        {archived.map((p) => (
+          <li
+            key={p.id}
+            className="flex items-center justify-between gap-4 rounded-xl border border-border bg-surface px-4 py-3"
+          >
+            <span className="font-medium text-ink">{p.name}</span>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={restore.isPending}
+                onClick={() => handleRestore(p.id, p.name)}
+                aria-label={`Restore ${p.name}`}
+              >
+                <RotateCcw className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                Restore
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={purge.isPending}
+                onClick={() => handlePurge(p.id, p.name)}
+                aria-label={`Delete ${p.name} permanently`}
+              >
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                Delete permanently
+              </Button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export default function Dashboard() {
   const { data, isPending, isError, refetch } = useDashboard();
 
@@ -57,7 +121,14 @@ export default function Dashboard() {
     );
   }
 
-  if (data.projects.length === 0) return <EmptyState />;
+  if (data.projects.length === 0) {
+    return (
+      <>
+        <EmptyState />
+        <ArchivedProjects />
+      </>
+    );
+  }
 
   return (
     <div className="space-y-8" data-testid="dashboard">
@@ -79,6 +150,7 @@ export default function Dashboard() {
         <div className="space-y-8 lg:col-span-2">
           <MyProjects projects={data.projects} />
           <MyWork items={data.myWork} />
+          <ArchivedProjects />
         </div>
         <DashboardFeed items={data.activity} />
       </div>

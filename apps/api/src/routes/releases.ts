@@ -20,8 +20,8 @@ async function releaseFeatures(releaseId: string, projectId?: string) {
     .from(features)
     .where(
       projectId
-        ? and(eq(features.releaseId, releaseId), eq(features.projectId, projectId))
-        : eq(features.releaseId, releaseId),
+        ? and(eq(features.releaseId, releaseId), eq(features.projectId, projectId), isNull(features.archivedAt))
+        : and(eq(features.releaseId, releaseId), isNull(features.archivedAt)),
     )
     .orderBy(asc(features.sortOrder), asc(features.createdAt));
 }
@@ -133,7 +133,7 @@ export const releasesRoutes = new Hono<MembershipEnv>()
         featureCount: count(features.id),
       })
       .from(releases)
-      .leftJoin(features, eq(features.releaseId, releases.id))
+      .leftJoin(features, and(eq(features.releaseId, releases.id), isNull(features.archivedAt)))
       .where(eq(releases.projectId, pid))
       .groupBy(releases.id)
       .orderBy(asc(releases.createdAt));
