@@ -2112,6 +2112,8 @@ export function useArchiveFeature() {
     onSettled: () => {
       qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
       qc.invalidateQueries({ queryKey: ['p', pid, 'features', 'archived'] });
+      qc.invalidateQueries({ queryKey: queryKeys.overview(pid) });
+      qc.invalidateQueries({ queryKey: queryKeys.dashboard });
     },
   });
 }
@@ -2126,6 +2128,8 @@ export function useRestoreFeature() {
     onSettled: () => {
       qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
       qc.invalidateQueries({ queryKey: ['p', pid, 'features', 'archived'] });
+      qc.invalidateQueries({ queryKey: queryKeys.overview(pid) });
+      qc.invalidateQueries({ queryKey: queryKeys.dashboard });
     },
   });
 }
@@ -2140,6 +2144,8 @@ export function usePurgeFeature() {
     onSettled: () => {
       qc.invalidateQueries({ queryKey: queryKeys.features(pid) });
       qc.invalidateQueries({ queryKey: ['p', pid, 'features', 'archived'] });
+      qc.invalidateQueries({ queryKey: queryKeys.overview(pid) });
+      qc.invalidateQueries({ queryKey: queryKeys.dashboard });
     },
   });
 }
