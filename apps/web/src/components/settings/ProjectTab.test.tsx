@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import type { MemberRole } from '@productmap/shared';
 
 // Mock sonner so we can assert toast.error for surfaced server errors.
@@ -42,11 +43,13 @@ let createInviteBody: unknown = null;
 let memberMutationStatus = 200;
 
 function projectsHandler() {
-  return http.get('/api/projects', () =>
-    HttpResponse.json([
+  return http.get('/api/projects', ({ request }) => {
+    const url = new URL(request.url);
+    if (url.searchParams.get('archived') === '1') return HttpResponse.json([]);
+    return HttpResponse.json([
       { id: 'p1', name: 'Alpha', vision: '', aboutMd: '', role: activeRole },
-    ]),
-  );
+    ]);
+  });
 }
 
 let archiveCalled = false;
@@ -60,11 +63,6 @@ const server = setupServer(
     ]),
   ),
   http.get('/api/projects/:id/invites', () => HttpResponse.json([])),
-  http.get('/api/projects', ({ request }) => {
-    const url = new URL(request.url);
-    if (url.searchParams.get('archived') === '1') return HttpResponse.json([]);
-    return HttpResponse.json([{ id: 'p1', name: 'Alpha', vision: '', aboutMd: '', role: activeRole }]);
-  }),
   http.post('/api/projects/:id/archive', () => {
     archiveCalled = true;
     return new HttpResponse(null, { status: 204 });
@@ -116,9 +114,11 @@ function renderTab() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <ActiveProjectProvider>
-        <ProjectTab />
-      </ActiveProjectProvider>
+      <MemoryRouter>
+        <ActiveProjectProvider>
+          <ProjectTab />
+        </ActiveProjectProvider>
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }

@@ -2099,7 +2099,9 @@ export function usePurgeProject() {
     mutationFn: (projectId: string) =>
       fetchJson<void>(`/api/projects/${projectId}`, { method: 'DELETE' }),
     onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.dashboard });
       qc.invalidateQueries({ queryKey: ['projects', 'archived'] });
+      qc.invalidateQueries({ queryKey: projectsListKey });
     },
   });
 }

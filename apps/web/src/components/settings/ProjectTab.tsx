@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Archive, Copy, Mail, Send, UserPlus } from 'lucide-react';
 import { useActiveProject } from '@/lib/project';
+import { appRoutes } from '@/lib/routes';
 import {
   apiErrorMessage,
   projectsListKey,
@@ -584,12 +586,16 @@ function InviteRow({ projectId, invite }: { projectId: string; invite: Invite })
 
 function DangerZone({ projectId, name }: { projectId: string; name: string }) {
   const archiveProject = useArchiveProject();
+  const navigate = useNavigate();
 
   function handleArchive() {
     if (archiveProject.isPending) return;
     if (!window.confirm(`Archive "${name}"? You can restore it from the dashboard.`)) return;
     archiveProject.mutate(projectId, {
-      onSuccess: () => toast.success('Project archived'),
+      onSuccess: () => {
+        toast.success('Project archived');
+        navigate(appRoutes.dashboard);
+      },
       onError: (err) => toast.error(apiErrorMessage(err, 'Could not archive project.')),
     });
   }

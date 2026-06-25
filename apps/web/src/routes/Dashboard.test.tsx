@@ -145,6 +145,25 @@ describe('Dashboard', () => {
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith('"Archived Alpha" restored'));
   });
 
+  it('Delete permanently button fires DELETE /api/projects/:id and shows success toast', async () => {
+    let purgeCalled = false;
+    archivedPayload = [
+      { id: 'pa', name: 'Archived Alpha', slug: 'archived-alpha', vision: '', aboutMd: '', role: 'owner' } as Project,
+    ];
+    server.use(
+      http.delete('/api/projects/pa', () => {
+        purgeCalled = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderDashboard();
+    await screen.findByTestId('archived-projects');
+    await userEvent.click(screen.getByRole('button', { name: 'Delete Archived Alpha permanently' }));
+    await waitFor(() => expect(purgeCalled).toBe(true));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('"Archived Alpha" deleted permanently'));
+  });
+
   it('archived section is hidden when there are no archived projects', async () => {
     archivedPayload = [];
     renderDashboard();
