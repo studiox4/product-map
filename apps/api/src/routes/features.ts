@@ -289,7 +289,11 @@ export const featuresRoutes = new Hono<MembershipEnv>()
   .delete('/:id', async (c) => {
     const id = c.req.param('id');
     const pid = c.get('currentProjectId');
-    await loadScoped(features, id, pid);
+    if (c.get('currentRole') !== 'owner') return c.json({ error: 'forbidden' }, 403);
+    const existing = await loadScoped(features, id, pid);
+    if (existing.archivedAt === null) return c.json({ error: 'not_archived' }, 409);
+    await db.delete(votes).where(eq(votes.featureId, id));
+    await db.delete(featureCollaborators).where(eq(featureCollaborators.featureId, id));
     const deleted = await db.delete(features).where(eq(features.id, id)).returning({ id: features.id });
     if (deleted.length === 0) return c.json({ error: 'not_found' }, 404);
     return c.body(null, 204);
