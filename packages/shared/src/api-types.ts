@@ -190,8 +190,18 @@ export interface InvitePreview {
 export interface ShareTokenInfo {
   id: string; token: string; kind: string; createdAt: string; revokedAt: string | null;
 }
+/** Which sections a public share link exposes. */
+export interface ShareSections { roadmap: boolean; board: boolean; changelog: boolean; }
+export const ALL_SHARE_SECTIONS: ShareSections = { roadmap: true, board: true, changelog: true };
 /** GET /api/share/:token/data — read-only, no auth. */
-export interface ShareData { project: Project; features: FeatureWithDocs[]; releases: Release[]; }
+export interface ShareData {
+  project: Project;
+  features: FeatureWithDocs[];
+  releases: Release[];
+  sections: ShareSections;
+}
+/** POST /api/projects/:id/share/roadmap response. */
+export interface ShareMintResult { url: string; sections: ShareSections; expiresAt: string | null; }
 /** GET /api/copilot/nudges — derived hygiene prompts, no table behind them. */
 export type CopilotNudge =
   | { kind: 'stale_draft'; documentId: string; featureId: string; title: string; updatedAt: string }

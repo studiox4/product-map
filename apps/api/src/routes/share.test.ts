@@ -164,13 +164,10 @@ describe('GET /api/share/:token/data — public + project isolation', () => {
     // vote summary present, anonymous viewer has no myVote
     expect(data.features[0]).toMatchObject({ score: 0, boosts: 0, cools: 0, myVote: 0 });
 
-    expect(data.releases).toHaveLength(1);
-    expect(data.releases[0]).toMatchObject({
-      id: release.id,
-      name: 'v0.2 — Team ready',
-      status: 'planned',
-      targetDate: '2026-07-01',
-    });
+    // The seeded release is 'planned' (forward-looking roadmap data). The
+    // changelog renders only shipped releases, so a planned one must never ship
+    // in the public payload — even on a default all-on link.
+    expect(data.releases.map((r: { id: string }) => r.id)).not.toContain(release.id);
   });
 
   it('returns ONLY the token project data — second project features and releases are absent (§13.5 isolation)', async () => {
@@ -339,5 +336,221 @@ describe('DELETE /api/share/:token (revoke + membership check)', () => {
 
     const [row] = await db.select().from(shareTokens).where(eq(shareTokens.token, token));
     expect(row.revokedAt).not.toBeNull();
+  });
+});
+
+// --- E1 public-share polish: selective sections + optional expiry ---
+const jsonHeaders = (cookie: string) => ({
+  cookie,
+  origin: 'http://localhost',
+  host: 'localhost',
+  'content-type': 'application/json',
+});
+
+async function mint(projectId: string, cookie: string, body: unknown) {
+  return app.request(`/api/projects/${projectId}/share/roadmap`, {
+    method: 'POST',
+    headers: jsonHeaders(cookie),
+    body: JSON.stringify(body),
+  });
+}
+
+describe('share polish — sections + expiry', () => {
+  it('persists chosen sections + expiry and echoes them on mint', async () => {
+    const { project } = await seedWorkspace();
+    const cookie = await authCookie(await createTestUser({ role: 'admin' }));
+    const res = await mint(project.id, cookie, {
+      sections: { roadmap: false, board: false, changelog: true },
+      expiresInDays: 7,
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.sections).toEqual({ roadmap: false, board: false, changelog: true });
+    expect(typeof body.expiresAt).toBe('string');
+
+    const token = body.url.split('/').pop();
+    const [row] = await db.select().from(shareTokens).where(eq(shareTokens.token, token));
+    expect(row.sections).toEqual({ roadmap: false, board: false, changelog: true });
+    expect(row.expiresAt).not.toBeNull();
+  });
+
+  it('defaults to the legacy all-on, never-expires link when body is empty', async () => {
+    const { project } = await seedWorkspace();
+    const cookie = await authCookie(await createTestUser({ role: 'admin' }));
+    const res = await app.request(`/api/projects/${project.id}/share/roadmap`, {
+      method: 'POST',
+      headers: { cookie, origin: 'http://localhost', host: 'localhost' },
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.sections).toEqual({ roadmap: true, board: true, changelog: true });
+    expect(body.expiresAt).toBeNull();
+  });
+
+  it('rejects an all-off sections set → 400', async () => {
+    const { project } = await seedWorkspace();
+    const cookie = await authCookie(await createTestUser({ role: 'admin' }));
+    const res = await mint(project.id, cookie, {
+      sections: { roadmap: false, board: false, changelog: false },
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('changelog-only link exposes only shipped-release features, never the roadmap', async () => {
+    const project = await createTestProject();
+    const cookie = await authCookie(await createTestUser({ role: 'admin' }));
+    const [shipped] = await db
+      .insert(releases)
+      .values({ projectId: project.id, name: 'v1', status: 'shipped', shippedAt: new Date() })
+      .returning();
+    const [shippedFeature] = await db
+      .insert(features)
+      .values({ projectId: project.id, title: 'Shipped thing', horizon: 'now', releaseId: shipped.id })
+      .returning();
+    const [futureFeature] = await db
+      .insert(features)
+      .values({ projectId: project.id, title: 'Secret future', horizon: 'later' })
+      .returning();
+    // A planned (unshipped) release — forward-looking roadmap, must NOT leak.
+    const [plannedRelease] = await db
+      .insert(releases)
+      .values({ projectId: project.id, name: 'v2 — secret plans', targetDate: '2027-01-01' })
+      .returning();
+
+    const res = await mint(project.id, cookie, {
+      sections: { roadmap: false, board: false, changelog: true },
+    });
+    const token = (await res.json()).url.split('/').pop();
+
+    const read = await app.request(`/api/share/${token}/data`);
+    expect(read.status).toBe(200);
+    const data = await read.json();
+    expect(data.sections).toEqual({ roadmap: false, board: false, changelog: true });
+    const ids = (data.features as Array<{ id: string }>).map((f) => f.id);
+    expect(ids).toContain(shippedFeature.id);
+    expect(ids).not.toContain(futureFeature.id);
+    // Only the shipped release ships — the planned one stays private.
+    const releaseIds = (data.releases as Array<{ id: string }>).map((r) => r.id);
+    expect(releaseIds).toEqual([shipped.id]);
+    expect(releaseIds).not.toContain(plannedRelease.id);
+  });
+
+  it('board-only link keeps features but drops releases (changelog off)', async () => {
+    const { project, featureA } = await seedWorkspace();
+    const cookie = await authCookie(await createTestUser({ role: 'admin' }));
+    const res = await mint(project.id, cookie, {
+      sections: { roadmap: false, board: true, changelog: false },
+    });
+    const token = (await res.json()).url.split('/').pop();
+
+    const read = await app.request(`/api/share/${token}/data`);
+    const data = await read.json();
+    expect((data.features as Array<{ id: string }>).map((f) => f.id)).toContain(featureA.id);
+    expect(data.releases).toEqual([]);
+  });
+
+  it('board+changelog link (roadmap off) never leaks planned/unshipped releases', async () => {
+    const project = await createTestProject();
+    const cookie = await authCookie(await createTestUser({ role: 'admin' }));
+    const [shipped] = await db
+      .insert(releases)
+      .values({ projectId: project.id, name: 'v1', status: 'shipped', shippedAt: new Date() })
+      .returning();
+    const [plannedRelease] = await db
+      .insert(releases)
+      .values({ projectId: project.id, name: 'v2 — secret plans', targetDate: '2027-01-01' })
+      .returning();
+
+    const res = await mint(project.id, cookie, {
+      sections: { roadmap: false, board: true, changelog: true },
+    });
+    const token = (await res.json()).url.split('/').pop();
+
+    const read = await app.request(`/api/share/${token}/data`);
+    const data = await read.json();
+    const releaseIds = (data.releases as Array<{ id: string }>).map((r) => r.id);
+    // Roadmap is hidden, so the planned release is forward-looking and must stay private.
+    expect(releaseIds).toContain(shipped.id);
+    expect(releaseIds).not.toContain(plannedRelease.id);
+  });
+
+  it('roadmap+changelog link still never ships planned/unshipped releases', async () => {
+    const project = await createTestProject();
+    const cookie = await authCookie(await createTestUser({ role: 'admin' }));
+    const [shipped] = await db
+      .insert(releases)
+      .values({ projectId: project.id, name: 'v1', status: 'shipped', shippedAt: new Date() })
+      .returning();
+    const [plannedRelease] = await db
+      .insert(releases)
+      .values({ projectId: project.id, name: 'v2 — secret plans', targetDate: '2027-01-01' })
+      .returning();
+
+    const res = await mint(project.id, cookie, {
+      sections: { roadmap: true, board: true, changelog: true },
+    });
+    const token = (await res.json()).url.split('/').pop();
+
+    const read = await app.request(`/api/share/${token}/data`);
+    const data = await read.json();
+    const releaseIds = (data.releases as Array<{ id: string }>).map((r) => r.id);
+    expect(releaseIds).toEqual([shipped.id]);
+    expect(releaseIds).not.toContain(plannedRelease.id);
+  });
+
+  it('archived features never surface on a public link', async () => {
+    const project = await createTestProject();
+    const cookie = await authCookie(await createTestUser({ role: 'admin' }));
+    const [liveFeature] = await db
+      .insert(features)
+      .values({ projectId: project.id, title: 'Live feature', horizon: 'now' })
+      .returning();
+    const [archivedFeature] = await db
+      .insert(features)
+      .values({ projectId: project.id, title: 'Archived feature', horizon: 'now', archivedAt: new Date() })
+      .returning();
+
+    const token = await createToken(project.id, cookie);
+    const read = await app.request(`/api/share/${token}/data`);
+    const data = await read.json();
+    const featureIds = (data.features as Array<{ id: string }>).map((f) => f.id);
+    expect(featureIds).toContain(liveFeature.id);
+    expect(featureIds).not.toContain(archivedFeature.id);
+  });
+
+  it('a non-empty but unparseable body fails closed → 400 (no maximally-public link)', async () => {
+    const { project } = await seedWorkspace();
+    const cookie = await authCookie(await createTestUser({ role: 'admin' }));
+    const res = await app.request(`/api/projects/${project.id}/share/roadmap`, {
+      method: 'POST',
+      headers: jsonHeaders(cookie),
+      body: '{ "sections": { "roadmap": fa', // truncated JSON
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('a still-valid (future) expiry returns 200', async () => {
+    const { project } = await seedWorkspace();
+    const cookie = await authCookie(await createTestUser({ role: 'admin' }));
+    const res = await mint(project.id, cookie, {
+      sections: { roadmap: true, board: true, changelog: true },
+      expiresInDays: 7,
+    });
+    const token = (await res.json()).url.split('/').pop();
+    const read = await app.request(`/api/share/${token}/data`);
+    expect(read.status).toBe(200);
+  });
+
+  it('404 once the link is past its expiry', async () => {
+    const { project } = await seedWorkspace();
+    const cookie = await authCookie(await createTestUser({ role: 'admin' }));
+    const token = await createToken(project.id, cookie);
+    await db
+      .update(shareTokens)
+      .set({ expiresAt: new Date(Date.now() - 1000) })
+      .where(eq(shareTokens.token, token));
+
+    const res = await app.request(`/api/share/${token}/data`);
+    expect(res.status).toBe(404);
   });
 });

@@ -1,0 +1,5 @@
+User-agent: *
+# Public share + invite links are private by URL — keep them out of search indexes.
+Disallow: /share/
+Disallow: /invite/
+Disallow: /app/

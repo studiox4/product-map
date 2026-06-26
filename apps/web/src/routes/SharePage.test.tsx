@@ -92,6 +92,7 @@ const shareData: ShareData = {
       createdAt: '2026-05-02T00:00:00Z',
     },
   ],
+  sections: { roadmap: true, board: true, changelog: true },
 };
 
 let lastShareRequest: Request | null = null;
@@ -169,6 +170,34 @@ describe('SharePage', () => {
     await screen.findByRole('heading', { name: 'ProductMap' });
     expect(lastShareRequest).not.toBeNull();
     expect(lastShareRequest!.headers.get('x-user-id')).toBeNull();
+  });
+
+  it('renders only the sections the link exposes (changelog-only)', async () => {
+    server.use(
+      http.get('/api/share/:token/data', () =>
+        HttpResponse.json({
+          ...shareData,
+          sections: { roadmap: false, board: false, changelog: true },
+        }),
+      ),
+    );
+    renderShare('tok-1');
+
+    // Changelog stays; roadmap timeline + now/next/later are gone.
+    expect(await screen.findByRole('region', { name: 'Changelog' })).toBeDefined();
+    expect(screen.queryByRole('img', { name: /gantt/i })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Now, next, later' })).toBeNull();
+  });
+
+  it('injects a noindex robots meta on mount and removes it on unmount', async () => {
+    const selector = 'meta[name="robots"]';
+    expect(document.head.querySelector(selector)).toBeNull();
+    const { unmount } = renderShare('tok-1');
+    await screen.findByRole('heading', { name: 'ProductMap' });
+    expect(document.head.querySelector(selector)?.getAttribute('content')).toBe('noindex, nofollow');
+    // Cleanup must run so the tag can't leak onto other SPA routes.
+    unmount();
+    expect(document.head.querySelector(selector)).toBeNull();
   });
 
   it('shows the not-found state when the token is revoked (404)', async () => {
