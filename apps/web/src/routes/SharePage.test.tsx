@@ -189,6 +189,17 @@ describe('SharePage', () => {
     expect(screen.queryByRole('region', { name: 'Now, next, later' })).toBeNull();
   });
 
+  it('injects a noindex robots meta on mount and removes it on unmount', async () => {
+    const selector = 'meta[name="robots"]';
+    expect(document.head.querySelector(selector)).toBeNull();
+    const { unmount } = renderShare('tok-1');
+    await screen.findByRole('heading', { name: 'ProductMap' });
+    expect(document.head.querySelector(selector)?.getAttribute('content')).toBe('noindex, nofollow');
+    // Cleanup must run so the tag can't leak onto other SPA routes.
+    unmount();
+    expect(document.head.querySelector(selector)).toBeNull();
+  });
+
   it('shows the not-found state when the token is revoked (404)', async () => {
     renderShare('revoked-tok');
     expect(await screen.findByText("This link isn't active")).toBeDefined();

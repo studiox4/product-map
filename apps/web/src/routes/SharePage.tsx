@@ -87,8 +87,8 @@ export default function SharePage() {
             This link isn't active
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            The share link was revoked or never existed. Ask the workspace
-            owner for a fresh one.
+            The share link expired, was revoked, or never existed. Ask the
+            workspace owner for a fresh one.
           </p>
         </div>
       </ShareFrame>

@@ -44,7 +44,8 @@ export const publicShareRoutes = new Hono<AuthEnv>()
     const featureRows = await db
       .select()
       .from(features)
-      .where(eq(features.projectId, tokenRow.projectId));
+      // Archived (soft-deleted, #22) features must not surface on public links.
+      .where(and(eq(features.projectId, tokenRow.projectId), isNull(features.archivedAt)));
     featureRows.sort(
       (a, b) =>
         HORIZON_ORDER[a.horizon] - HORIZON_ORDER[b.horizon] ||
@@ -124,13 +125,13 @@ export const publicShareRoutes = new Hono<AuthEnv>()
       : sections.changelog
         ? featuresWithDocs.filter((f) => f.releaseId && shippedReleaseIds.has(f.releaseId))
         : [];
-    // Mirror the feature rule: when the roadmap is hidden, planned releases are
-    // forward-looking roadmap data and must not leak — only shipped ones ship.
-    const visibleReleases = !sections.changelog
-      ? []
-      : wantBoardOrRoadmap
-        ? releaseRows
-        : releaseRows.filter((r) => r.status === 'shipped');
+    // Releases are rendered only by the changelog, and only the shipped ones
+    // (SharePage filters to status === 'shipped'). Planned releases are
+    // forward-looking roadmap data that nothing renders — never ship them, so a
+    // planned release's name/targetDate can't leak in the public JSON.
+    const visibleReleases = sections.changelog
+      ? releaseRows.filter((r) => r.status === 'shipped')
+      : [];
 
     const response: ShareData = {
       project: {
@@ -191,7 +192,21 @@ export const shareMintRoutes = new Hono<MembershipEnv>()
   // chosen sections + optional expiry. A missing/empty body defaults to the
   // legacy all-on, never-expires link (the schema defaults every field).
   .post('/roadmap', async (c) => {
-    const raw = await c.req.json().catch(() => ({}));
+    // A genuinely empty body means the legacy all-on default. A non-empty but
+    // unparseable body is a client error — fail closed with 400 rather than
+    // silently minting the maximally-public (all sections, never-expires) link.
+    const bodyText = await c.req.text();
+    let raw: unknown = {};
+    if (bodyText.trim() !== '') {
+      try {
+        raw = JSON.parse(bodyText);
+      } catch {
+        return c.json(
+          { error: 'bad_request', issues: [{ message: 'Invalid JSON body' }] },
+          400,
+        );
+      }
+    }
     const parsed = shareMint.safeParse(raw);
     if (!parsed.success) {
       return c.json({ error: 'bad_request', issues: parsed.error.issues }, 400);
