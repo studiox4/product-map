@@ -2,6 +2,7 @@
 // Extended in Task 6 with public-submit route tests.
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { setupTestDb, truncateAll, closeTestDb, createTestUser, authCookie, createTestProject, addMembership } from '../test/helpers';
+import { __resetIntakeLimiters } from './intake';
 import { db } from '../db';
 import { eq } from 'drizzle-orm';
 import { shareTokens, notifications, ideas } from '@productmap/db/schema';
@@ -17,6 +18,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+  __resetIntakeLimiters();
   await truncateAll();
   const project = await createTestProject('ProductMap');
   projectId = project.id;
@@ -123,4 +125,16 @@ it('a roadmap token cannot be used as an intake token → 404', async () => {
   const roadmapToken = (await mint.json()).url.split('/').pop();
   const res = await submit(roadmapToken, { title: 'wrong kind' });
   expect(res.status).toBe(404);
+});
+
+it('rate-limit: 6 submits from the same IP trip the ipLimiter (max 5) → 429', async () => {
+  // In the test env clientIp() falls back to 'unknown' for all requests, so
+  // all calls share one IP bucket. The IP limit (max 5) trips before the
+  // token limit (max 20) — we assert the IP bucket, not per-token semantics.
+  const token = await mintIntake({ moderation: false });
+  const responses = await Promise.all(
+    Array.from({ length: 6 }, () => submit(token, { title: 'Rate test idea' })),
+  );
+  const statuses = responses.map((r) => r.status);
+  expect(statuses).toContain(429);
 });

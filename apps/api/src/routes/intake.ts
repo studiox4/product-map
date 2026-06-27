@@ -12,8 +12,11 @@ import { RateLimiter, clientIp } from '../lib/rate-limit';
 import { fanOutIdeaSubmittedNotification } from '../lib/notifications';
 
 // Per-process limiters (best-effort on multi-instance Railway).
-const ipLimiter = new RateLimiter({ max: 5, windowMs: 60_000 });
-const tokenLimiter = new RateLimiter({ max: 20, windowMs: 3_600_000 });
+export const ipLimiter = new RateLimiter({ max: 5, windowMs: 60_000 });
+export const tokenLimiter = new RateLimiter({ max: 20, windowMs: 3_600_000 });
+
+/** Reset both intake limiters — for use in tests to prevent cross-test contamination. */
+export function __resetIntakeLimiters() { ipLimiter.reset(); tokenLimiter.reset(); }
 
 /** Load an active (non-revoked, non-expired) intake token, or null. */
 async function loadActiveIntakeToken(token: string) {
