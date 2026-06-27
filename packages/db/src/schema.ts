@@ -21,7 +21,7 @@ export const horizonEnum = pgEnum('horizon', ['now', 'next', 'later']);
 export const featureStatusEnum = pgEnum('feature_status', ['idea', 'planned', 'in_progress', 'shipped']);
 export const docTypeEnum = pgEnum('doc_type', ['prd', 'brd', 'tech_spec', 'feature_brief', 'idea_pitch', 'release_notes']);
 export const docStatusEnum = pgEnum('doc_status', ['draft', 'in_review', 'final']);
-export const ideaStatusEnum = pgEnum('idea_status', ['inbox', 'triaged', 'promoted', 'archived']);
+export const ideaStatusEnum = pgEnum('idea_status', ['inbox', 'triaged', 'promoted', 'archived', 'pending']);
 export const evidenceKindEnum = pgEnum('evidence_kind', ['quote', 'research', 'ticket', 'metric', 'other']);
 export const releaseStatusEnum = pgEnum('release_status', ['planned', 'shipped']);
 export const featureSizeEnum = pgEnum('feature_size', ['s', 'm', 'l']);
@@ -163,7 +163,7 @@ export const comments = pgTable(
     check('comments_body_check', sql`char_length(${t.body}) BETWEEN 1 AND 4000`),
   ],
 );
-const NOTIFICATION_KIND_VALUES = ['mention', 'comment', 'reply', 'project_invite'] as const;
+const NOTIFICATION_KIND_VALUES = ['mention', 'comment', 'reply', 'project_invite', 'idea_submitted'] as const;
 const kindCheckList = NOTIFICATION_KIND_VALUES.map((v) => `'${v}'`).join(', ');
 
 export const notifications = pgTable(
@@ -240,6 +240,8 @@ export const ideas = pgTable('ideas', {
   title: text('title').notNull(),
   bodyMd: text('body_md').notNull().default(''),
   source: text('source').notNull().default(''), // "sales call", "support", freeform
+  submitterName: text('submitter_name'),
+  submitterEmail: text('submitter_email'),
   status: ideaStatusEnum('status').notNull().default('inbox'),
   promotedFeatureId: uuid('promoted_feature_id').references(() => features.id, { onDelete: 'set null' }),
   createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
@@ -349,6 +351,8 @@ export const shareTokens = pgTable('share_tokens', {
     .default({ roadmap: true, board: true, changelog: true }),
   // Optional time-bound expiry. Null = never expires (legacy behaviour).
   expiresAt: timestamp('expires_at', { withTimezone: true }),
+  // Intake-token config (E5). Null for roadmap tokens. Read paths key off `kind`.
+  config: jsonb('config').$type<{ introMd: string; moderation: boolean }>(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
 }, (t) => [index('share_tokens_project_id_idx').on(t.projectId)]);
