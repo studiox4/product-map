@@ -4,11 +4,13 @@ import { zValidator } from '@hono/zod-validator';
 import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import {
   IDEA_STATUSES,
+  IDEA_INBOX_STATUSES,
   ideaCreate,
   ideaUpdate,
   ideaVoteBody,
   ideaPromote,
   type VoteSummary,
+  type IdeaStatus,
 } from '@productmap/shared';
 import { activity, documents, features, ideas, ideaVotes, templates, users } from '@productmap/db/schema';
 import { db } from '../db';
@@ -152,7 +154,7 @@ export const ideasRoutes = new Hono<MembershipEnv>()
       .where(
         status
           ? and(eq(ideas.projectId, pid), eq(ideas.status, status as (typeof IDEA_STATUSES)[number]))
-          : eq(ideas.projectId, pid),
+          : and(eq(ideas.projectId, pid), inArray(ideas.status, IDEA_INBOX_STATUSES as unknown as IdeaStatus[])),
       )
       .orderBy(desc(ideas.createdAt));
     const ids = rows.map((r) => r.idea.id);

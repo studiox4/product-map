@@ -453,6 +453,24 @@ describe('POST /api/projects/:projectId/ideas/:id/pitch', () => {
   });
 });
 
+describe('pending-idea exclusion (moderation guard)', () => {
+  it('excludes pending ideas from the default list but returns them under ?status=pending', async () => {
+    // Insert a held public submission directly.
+    const [held] = await db
+      .insert(ideas)
+      .values({ projectId, title: 'Held idea', source: 'public', status: 'pending' })
+      .returning();
+
+    const def = await app.request(`/api/projects/${projectId}/ideas`, { headers: auth });
+    const defList = await def.json();
+    expect((defList as Array<{ id: string }>).map((r) => r.id)).not.toContain(held.id);
+
+    const pend = await app.request(`/api/projects/${projectId}/ideas?status=pending`, { headers: auth });
+    const pendList = await pend.json();
+    expect((pendList as Array<{ id: string }>).map((r) => r.id)).toEqual([held.id]);
+  });
+});
+
 describe('cross-project isolation (IDOR + list + viewer gate)', () => {
   it('GET/PATCH/DELETE on B idea via A path → 404 (IDOR)', async () => {
     // Project B + editor B
