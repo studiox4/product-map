@@ -1158,14 +1158,14 @@ it('shows a Pending review tab and approves a held idea', async () => {
 Run (sandbox disabled): `pnpm --filter @productmap/web test -- Inbox`
 Expected: FAIL — no Pending tab.
 
-- [ ] **Step 3: Add the Pending tab + STATUS labels/badges** — `Inbox.tsx`
+- [ ] **Step 3: Add the Pending tab + verify the pending badge token** — `Inbox.tsx`
 
+NOTE: the `pending` keys in `STATUS_LABELS` and `STATUS_BADGE` (Inbox.tsx) and in `IdeaDetailPane.tsx`'s `STATUS_LABELS` were ALREADY added in commit `21b8a24` (they were required for web typecheck after Task 1 added the enum value). **Do NOT re-add them — that is a duplicate-key TS error.** Two things remain here:
+
+1. The pending badge is currently `pending: 'bg-action-soft text-action'` in Inbox.tsx `STATUS_BADGE` — visually IDENTICAL to `triaged`. For a moderation queue, pending must stand out. Change it to a distinct token. The plan's original guess `bg-amber-soft text-amber` was never confirmed to exist — grep the Tailwind theme (`apps/web/tailwind.config.*` / the CSS token definitions) for an available warning/amber/attention token; if none exists, pick another existing distinct token (NOT one already used by inbox/triaged/promoted/archived) or add a minimal theme token. State which token you used and that it differs from the other four.
+
+2. Add the Pending tab to the `FILTERS` array (value is the status passed to `useIdeas`):
 ```typescript
-// extend STATUS_LABELS and STATUS_BADGE with pending:
-  pending: 'Pending',            // in STATUS_LABELS
-  pending: 'bg-amber-soft text-amber',   // in STATUS_BADGE (use an existing warning token; check tailwind theme)
-
-// add to the FILTERS array (value is the status string passed to useIdeas):
   { value: 'pending' as const, label: 'Pending review' },
 ```
 The list already calls `useIdeas(filter)`; selecting the Pending tab passes `'pending'`, hitting `?status=pending`.
