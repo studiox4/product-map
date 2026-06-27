@@ -29,8 +29,11 @@ const STATUS_LABELS: Record<IdeaStatus, string> = {
   triaged: 'Triaged',
   promoted: 'Promoted',
   archived: 'Archived',
+  pending: 'Pending',
 };
 
+// 'pending' is intentionally NOT selectable — held public ideas move to inbox via
+// the approve action, not the manual status dropdown.
 /** Statuses pickable from the detail select — promotion goes through the promote flow. */
 const SELECTABLE_STATUSES: IdeaStatus[] = ['inbox', 'triaged', 'archived'];
 

@@ -25,6 +25,7 @@ const STATUS_LABELS: Record<IdeaStatus, string> = {
   triaged: 'Triaged',
   promoted: 'Promoted',
   archived: 'Archived',
+  pending: 'Pending',
 };
 
 const STATUS_BADGE: Record<IdeaStatus, string> = {
@@ -32,6 +33,7 @@ const STATUS_BADGE: Record<IdeaStatus, string> = {
   triaged: 'bg-action-soft text-action',
   promoted: 'bg-sage-soft text-sage',
   archived: 'bg-inset text-muted-ink line-through',
+  pending: 'bg-action-soft text-action',
 };
 
 function StatusBadgeChip({ status }: { status: IdeaStatus }) {
