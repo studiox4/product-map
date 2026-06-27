@@ -355,6 +355,28 @@ async function mint(projectId: string, cookie: string, body: unknown) {
   });
 }
 
+describe('intake token cannot read roadmap data via share reader', () => {
+  it('GET /api/share/<intakeToken>/data → 404 (kind guard)', async () => {
+    const { project } = await seedWorkspace();
+    const admin = await createTestUser({ role: 'admin' });
+    const cookie = await authCookie(admin);
+
+    // Mint an intake token (write-only; must never expose roadmap data).
+    const mintRes = await app.request(`/api/projects/${project.id}/share/intake`, {
+      method: 'POST',
+      headers: { cookie, origin: 'http://localhost', host: 'localhost' },
+    });
+    expect(mintRes.status).toBe(201);
+    const { url: intakeUrl } = await mintRes.json();
+    // intakeUrl is /p/<token>/submit — extract the token.
+    const intakeToken = intakeUrl.split('/')[2] as string;
+
+    // The share reader must refuse intake tokens — opaque 404, no data leak.
+    const res = await app.request(`/api/share/${intakeToken}/data`);
+    expect(res.status).toBe(404);
+  });
+});
+
 describe('share polish — sections + expiry', () => {
   it('persists chosen sections + expiry and echoes them on mint', async () => {
     const { project } = await seedWorkspace();

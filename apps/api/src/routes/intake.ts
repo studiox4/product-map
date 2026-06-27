@@ -72,9 +72,10 @@ export const publicIntakeRoutes = new Hono<AuthEnv>()
     if (!parsed.success) return c.json({ error: 'bad_request', issues: parsed.error.issues }, 400);
     const { title, bodyMd, submitterName, submitterEmail } = parsed.data;
 
-    // Invariant 2: fail closed — absent config ⇒ moderated.
+    // Invariant 2: fail closed — absent config or absent moderation key ⇒ moderated.
+    // `config.moderation !== false` ensures undefined (key missing) is treated as true.
     const config = (row.config as IntakeConfig | null) ?? { introMd: '', moderation: true };
-    const status = config.moderation ? ('pending' as const) : ('inbox' as const);
+    const status = config.moderation !== false ? ('pending' as const) : ('inbox' as const);
 
     const [idea] = await db
       .insert(ideas)

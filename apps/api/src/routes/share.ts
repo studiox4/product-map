@@ -37,6 +37,8 @@ export const publicShareRoutes = new Hono<AuthEnv>()
     if (tokenRow.expiresAt && tokenRow.expiresAt.getTime() < Date.now()) {
       return c.json({ error: 'not_found' }, 404);
     }
+    // Only roadmap tokens may serve roadmap data — intake tokens are write-only.
+    if (tokenRow.kind !== 'roadmap') return c.json({ error: 'not_found' }, 404);
 
     const [project] = await db.select().from(projects).where(eq(projects.id, tokenRow.projectId));
     if (!project) return c.json({ error: 'not_found' }, 404);
@@ -247,6 +249,9 @@ export const shareMintRoutes = new Hono<MembershipEnv>()
       token,
       kind: 'intake',
       config: { introMd, moderation },
+      // Belt-and-suspenders: an intake token carries no visible sections so a
+      // future reader that skips the kind guard still shows nothing.
+      sections: { roadmap: false, board: false, changelog: false },
       expiresAt,
     });
     return c.json({ url: `/p/${token}/submit`, expiresAt: expiresAt?.toISOString() ?? null }, 201);
