@@ -2161,3 +2161,62 @@ export function usePurgeFeature() {
 }
 
 // =============== END APPEND BLOCK (feature archive / restore / purge) ========
+
+// ============================================================================
+// APPEND BLOCK — public idea intake (E5: intake form per project).
+// Owned by this task; keep additions inside this block.
+// ============================================================================
+
+import type { IntakeMeta, IntakeMintResult } from '@productmap/shared';
+
+export interface CreateIntakeVars {
+  introMd: string;
+  moderation: boolean;
+  expiresInDays: 7 | 30 | 90 | null;
+}
+export function useCreateIntake() {
+  const pid = useProjectId();
+  return useMutation({
+    mutationFn: (input: CreateIntakeVars) =>
+      fetchJson<IntakeMintResult>(apiPath(pid, 'share', 'intake'), {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+  });
+}
+
+export function useIntakeMeta(token: string) {
+  return useQuery({
+    queryKey: ['intake', token],
+    queryFn: async () => {
+      const res = await activeFetch(`/api/intake/${token}`);
+      if (!res.ok) {
+        let body: unknown = null;
+        try { body = await res.json(); } catch { /* non-json */ }
+        throw new ApiError(res.status, body);
+      }
+      return (await res.json()) as IntakeMeta;
+    },
+    retry: false,
+    enabled: token.length > 0,
+  });
+}
+
+export interface SubmitIntakeBody {
+  title: string;
+  bodyMd: string;
+  submitterName?: string;
+  submitterEmail?: string;
+  website: string;
+}
+export function useSubmitIntake(token: string) {
+  return useMutation({
+    mutationFn: (body: SubmitIntakeBody) =>
+      fetchJson<{ ok: boolean }>(`/api/intake/${token}`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+  });
+}
+
+// ================= END APPEND BLOCK (public idea intake) ====================
