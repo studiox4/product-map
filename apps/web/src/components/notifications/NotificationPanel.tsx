@@ -10,12 +10,14 @@ function summarize(n: NotificationItem): string {
     case 'reply': return `${who} replied in a thread`;
     case 'comment': return `${who} commented on your work`;
     case 'project_invite': return `${who} invited you to a project`;
+    case 'idea_submitted': return 'New public idea submitted';
     default: return 'New notification';
   }
 }
 
 /** Deep link to the notification's target using appRoutes builders. */
 function hrefFor(n: NotificationItem): string {
+  if (n.kind === 'idea_submitted') return appRoutes.inbox;
   if (n.documentId) return appRoutes.doc(n.documentId);
   if (n.featureId) return appRoutes.feature(n.featureId);
   return appRoutes.projectOverview(n.projectSlug);

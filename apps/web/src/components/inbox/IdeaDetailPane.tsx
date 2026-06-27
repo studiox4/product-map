@@ -185,9 +185,19 @@ export function IdeaDetailPane({ idea, onPromote }: IdeaDetailPaneProps) {
         )}
       </div>
 
-      <div className="mt-2">
+      <div className="mt-2 flex flex-wrap items-center gap-2">
         <IdeaByline idea={idea} />
+        {idea.source === 'public' ? (
+          <span className="inline-flex items-center rounded-full bg-cool-soft px-2 py-0.5 text-xs font-medium text-cool">
+            Public submission
+          </span>
+        ) : null}
       </div>
+      {(idea.submitterName || idea.submitterEmail) ? (
+        <p className="mt-1 text-xs text-muted-ink">
+          From: {idea.submitterName}{idea.submitterEmail ? ` <${idea.submitterEmail}>` : ''}
+        </p>
+      ) : null}
 
       <div className="mt-4">
         <IdeaVotePills idea={idea} size="full" />
@@ -271,6 +281,25 @@ export function IdeaDetailPane({ idea, onPromote }: IdeaDetailPaneProps) {
             <RotateCcw className="h-4 w-4" aria-hidden />
             Restore to inbox
           </Button>
+        ) : null}
+        {canEdit && idea.status === 'pending' ? (
+          <>
+            <Button
+              size="sm"
+              className="rounded-full"
+              onClick={() => setStatus('inbox', 'approve')}
+            >
+              Approve
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="rounded-full"
+              onClick={() => setStatus('archived', 'reject')}
+            >
+              Reject
+            </Button>
+          </>
         ) : null}
       </div>
     </section>

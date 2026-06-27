@@ -18,6 +18,7 @@ const FILTERS: { value: IdeaStatus | undefined; label: string }[] = [
   { value: 'triaged', label: 'Triaged' },
   { value: 'promoted', label: 'Promoted' },
   { value: 'archived', label: 'Archived' },
+  { value: 'pending', label: 'Pending review' },
 ];
 
 const STATUS_LABELS: Record<IdeaStatus, string> = {
@@ -33,7 +34,7 @@ const STATUS_BADGE: Record<IdeaStatus, string> = {
   triaged: 'bg-action-soft text-action',
   promoted: 'bg-sage-soft text-sage',
   archived: 'bg-inset text-muted-ink line-through',
-  pending: 'bg-action-soft text-action',
+  pending: 'bg-warm-soft text-warm',
 };
 
 function StatusBadgeChip({ status }: { status: IdeaStatus }) {

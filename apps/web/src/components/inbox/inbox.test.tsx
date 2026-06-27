@@ -65,6 +65,8 @@ function makeIdea(overrides: Partial<IdeaWithVotes>): IdeaWithVotes {
     updatedAt: now,
     creator: null,
     pitchDoc: null,
+    submitterName: null,
+    submitterEmail: null,
     score: 0,
     boosts: 0,
     cools: 0,
