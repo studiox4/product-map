@@ -143,3 +143,34 @@ export async function fanOutInviteNotification(
     console.error('[notifications] invite fan-out failed (swallowed):', { projectId: invite.projectId, email: invite.email }, err);
   }
 }
+
+/**
+ * Notify project owners + editors that a public idea was submitted (held for
+ * moderation). actorId is null — the submitter is unauthenticated. Best-effort;
+ * a failure here must never fail the public submit.
+ */
+export async function fanOutIdeaSubmittedNotification(
+  params: { projectId: string; ideaId: string; title: string },
+): Promise<void> {
+  try {
+    const recipients = await db
+      .select({ userId: memberships.userId })
+      .from(memberships)
+      .where(and(eq(memberships.projectId, params.projectId), inArray(memberships.role, ['owner', 'editor'])));
+    const ids = recipients.map((r) => r.userId);
+    if (ids.length === 0) return;
+    const muted = await mutedAmong(ids, 'idea_submitted');
+    const rows = ids
+      .filter((id) => !muted.has(id))
+      .map((id) => ({
+        userId: id,
+        projectId: params.projectId,
+        kind: 'idea_submitted' as const,
+        actorId: null,
+        payload: { ideaId: params.ideaId, title: params.title },
+      }));
+    if (rows.length > 0) await db.insert(notifications).values(rows);
+  } catch (err) {
+    console.error('[notifications] idea_submitted fan-out failed (swallowed):', { projectId: params.projectId, ideaId: params.ideaId }, err);
+  }
+}
