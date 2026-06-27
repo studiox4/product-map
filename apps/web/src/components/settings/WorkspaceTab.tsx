@@ -24,6 +24,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { SharingBlock } from '@/components/settings/SharingBlock';
+import { IntakeBlock } from '@/components/settings/IntakeBlock';
 import { demoReady } from '@/demo/demoState';
 
 /**
@@ -131,6 +132,9 @@ function WorkspaceForm({ product }: { product: Project }) {
 
       {/* Sharing block owned by the share/settings task (dream tier D8). */}
       <SharingBlock />
+
+      {/* Public intake form for unauthenticated idea submission (E5). */}
+      <IntakeBlock />
 
       <DangerZone />
     </div>
