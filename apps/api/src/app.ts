@@ -13,6 +13,7 @@ import { adminRoutes } from './routes/admin';
 // Dream-tier route modules (mounted as stubs by the foundation agent; each
 // feature agent fills in its own file — nobody else edits app.ts).
 import { publicShareRoutes } from './routes/share';
+import { publicIntakeRoutes } from './routes/intake';
 import { projectScopedContent } from './routes/project-scoped';
 import { invitesRoutes } from './routes/invites';
 import { notificationsRoutes } from './routes/notifications';
@@ -30,7 +31,8 @@ export const app = new Hono()
     const isPublic =
       isAuthPath ||
       p === '/api/healthz' ||
-      (p.startsWith('/api/share/') && c.req.method === 'GET');
+      (p.startsWith('/api/share/') && c.req.method === 'GET') ||
+      p.startsWith('/api/intake/');
     if (c.req.method !== 'GET' && !isPublic && !isSameOrigin(c)) {
       return c.json({ error: 'forbidden_origin' }, 403);
     }
@@ -57,6 +59,7 @@ export const app = new Hono()
   // DELETE /:token is NOT in the public allowlist — requireAuth runs for it via the
   // /api/* middleware, then the handler enforces membership on tokenRow.projectId.
   .route('/api/share', publicShareRoutes)
+  .route('/api/intake', publicIntakeRoutes)
   .route('/api/notifications', notificationsRoutes);
 
 app.notFound((c) => c.json({ error: 'not_found' }, 404));
