@@ -15,7 +15,7 @@ import { projects, features, documents, releases, shareTokens, memberships } fro
 import type { AuthEnv } from '../middleware/auth';
 import type { MembershipEnv } from '../middleware/membership';
 import type { DocumentMeta, FeatureWithDocs, Horizon, ShareData } from '@productmap/shared';
-import { shareMint } from '@productmap/shared';
+import { shareMint, intakeMint } from '@productmap/shared';
 import { EMPTY_VOTE_SUMMARY, voteSummaries } from '../lib/votes';
 
 const HORIZON_ORDER: Record<Horizon, number> = { now: 0, next: 1, later: 2 };
@@ -37,6 +37,8 @@ export const publicShareRoutes = new Hono<AuthEnv>()
     if (tokenRow.expiresAt && tokenRow.expiresAt.getTime() < Date.now()) {
       return c.json({ error: 'not_found' }, 404);
     }
+    // Only roadmap tokens may serve roadmap data — intake tokens are write-only.
+    if (tokenRow.kind !== 'roadmap') return c.json({ error: 'not_found' }, 404);
 
     const [project] = await db.select().from(projects).where(eq(projects.id, tokenRow.projectId));
     if (!project) return c.json({ error: 'not_found' }, 404);
@@ -221,4 +223,36 @@ export const shareMintRoutes = new Hono<MembershipEnv>()
       { url: `/share/${token}`, sections, expiresAt: expiresAt?.toISOString() ?? null },
       201,
     );
+  })
+  // POST /api/projects/:projectId/share/intake → mint a public idea-intake link.
+  .post('/intake', async (c) => {
+    const bodyText = await c.req.text();
+    let raw: unknown = {};
+    if (bodyText.trim() !== '') {
+      try {
+        raw = JSON.parse(bodyText);
+      } catch {
+        return c.json({ error: 'bad_request', issues: [{ message: 'Invalid JSON body' }] }, 400);
+      }
+    }
+    const parsed = intakeMint.safeParse(raw);
+    if (!parsed.success) {
+      return c.json({ error: 'bad_request', issues: parsed.error.issues }, 400);
+    }
+    const { introMd, moderation, expiresInDays } = parsed.data;
+    const token = nanoid();
+    const projectId = c.get('currentProjectId');
+    const expiresAt =
+      expiresInDays != null ? new Date(Date.now() + expiresInDays * 86_400_000) : null;
+    await db.insert(shareTokens).values({
+      projectId,
+      token,
+      kind: 'intake',
+      config: { introMd, moderation },
+      // Belt-and-suspenders: an intake token carries no visible sections so a
+      // future reader that skips the kind guard still shows nothing.
+      sections: { roadmap: false, board: false, changelog: false },
+      expiresAt,
+    });
+    return c.json({ url: `/p/${token}/submit`, expiresAt: expiresAt?.toISOString() ?? null }, 201);
   });

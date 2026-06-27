@@ -6,8 +6,13 @@ export const DOC_TYPES = ['prd', 'brd', 'tech_spec', 'feature_brief', 'idea_pitc
 export type DocType = (typeof DOC_TYPES)[number];
 export const DOC_STATUSES = ['draft', 'in_review', 'final'] as const;
 export type DocStatus = (typeof DOC_STATUSES)[number];
-export const IDEA_STATUSES = ['inbox', 'triaged', 'promoted', 'archived'] as const;
+export const IDEA_STATUSES = ['inbox', 'triaged', 'promoted', 'archived', 'pending'] as const;
 export type IdeaStatus = (typeof IDEA_STATUSES)[number];
+/** Statuses shown in the default (no-filter) inbox list — everything except held public submissions. */
+export const IDEA_INBOX_STATUSES = IDEA_STATUSES.filter((s) => s !== 'pending') as readonly Exclude<
+  IdeaStatus,
+  'pending'
+>[];
 export const EVIDENCE_KINDS = ['quote', 'research', 'ticket', 'metric', 'other'] as const;
 export type EvidenceKind = (typeof EVIDENCE_KINDS)[number];
 export const RELEASE_STATUSES = ['planned', 'shipped'] as const;
@@ -43,7 +48,7 @@ export const ACTIVITY_KINDS = [
 ] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 
-export const NOTIFICATION_KINDS = ['mention', 'comment', 'reply', 'project_invite'] as const;
+export const NOTIFICATION_KINDS = ['mention', 'comment', 'reply', 'project_invite', 'idea_submitted'] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
 export const DOC_TYPE_COLORS: Record<DocType, { chip: string; edge: string }> = {

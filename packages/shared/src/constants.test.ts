@@ -6,11 +6,21 @@ import {
   DOC_STATUS_COLORS,
   USER_COLORS,
   NOTIFICATION_KINDS,
+  IDEA_STATUSES,
+  IDEA_INBOX_STATUSES,
 } from './constants';
 
 describe('NOTIFICATION_KINDS', () => {
-  it('is the four E2a kinds in order', () => {
-    expect(NOTIFICATION_KINDS).toEqual(['mention', 'comment', 'reply', 'project_invite']);
+  it('is all notification kinds in order', () => {
+    expect(NOTIFICATION_KINDS).toEqual(['mention', 'comment', 'reply', 'project_invite', 'idea_submitted']);
+  });
+});
+
+describe('IDEA_STATUSES', () => {
+  it('includes pending and exposes the inbox subset without it', () => {
+    expect(IDEA_STATUSES).toEqual(['inbox', 'triaged', 'promoted', 'archived', 'pending']);
+    expect(IDEA_INBOX_STATUSES).toEqual(['inbox', 'triaged', 'promoted', 'archived']);
+    expect(IDEA_INBOX_STATUSES).not.toContain('pending');
   });
 });
 

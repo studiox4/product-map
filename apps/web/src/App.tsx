@@ -31,6 +31,8 @@ const ProjectTab = lazy(() => import('@/components/settings/ProjectTab'));
 const NotificationsTab = lazy(() => import('@/components/settings/NotificationsTab'));
 const TemplateEditorPage = lazy(() => import('@/routes/TemplateEditor'));
 const SharePage = lazy(() => import('@/routes/SharePage'));
+// Public idea intake form — bare page outside AppShell, no auth required.
+const IntakePage = lazy(() => import('@/routes/IntakePage'));
 // Accept-invite page — sibling of /share/:token; does its own auth check + redirect.
 const AcceptInvitePage = lazy(() => import('@/routes/AcceptInvite'));
 // First-run gate — shown by AuthedShell when the caller has no memberships.
@@ -246,6 +248,15 @@ export default function App() {
               element={
                 <Suspense fallback={<RouteFallback />}>
                   <SharePage />
+                </Suspense>
+              }
+            />
+            {/* Public idea intake form — outside AppShell, no auth required. */}
+            <Route
+              path="/p/:token/submit"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <IntakePage />
                 </Suspense>
               }
             />

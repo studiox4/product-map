@@ -21,6 +21,9 @@ export class RateLimiter {
     b.count += 1;
     return true;
   }
+
+  /** Clear all buckets — for use in tests to prevent cross-test contamination. */
+  reset() { this.buckets.clear(); }
 }
 
 /**

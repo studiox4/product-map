@@ -263,6 +263,24 @@ export const shareMint = z.object({
     .default(null),
 });
 
+// --- E5 public idea intake ---
+export const intakeMint = z.object({
+  introMd: z.string().max(2000).default(''),
+  moderation: z.boolean().default(true),
+  expiresInDays: z
+    .union([z.literal(7), z.literal(30), z.literal(90)])
+    .nullable()
+    .default(null),
+});
+export const intakeSubmit = z.object({
+  title: z.string().min(1).max(200),
+  bodyMd: z.string().max(5000).default(''),
+  submitterName: z.string().max(100).optional(),
+  submitterEmail: z.string().email().max(200).optional(),
+  // Honeypot: real users never see this; bots fill it. Must be empty.
+  website: z.string().max(0).default(''),
+});
+
 // --- E2a In-app notifications ---
 export const notificationPrefUpdate = z.object({
   kind: z.enum(NOTIFICATION_KINDS),

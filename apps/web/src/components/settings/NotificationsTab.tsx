@@ -6,6 +6,7 @@ const ROWS: Record<NotificationKind, string> = {
   comment: 'Comments on my work',
   reply: 'Replies to my threads',
   project_invite: 'Project invites',
+  idea_submitted: 'Public idea submissions',
 };
 
 export function NotificationsTab() {

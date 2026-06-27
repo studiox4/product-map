@@ -114,6 +114,9 @@ export interface Idea {
   creator?: { id: string; name: string; color: string } | null;
   /** Pitch doc meta when one exists (idea_pitch document owned by this idea). */
   pitchDoc?: { id: string; title: string; status: DocStatus } | null;
+  /** Public intake submitter contact — present on ideas with source='public'. */
+  submitterName: string | null;
+  submitterEmail: string | null;
 }
 /** Idea list/detail rows carry their vote summary (same pill UI as the board). */
 export interface IdeaWithVotes extends Idea { score: number; boosts: number; cools: number; myVote: VoteValue | 0; }
@@ -202,6 +205,24 @@ export interface ShareData {
 }
 /** POST /api/projects/:id/share/roadmap response. */
 export interface ShareMintResult { url: string; sections: ShareSections; expiresAt: string | null; }
+
+/** E5 public idea intake configuration. */
+export interface IntakeConfig {
+  introMd: string;
+  moderation: boolean;
+}
+/** POST /api/projects/:id/intake/mint response. */
+export interface IntakeMintResult {
+  url: string;
+  expiresAt: string | null;
+}
+/** GET /api/intake/:token/meta — public-safe metadata for the intake form. */
+export interface IntakeMeta {
+  projectName: string;
+  introMd: string;
+  active: true;
+}
+
 /** GET /api/copilot/nudges — derived hygiene prompts, no table behind them. */
 export type CopilotNudge =
   | { kind: 'stale_draft'; documentId: string; featureId: string; title: string; updatedAt: string }
