@@ -5,7 +5,21 @@ import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ProjectProvider } from '@/lib/project';
-import { IntakeBlock } from './IntakeBlock';
+import { IntakeBlock, intakeUrlKey } from './IntakeBlock';
+
+// Node's experimental webstorage shadows jsdom's localStorage in this env —
+// install a working in-memory Storage (mirrors SharingBlock.test.tsx).
+class MemoryStorage {
+  private store = new Map<string, string>();
+  getItem(key: string) { return this.store.has(key) ? this.store.get(key)! : null; }
+  setItem(key: string, value: string) { this.store.set(key, String(value)); }
+  removeItem(key: string) { this.store.delete(key); }
+  clear() { this.store.clear(); }
+}
+Object.defineProperty(globalThis, 'localStorage', {
+  value: new MemoryStorage(),
+  configurable: true,
+});
 
 let createCalls = 0;
 let lastMintBody: unknown = null;
@@ -36,6 +50,7 @@ beforeEach(() => {
   createCalls = 0;
   lastMintBody = null;
   revokedToken = null;
+  localStorage.clear();
 });
 afterEach(() => {
   server.resetHandlers();
@@ -112,5 +127,38 @@ describe('IntakeBlock', () => {
 
     expect(await screen.findByRole('button', { name: /create intake link/i })).toBeDefined();
     expect(screen.queryByLabelText(/intake link/i)).toBeNull();
+  });
+
+  it('minting writes the URL to localStorage so a reload restores it', async () => {
+    const user = userEvent.setup();
+    renderIntakeBlock();
+
+    await user.click(await screen.findByRole('button', { name: /create intake link/i }));
+    await screen.findByLabelText(/intake link/i);
+
+    // localStorage must have the persisted path keyed by the mock project id.
+    expect(localStorage.getItem(intakeUrlKey('p-test'))).toBe('/p/tok-x/submit');
+  });
+
+  it('a fresh render restores the persisted intake link without a new mint', async () => {
+    // Pre-seed localStorage as if a previous session minted the link.
+    localStorage.setItem(intakeUrlKey('p-test'), '/p/tok-x/submit');
+    renderIntakeBlock();
+
+    // After ProjectProvider resolves, the link input should appear — no mint call.
+    const input = await screen.findByLabelText(/intake link/i);
+    expect((input as HTMLInputElement).value).toContain('/p/tok-x/submit');
+    expect(createCalls).toBe(0);
+  });
+
+  it('revoking clears the persisted URL from localStorage', async () => {
+    localStorage.setItem(intakeUrlKey('p-test'), '/p/tok-x/submit');
+    const user = userEvent.setup();
+    renderIntakeBlock();
+
+    await user.click(await screen.findByRole('button', { name: /revoke link/i }));
+
+    expect(await screen.findByRole('button', { name: /create intake link/i })).toBeDefined();
+    expect(localStorage.getItem(intakeUrlKey('p-test'))).toBeNull();
   });
 });

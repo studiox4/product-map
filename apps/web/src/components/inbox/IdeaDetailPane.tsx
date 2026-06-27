@@ -195,7 +195,10 @@ export function IdeaDetailPane({ idea, onPromote }: IdeaDetailPaneProps) {
       </div>
       {(idea.submitterName || idea.submitterEmail) ? (
         <p className="mt-1 text-xs text-muted-ink">
-          From: {idea.submitterName}{idea.submitterEmail ? ` <${idea.submitterEmail}>` : ''}
+          {'From: ' +
+            [idea.submitterName, idea.submitterEmail ? `<${idea.submitterEmail}>` : null]
+              .filter(Boolean)
+              .join(' ')}
         </p>
       ) : null}
 
