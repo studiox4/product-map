@@ -11,7 +11,7 @@ import {
 } from './constants';
 
 describe('NOTIFICATION_KINDS', () => {
-  it('is the four E2a kinds in order', () => {
+  it('is all notification kinds in order', () => {
     expect(NOTIFICATION_KINDS).toEqual(['mention', 'comment', 'reply', 'project_invite', 'idea_submitted']);
   });
 });
