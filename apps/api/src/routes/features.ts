@@ -7,6 +7,7 @@ import { features, documents, activity, featureCollaborators, users, votes, feat
 import { db } from '../db';
 import { type MembershipEnv } from '../middleware/membership';
 import { recordActivity, addCollaborator } from '../lib/activity';
+import { fanOutAssignedNotification } from '../lib/notifications';
 import { EMPTY_VOTE_SUMMARY, requestUserId, voteSummaries, voteSummaryFor } from '../lib/votes';
 import { loadScoped } from '../lib/scope';
 
@@ -253,6 +254,12 @@ export const featuresRoutes = new Hono<MembershipEnv>()
       const pid = c.get('currentProjectId');
       const { userIds } = c.req.valid('json');
       await loadScoped(features, id, pid);
+      // Capture the prior set to notify only NEW collaborators.
+      const existing = await db
+        .select({ userId: featureCollaborators.userId })
+        .from(featureCollaborators)
+        .where(eq(featureCollaborators.featureId, id));
+      const existingIds = new Set(existing.map((r) => r.userId));
       // userIds are global (users have no projectId) — do NOT scope them.
       await db.delete(featureCollaborators).where(eq(featureCollaborators.featureId, id));
       if (userIds.length > 0) {
@@ -261,6 +268,8 @@ export const featuresRoutes = new Hono<MembershipEnv>()
           .values(userIds.map((userId) => ({ featureId: id, userId })))
           .onConflictDoNothing();
       }
+      const addedUserIds = userIds.filter((u) => !existingIds.has(u));
+      await fanOutAssignedNotification({ featureId: id, projectId: pid, addedUserIds, actorId: c.get('currentUser')?.id ?? null });
       return c.body(null, 204);
     },
   )
