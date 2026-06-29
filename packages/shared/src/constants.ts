@@ -48,7 +48,7 @@ export const ACTIVITY_KINDS = [
 ] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 
-export const NOTIFICATION_KINDS = ['mention', 'comment', 'reply', 'project_invite', 'idea_submitted'] as const;
+export const NOTIFICATION_KINDS = ['mention', 'comment', 'reply', 'project_invite', 'idea_submitted', 'assigned', 'release_published'] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
 export const DOC_TYPE_COLORS: Record<DocType, { chip: string; edge: string }> = {

@@ -12,7 +12,7 @@ import {
 
 describe('NOTIFICATION_KINDS', () => {
   it('is all notification kinds in order', () => {
-    expect(NOTIFICATION_KINDS).toEqual(['mention', 'comment', 'reply', 'project_invite', 'idea_submitted']);
+    expect(NOTIFICATION_KINDS).toEqual(['mention', 'comment', 'reply', 'project_invite', 'idea_submitted', 'assigned', 'release_published']);
   });
 });
 
