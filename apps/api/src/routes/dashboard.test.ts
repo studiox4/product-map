@@ -19,6 +19,7 @@ import {
   releases,
   featureCollaborators,
   projectFavorites,
+  notifications,
 } from '@productmap/db/schema';
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 
@@ -240,6 +241,25 @@ describe('GET /api/dashboard — content', () => {
     const res = await app.request('/api/dashboard', { headers: auth });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ projects: [], nextActions: [], myWork: [], activity: [] });
+  });
+});
+
+describe('GET /api/dashboard — notification nextActions (E2b)', () => {
+  it('surfaces unread assigned/mention notifications as nextActions (capped)', async () => {
+    // harness builds a user + project they belong to; insert an unread assigned notif on a feature
+    const u = await createTestUser({ role: 'member' });
+    const auth = { cookie: await authCookie(u), origin: 'http://localhost', host: 'localhost' };
+    const A = await makeProject('Alpha', 'alpha');
+    await addMembership(u.id, A.id, 'editor');
+    const userId = u.id;
+    const projectId = A.id;
+    const [f] = await db.insert(features).values({ projectId, title: 'Feat', horizon: 'now' }).returning();
+    await db.insert(notifications).values({ userId, projectId, kind: 'assigned', actorId: null, featureId: f.id });
+    const res = await app.request('/api/dashboard', { headers: auth });
+    const body = await res.json();
+    const notifActions = body.nextActions.filter((a: { kind: string }) => a.kind === 'notification');
+    expect(notifActions.length).toBe(1);
+    expect(notifActions[0]).toMatchObject({ kind: 'notification', notifKind: 'assigned', featureId: f.id });
   });
 });
 
