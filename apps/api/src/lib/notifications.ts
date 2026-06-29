@@ -198,7 +198,7 @@ export async function fanOutAssignedNotification(
   params: { featureId: string; projectId: string; addedUserIds: string[]; actorId: string | null },
 ): Promise<void> {
   try {
-    const candidates = params.addedUserIds.filter((id) => id !== params.actorId);
+    const candidates = [...new Set(params.addedUserIds.filter((id) => id !== params.actorId))];
     if (candidates.length === 0) return;
     const muted = await mutedAmong(candidates, 'assigned');
     const rows: (typeof notifications.$inferInsert)[] = [];

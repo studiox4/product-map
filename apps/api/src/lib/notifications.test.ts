@@ -62,6 +62,14 @@ describe('fanOutAssignedNotification + fanOutReleasePublishedNotification', () =
     expect(rows).toHaveLength(1);
   });
 
+  it('fanOutAssignedNotification dedupes duplicate addedUserIds — exactly one row per user', async () => {
+    const { fanOutAssignedNotification } = await import('../lib/notifications');
+    // bob appears twice in addedUserIds; only one notification row should be inserted
+    await fanOutAssignedNotification({ featureId, projectId, addedUserIds: [bob.id, bob.id], actorId: alice.id });
+    const rows = await db.select().from(notifications).where(and(eq(notifications.userId, bob.id), eq(notifications.kind, 'assigned')));
+    expect(rows).toHaveLength(1);
+  });
+
   it('release_published notifies only favoriters, excludes actor + muted', async () => {
     const { fanOutReleasePublishedNotification } = await import('../lib/notifications');
     const [rel] = await db.insert(releases).values({ projectId, name: 'v1', status: 'shipped', shippedAt: new Date() }).returning();
