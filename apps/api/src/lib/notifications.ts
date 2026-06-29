@@ -1,4 +1,4 @@
-import { and, eq, inArray, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import {
   notifications,
   notificationMutes,
@@ -7,6 +7,7 @@ import {
   comments,
   documents,
   users,
+  projectFavorites,
 } from '@productmap/db/schema';
 import type { NotificationKind } from '@productmap/shared';
 import { db } from '../db';
@@ -172,5 +173,66 @@ export async function fanOutIdeaSubmittedNotification(
     if (rows.length > 0) await db.insert(notifications).values(rows);
   } catch (err) {
     console.error('[notifications] idea_submitted fan-out failed (swallowed):', { projectId: params.projectId, ideaId: params.ideaId }, err);
+  }
+}
+
+/** True if the user already has an UNREAD notification of `kind` for the same target. */
+async function unreadExists(
+  userId: string,
+  kind: NotificationKind,
+  match: { featureId?: string; releaseId?: string },
+): Promise<boolean> {
+  const conds = [
+    eq(notifications.userId, userId),
+    eq(notifications.kind, kind),
+    isNull(notifications.readAt),
+  ];
+  if (match.featureId) conds.push(eq(notifications.featureId, match.featureId));
+  if (match.releaseId) conds.push(sql`${notifications.payload}->>'releaseId' = ${match.releaseId}`);
+  const [row] = await db.select({ id: notifications.id }).from(notifications).where(and(...conds)).limit(1);
+  return !!row;
+}
+
+/** Notify users newly added as collaborators on a feature. Best-effort. */
+export async function fanOutAssignedNotification(
+  params: { featureId: string; projectId: string; addedUserIds: string[]; actorId: string | null },
+): Promise<void> {
+  try {
+    const candidates = params.addedUserIds.filter((id) => id !== params.actorId);
+    if (candidates.length === 0) return;
+    const muted = await mutedAmong(candidates, 'assigned');
+    const rows: (typeof notifications.$inferInsert)[] = [];
+    for (const userId of candidates) {
+      if (muted.has(userId)) continue;
+      if (await unreadExists(userId, 'assigned', { featureId: params.featureId })) continue;
+      rows.push({ userId, projectId: params.projectId, kind: 'assigned', actorId: params.actorId, featureId: params.featureId, payload: null });
+    }
+    if (rows.length > 0) await db.insert(notifications).values(rows);
+  } catch (err) {
+    console.error('[notifications] assigned fan-out failed (swallowed):', { featureId: params.featureId }, err);
+  }
+}
+
+/** Notify project favoriters that a release shipped. Best-effort. */
+export async function fanOutReleasePublishedNotification(
+  params: { projectId: string; releaseId: string; releaseName: string; actorId: string | null },
+): Promise<void> {
+  try {
+    const favs = await db
+      .select({ userId: projectFavorites.userId })
+      .from(projectFavorites)
+      .where(eq(projectFavorites.projectId, params.projectId));
+    const ids = favs.map((f) => f.userId).filter((id) => id !== params.actorId);
+    if (ids.length === 0) return;
+    const muted = await mutedAmong(ids, 'release_published');
+    const rows: (typeof notifications.$inferInsert)[] = [];
+    for (const userId of ids) {
+      if (muted.has(userId)) continue;
+      if (await unreadExists(userId, 'release_published', { releaseId: params.releaseId })) continue;
+      rows.push({ userId, projectId: params.projectId, kind: 'release_published', actorId: params.actorId, payload: { releaseId: params.releaseId, name: params.releaseName } });
+    }
+    if (rows.length > 0) await db.insert(notifications).values(rows);
+  } catch (err) {
+    console.error('[notifications] release_published fan-out failed (swallowed):', { releaseId: params.releaseId }, err);
   }
 }
