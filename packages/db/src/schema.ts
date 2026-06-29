@@ -163,7 +163,7 @@ export const comments = pgTable(
     check('comments_body_check', sql`char_length(${t.body}) BETWEEN 1 AND 4000`),
   ],
 );
-const NOTIFICATION_KIND_VALUES = ['mention', 'comment', 'reply', 'project_invite', 'idea_submitted'] as const;
+const NOTIFICATION_KIND_VALUES = ['mention', 'comment', 'reply', 'project_invite', 'idea_submitted', 'assigned', 'release_published'] as const;
 const kindCheckList = NOTIFICATION_KIND_VALUES.map((v) => `'${v}'`).join(', ');
 
 export const notifications = pgTable(
