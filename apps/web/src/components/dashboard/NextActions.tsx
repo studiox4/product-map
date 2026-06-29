@@ -15,6 +15,12 @@ function describe(a: NextAction): { icon: typeof MessageSquare; to: string; text
       return { icon: FileText, to: appRoutes.doc(a.documentId), text: `Review “${a.title}”` };
     case 'feature_missing_dates':
       return { icon: CalendarClock, to: appRoutes.feature(a.featureId), text: `Add dates to “${a.title}”` };
+    case 'notification':
+      return {
+        icon: MessageSquare,
+        to: a.featureId ? appRoutes.feature(a.featureId) : appRoutes.projectOverview(a.projectSlug),
+        text: a.title,
+      };
   }
 }
 
