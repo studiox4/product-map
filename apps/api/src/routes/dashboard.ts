@@ -12,6 +12,7 @@ import {
   releases,
   activity,
   users,
+  notifications,
 } from '@productmap/db/schema';
 import type { AuthEnv } from '../middleware/auth';
 import type {
@@ -214,7 +215,39 @@ export const dashboardRoutes = new Hono<AuthEnv>().get('/', async (c) => {
     }
   }
 
-  // 7c) open_comment: unresolved root comment threads on the caller's
+  // 7c) notification: up to 5 unread actionable notifications (mention/assigned).
+  const notifRows = await db
+    .select({
+      kind: notifications.kind,
+      projectId: notifications.projectId,
+      featureId: notifications.featureId,
+      documentId: notifications.documentId,
+      createdAt: notifications.createdAt,
+    })
+    .from(notifications)
+    .where(
+      and(
+        eq(notifications.userId, user.id),
+        isNull(notifications.readAt),
+        inArray(notifications.kind, ['mention', 'assigned']),
+        inArray(notifications.projectId, activePids),
+      ),
+    )
+    .orderBy(desc(notifications.createdAt))
+    .limit(5);
+  for (const n of notifRows) {
+    nextActions.push({
+      kind: 'notification',
+      notifKind: n.kind as 'mention' | 'assigned',
+      projectId: n.projectId,
+      projectSlug: slugByPid.get(n.projectId) ?? '',
+      featureId: n.featureId ?? undefined,
+      documentId: n.documentId ?? undefined,
+      title: n.kind === 'assigned' ? 'You were assigned to a feature' : 'You were mentioned',
+    });
+  }
+
+  // 7d) open_comment: unresolved root comment threads on the caller's
   // collaborated features (and their docs), grouped + counted. Scoped to the
   // myWork feature set so it's both relevant and bounded.
   if (myFeatureIds.size > 0) {

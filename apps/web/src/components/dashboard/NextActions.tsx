@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { MessageSquare, FileText, CalendarClock, CheckCircle2 } from 'lucide-react';
+import { Bell, MessageSquare, FileText, CalendarClock, CheckCircle2 } from 'lucide-react';
 import type { NextAction } from '@productmap/shared';
 import { appRoutes } from '@/lib/routes';
 
@@ -15,6 +15,12 @@ function describe(a: NextAction): { icon: typeof MessageSquare; to: string; text
       return { icon: FileText, to: appRoutes.doc(a.documentId), text: `Review “${a.title}”` };
     case 'feature_missing_dates':
       return { icon: CalendarClock, to: appRoutes.feature(a.featureId), text: `Add dates to “${a.title}”` };
+    case 'notification':
+      return {
+        icon: Bell,
+        to: a.featureId ? appRoutes.feature(a.featureId) : a.documentId ? appRoutes.doc(a.documentId) : appRoutes.projectOverview(a.projectSlug),
+        text: a.title,
+      };
   }
 }
 

@@ -209,7 +209,7 @@ describe('routes', () => {
 
   it('prefs default all-on, and a mute round-trips', async () => {
     const def = await (await app.request('/api/notifications/prefs', { headers: bobAuth })).json();
-    expect(def).toEqual({ mention: true, comment: true, reply: true, project_invite: true, idea_submitted: true });
+    expect(def).toEqual({ mention: true, comment: true, reply: true, project_invite: true, idea_submitted: true, assigned: true, release_published: true });
     await app.request('/api/notifications/prefs', { method: 'PUT', headers: headers(bobAuth), body: JSON.stringify({ kind: 'comment', enabled: false }) });
     const muted = await (await app.request('/api/notifications/prefs', { headers: bobAuth })).json();
     expect(muted.comment).toBe(false);

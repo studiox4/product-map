@@ -8,6 +8,7 @@ import { db } from '../db';
 import { type MembershipEnv } from '../middleware/membership';
 import { loadScoped } from '../lib/scope';
 import { recordActivity } from '../lib/activity';
+import { fanOutReleasePublishedNotification } from '../lib/notifications';
 import { markdownToTiptap } from '../lib/markdown';
 
 const EMPTY_DOC = { type: 'doc', content: [] };
@@ -58,6 +59,10 @@ async function updateRelease(
         from: prev.status,
         to: row.status,
       });
+    }
+    // E2b: notify favoriters only when a release is newly published.
+    if (prev.status === 'planned' && row.status === 'shipped') {
+      await fanOutReleasePublishedNotification({ projectId: prev.projectId, releaseId: row.id, releaseName: row.name, actorId: userId ?? null });
     }
   }
   return row;

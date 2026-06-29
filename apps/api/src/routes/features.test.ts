@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { setupTestDb, truncateAll, closeTestDb, createTestUser, createTestProject, addMembership, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { projects, features, documents, users, activity, featureCollaborators, votes, objectives, releases, featureDependencies } from '@productmap/db/schema';
+import { projects, features, documents, users, activity, featureCollaborators, votes, objectives, releases, featureDependencies, notifications } from '@productmap/db/schema';
 import { asc, eq } from 'drizzle-orm';
 
 let projectId: string;
@@ -458,6 +458,21 @@ describe('PUT /api/projects/:projectId/features/:id/collaborators', () => {
       },
     );
     expect(missing.status).toBe(404);
+  });
+
+  it('PUT collaborators notifies only newly-added users, not the actor or pre-existing', async () => {
+    const [f] = await db.insert(features).values({ projectId, title: 'F', horizon: 'now' }).returning();
+    const [bob] = await db.insert(users).values({ name: 'Bob', color: '#123456' }).returning();
+    // userId (actor) is already a pre-existing collaborator
+    await db.insert(featureCollaborators).values({ featureId: f.id, userId }).onConflictDoNothing();
+    const res = await app.request(`/api/projects/${projectId}/features/${f.id}/collaborators`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json', ...auth },
+      body: JSON.stringify({ userIds: [userId, bob.id] }),
+    });
+    expect(res.status).toBe(204);
+    const notifs = await db.select().from(notifications).where(eq(notifications.kind, 'assigned'));
+    expect(notifs.map((n) => n.userId)).toEqual([bob.id]); // userId (actor + pre-existing) excluded
   });
 });
 

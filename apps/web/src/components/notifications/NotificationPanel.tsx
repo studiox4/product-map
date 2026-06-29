@@ -11,6 +11,8 @@ function summarize(n: NotificationItem): string {
     case 'comment': return `${who} commented on your work`;
     case 'project_invite': return `${who} invited you to a project`;
     case 'idea_submitted': return 'New public idea submitted';
+    case 'assigned': return `${who} assigned you to a feature`;
+    case 'release_published': return `${who} shipped ${(n.payload?.name as string) ?? 'a release'}`;
     default: return 'New notification';
   }
 }

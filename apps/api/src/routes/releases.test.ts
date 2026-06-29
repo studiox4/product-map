@@ -10,7 +10,7 @@ import {
 } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { features, documents, releases, activity, templates } from '@productmap/db/schema';
+import { features, documents, releases, activity, templates, notifications, projectFavorites } from '@productmap/db/schema';
 import { markdownToTiptap } from '../lib/markdown';
 import { asc, eq } from 'drizzle-orm';
 
@@ -664,5 +664,34 @@ describe('releases cross-project isolation', () => {
     const nonMemberAuth = { cookie: await authCookie(nonMember), origin: 'http://localhost', host: 'localhost' };
     const res = await app.request(`/api/projects/${projectId}/releases`, { headers: nonMemberAuth });
     expect(res.status).toBe(404);
+  });
+});
+
+describe('release_published notifications (E2b)', () => {
+  it('shipping a release notifies project favoriters (not the actor)', async () => {
+    // harness: a project + actor; create a release planned, a favoriter (not actor)
+    const favoriter = await createTestUser({ role: 'member', name: 'Fav', email: 'fav@test.co' });
+    await addMembership(favoriter.id, projectId, 'viewer');
+    await db.insert(projectFavorites).values({ userId: favoriter.id, projectId });
+    const [rel] = await db.insert(releases).values({ projectId, name: 'v1', status: 'planned' }).returning();
+    const res = await app.request(`/api/projects/${projectId}/releases/${rel.id}`, {
+      method: 'PATCH', headers: { 'content-type': 'application/json', ...auth },
+      body: JSON.stringify({ status: 'shipped' }),
+    });
+    expect(res.status).toBe(200);
+    const notifs = await db.select().from(notifications).where(eq(notifications.kind, 'release_published'));
+    expect(notifs.map((n) => n.userId)).toEqual([favoriter.id]);
+    expect(notifs[0].payload).toMatchObject({ releaseId: rel.id, name: 'v1' });
+  });
+
+  it('re-shipping an already-shipped release fires no notification', async () => {
+    const favoriter = await createTestUser({ role: 'member', name: 'F2', email: 'f2@test.co' });
+    await db.insert(projectFavorites).values({ userId: favoriter.id, projectId });
+    const [rel] = await db.insert(releases).values({ projectId, name: 'v2', status: 'shipped', shippedAt: new Date() }).returning();
+    await app.request(`/api/projects/${projectId}/releases/${rel.id}`, {
+      method: 'PATCH', headers: { 'content-type': 'application/json', ...auth },
+      body: JSON.stringify({ status: 'shipped' }),
+    });
+    expect((await db.select().from(notifications).where(eq(notifications.kind, 'release_published'))).length).toBe(0);
   });
 });

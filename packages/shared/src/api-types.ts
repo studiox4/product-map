@@ -244,7 +244,8 @@ export interface DashboardProject {
 export type NextAction =
   | { kind: 'open_comment'; source: 'authored' | 'collaborating'; projectId: string; projectSlug: string; featureId?: string; documentId?: string; title: string; count: number }
   | { kind: 'doc_in_review'; projectId: string; projectSlug: string; documentId: string; featureId: string; title: string; docType: DocType }
-  | { kind: 'feature_missing_dates'; projectId: string; projectSlug: string; featureId: string; title: string };
+  | { kind: 'feature_missing_dates'; projectId: string; projectSlug: string; featureId: string; title: string }
+  | { kind: 'notification'; notifKind: 'mention' | 'assigned'; projectId: string; projectSlug: string; featureId?: string; documentId?: string; title: string };
 /** A feature the caller collaborates on, across projects. */
 export interface MyWorkItem {
   featureId: string; projectId: string; projectSlug: string;

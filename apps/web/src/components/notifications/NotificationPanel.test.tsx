@@ -57,6 +57,28 @@ vi.mock('@/lib/api', async (orig) => ({
           readAt: null,
           createdAt: new Date().toISOString(),
         },
+        {
+          id: 'n4',
+          kind: 'assigned',
+          actorName: 'Dana',
+          documentId: null,
+          featureId: 'feat-789',
+          projectSlug: 'my-project',
+          payload: null,
+          readAt: null,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 'n5',
+          kind: 'release_published',
+          actorName: 'Eli',
+          documentId: null,
+          featureId: null,
+          projectSlug: 'my-project',
+          payload: { releaseId: 'r1', name: 'v2.0' },
+          readAt: null,
+          createdAt: new Date().toISOString(),
+        },
       ],
       nextCursor: null,
     },
@@ -121,5 +143,17 @@ describe('NotificationPanel', () => {
   it('mention item shows mention-appropriate text', () => {
     const { panel } = renderPanel();
     expect(panel.getByText(/alice mentioned you/i)).toBeTruthy();
+  });
+
+  it('assigned item links to the feature', () => {
+    const { panel } = renderPanel();
+    const link = panel.getByText(/dana assigned you/i).closest('a');
+    expect(link?.getAttribute('href')).toContain('/features/');
+    expect(link?.getAttribute('href')).toContain('feat-789');
+  });
+
+  it('release_published item shows the release name', () => {
+    const { panel } = renderPanel();
+    expect(panel.getByText(/eli shipped v2\.0/i)).toBeTruthy();
   });
 });
