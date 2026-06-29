@@ -555,7 +555,9 @@ Expected: FAIL — no notification nextAction.
 ```
 Confirm `isNull`, `desc`, `inArray` are imported in dashboard.ts (add any missing). Use the same scope variable the other nextActions use (`activePids` per the reviewDocRows block).
 
-- [ ] **Step 4: Render the variant** — `NextActions.tsx` `describe()` switch
+- [ ] **Step 4: Refine the existing `notification` case** — `NextActions.tsx` `describe()` switch
+
+NOTE: Task 6 already ADDED a `notification` case to this switch (forced by Task 1 growing the `NextAction` union — TS2366). Its current form uses `MessageSquare` and routes `to: a.featureId ? feature : projectOverview` — which DROPS the `documentId` deep-link for a mention on a doc. Do NOT add a second case (duplicate). Instead REPLACE the existing case body so it handles `documentId`:
 
 ```typescript
     case 'notification':
@@ -565,7 +567,7 @@ Confirm `isNull`, `desc`, `inArray` are imported in dashboard.ts (add any missin
         text: a.title,
       };
 ```
-Import `Bell` from `lucide-react` at the top of `NextActions.tsx`.
+Import `Bell` from `lucide-react` at the top of `NextActions.tsx` (and drop the `MessageSquare` import only if it becomes unused).
 
 - [ ] **Step 5: Run tests**
 
