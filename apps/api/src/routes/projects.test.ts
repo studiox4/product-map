@@ -2,7 +2,8 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { setupTestDb, truncateAll, closeTestDb, createTestUser, createTestProject, addMembership, authCookie } from '../test/helpers';
 import { app } from '../app';
 import { db } from '../db';
-import { projects } from '@productmap/db/schema';
+import { and, eq } from 'drizzle-orm';
+import { projects, projectFavorites } from '@productmap/db/schema';
 
 let projectId: string;
 let adminAuth: Record<string, string> = {};
@@ -130,6 +131,24 @@ describe('project members', () => {
     const del = await app.request(`/api/projects/${p.id}/members/${target.id}`, { method: 'DELETE', headers: h });
     expect(del.status).toBe(204);
   });
+  it('removing a member clears their project favorite (no orphaned subscription)', async () => {
+    const owner = await createTestUser({ role: 'member' }); const p = await createTestProject();
+    await addMembership(owner.id, p.id, 'owner');
+    const target = await createTestUser({ role: 'member', email: 'fav@x.co' });
+    await addMembership(target.id, p.id, 'editor');
+    await db.insert(projectFavorites).values({ userId: target.id, projectId: p.id });
+    const h = await auth(owner);
+
+    const del = await app.request(`/api/projects/${p.id}/members/${target.id}`, { method: 'DELETE', headers: h });
+    expect(del.status).toBe(204);
+
+    const favs = await db
+      .select()
+      .from(projectFavorites)
+      .where(and(eq(projectFavorites.userId, target.id), eq(projectFavorites.projectId, p.id)));
+    expect(favs).toHaveLength(0);
+  });
+
   it('cannot demote or remove the last owner', async () => {
     const owner = await createTestUser({ role: 'member' }); const p = await createTestProject();
     await addMembership(owner.id, p.id, 'owner');

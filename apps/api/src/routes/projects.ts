@@ -202,6 +202,13 @@ export const projectsRoutes = new Hono<MembershipEnv>()
         .delete(memberships)
         .where(and(eq(memberships.projectId, projectId), eq(memberships.userId, userId)));
 
+      // Clear their subscription too: a favorite doubles as a notification
+      // subscription (E2b), so an orphaned favorite would keep leaking project
+      // activity (release notifications, dashboard rollups) to an ex-member.
+      await tx
+        .delete(projectFavorites)
+        .where(and(eq(projectFavorites.userId, userId), eq(projectFavorites.projectId, projectId)));
+
       return { conflict: false } as const;
     });
 
