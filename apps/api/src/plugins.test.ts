@@ -33,3 +33,17 @@ describe('plugin seam', () => {
     expect((await probe.request('/api/ee/fake/ping')).status).toBe(200);
   });
 });
+
+describe('EE auth-gating (security boundary)', () => {
+  // M1: verify the global /api/* requireAuth middleware fires BEFORE any
+  // /api/ee/* route handler. The middleware chain in app.ts runs
+  // `.use('/api/*', ...)` first (Hono processes middleware in registration
+  // order), so an unauthenticated request to the EE namespace must 401
+  // regardless of whether any plugin has registered a handler at that path.
+  it('unauthenticated request to /api/ee/* → 401 (global auth gate)', async () => {
+    // No auth cookie / Authorization header — raw unauthenticated fetch.
+    const res = await app.request('/api/ee/any-plugin/any-action');
+    expect(res.status).toBe(401);
+    expect(await res.json()).toMatchObject({ error: 'unauthorized' });
+  });
+});

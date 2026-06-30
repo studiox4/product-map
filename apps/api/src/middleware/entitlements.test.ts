@@ -1,7 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { Hono } from 'hono';
 import { createCommunityProvider, createEntitlementProvider } from '@productmap/sdk';
 import { setEntitlementProvider, requireFeature } from './entitlements';
+
+// Reset to community provider before each test so a future appended test
+// cannot silently inherit an entitled provider set by a prior test.
+beforeEach(() => setEntitlementProvider(createCommunityProvider()));
 
 function appWithGate() {
   return new Hono().get('/x', requireFeature('analytics'), (c) => c.json({ ok: true }));

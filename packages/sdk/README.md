@@ -12,6 +12,17 @@ interfaces + the CommunityProvider; the private paid edition implements them.
   `<Slot id>` lazy-renders the fill. Build-time composition only.
 - **Entitlements** (`entitlements.ts`) — `EntitlementProvider`; `requireFeature`
   on the server is the real gate, `useEntitlement` on the client is UX-only.
+
+  ### Entitlement scope: per-process (self-hosted, single-org)
+
+  The entitlement provider is resolved per-process: `get()`, `can()`, and
+  `limit()` take no tenant or request argument, and `setEntitlementProvider`
+  sets a process-level singleton. This is intentional for the self-hosted Team
+  edition, where one deployment serves one organisation. A future hosted
+  multi-tenant edition would resolve entitlements per-request at a different
+  layer (e.g. a request-scoped middleware that selects the right provider by
+  tenant ID) and may add an optional context parameter to the
+  `EntitlementProvider` contract at that time.
 - **Migrations** — `@productmap/db`'s `migrateStream(db, { folder, table })`
   runs the paid `ee` stream on its own ledger. ee migrations are additive-only.
 
