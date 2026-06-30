@@ -1,6 +1,7 @@
 import MarketingNav from '@/components/marketing/MarketingNav';
 import Hero from '@/components/marketing/Hero';
 import FeatureHighlights from '@/components/marketing/FeatureHighlights';
+import TeamHighlights from '@/components/marketing/TeamHighlights';
 import ScreenshotStrip from '@/components/marketing/ScreenshotStrip';
 import EthosBand from '@/components/marketing/EthosBand';
 import GitHubStars from '@/components/marketing/GitHubStars';
@@ -21,6 +22,7 @@ export default function Marketing() {
         <main>
           <Hero />
           <FeatureHighlights />
+          <TeamHighlights />
           <ScreenshotStrip />
           <EthosBand />
           <GitHubStars />
