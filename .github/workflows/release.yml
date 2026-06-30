@@ -10,6 +10,9 @@ on:
       - 'v*'
 
 jobs:
+  # NOTE: this verify job intentionally mirrors ci.yml's quality+test jobs.
+  # Keep the two in sync when the build/test setup changes (services, node
+  # version, per-package typechecks).
   verify:
     name: Verify tag (build + tests)
     runs-on: ubuntu-latest
