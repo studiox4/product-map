@@ -4,10 +4,13 @@ import { mkdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { createDb } from '@productmap/db';
+import { createCommunityProvider } from '@productmap/sdk';
 import { app } from './app';
 import { configureDb } from './db';
 import { mountWebStatic } from './serve-web';
 import { assertConfig } from './config';
+import { setEntitlementProvider } from './middleware/entitlements';
+import { installServerPlugins } from './plugins';
 assertConfig(); // fail fast if AUTH_SECRET missing in production
 
 // Build the node pg pool here (off the browser-reachable `app` graph) and inject
@@ -16,6 +19,11 @@ const connectionString =
   process.env.DATABASE_URL ?? 'postgres://localhost:5432/productmap';
 const { db: nodeDb } = createDb(connectionString);
 configureDb(nodeDb);
+
+// Edition seam: core installs the community provider + zero plugins. A paid
+// edition replaces the provider and adds plugins before this runs.
+setEntitlementProvider(createCommunityProvider());
+installServerPlugins(app);
 
 // Repo root is two levels up from apps/api.
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');

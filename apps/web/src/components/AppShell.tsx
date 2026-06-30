@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils';
 import { appRoutes } from '@/lib/routes';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import DemoBanner from '@/demo/DemoBanner';
+import { Slot } from '@/lib/slots';
 
 const NAV_LINKS: { to: string; label: string; end: boolean; icon?: typeof Lightbulb }[] = [
   { to: appRoutes.dashboard, label: 'Dashboard', end: true },
@@ -183,6 +184,7 @@ export function AppShell() {
             </NavLink>
           </div>
           <div className="ml-auto flex items-center gap-1 md:gap-2">
+            <Slot id="nav.analytics" />
             <NotificationBell />
             <button
               type="button"
