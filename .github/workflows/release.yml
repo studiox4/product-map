@@ -1,0 +1,68 @@
+name: Release
+
+# Cut a core release the private edition can pin to: push a `vX.Y.Z` tag, this
+# re-verifies the tagged commit (build + unit/integration tests) and publishes a
+# GitHub Release. The private `productmap-cloud` repo pins the public core to
+# these tags (git submodule). See docs/open-core-dual-repo.md.
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  # NOTE: this verify job intentionally mirrors ci.yml's quality+test jobs.
+  # Keep the two in sync when the build/test setup changes (services, node
+  # version, per-package typechecks).
+  verify:
+    name: Verify tag (build + tests)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # Test harness reads TEST_PG_BASE (apps/api/src/test/helpers.ts) and
+      # creates/migrates productmap_test automatically.
+      TEST_PG_BASE: postgres://postgres:postgres@localhost:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Typecheck API
+        run: pnpm --filter @productmap/api exec tsc -p tsconfig.json --noEmit
+      - name: Typecheck web
+        run: pnpm --filter @productmap/web exec tsc -p tsconfig.json --noEmit
+      - name: Build (all packages)
+        run: pnpm build
+      - name: Unit & integration tests
+        run: pnpm test
+
+  release:
+    name: Publish GitHub Release
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # Pass the tag via env (not inline ${{ }}) so a crafted tag name can't
+          # inject into the shell command.
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" --title "$TAG" --generate-notes

@@ -1,5 +1,7 @@
 name: CI
 
+# NOTE: release.yml's `verify` job mirrors the quality+test jobs below. Keep the
+# two in sync when the build/test setup changes.
 on:
   pull_request:
   push:
