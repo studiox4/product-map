@@ -3,3 +3,4 @@
 export * from './entitlements';
 export * from './server-plugins';
 export * from './jobs';
+export * from './slots';
