@@ -62,6 +62,8 @@ export const app = new Hono()
   .route('/api/intake', publicIntakeRoutes)
   .route('/api/notifications', notificationsRoutes);
 
+// Reserved: /api/ee/* is the mount namespace for edition plugins (see plugins.ts).
+// Core registers none, so unmatched /api/ee/* falls through to notFound (404).
 app.notFound((c) => c.json({ error: 'not_found' }, 404));
 
 app.onError((err, c) => {
