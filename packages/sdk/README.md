@@ -12,6 +12,12 @@ interfaces + the CommunityProvider; the private paid edition implements them.
   `<Slot id>` lazy-renders the fill. Build-time composition only.
 - **Entitlements** (`entitlements.ts`) — `EntitlementProvider`; `requireFeature`
   on the server is the real gate, `useEntitlement` on the client is UX-only.
+  License **verification** ships here (`verifyLicense` via the **node-only**
+  `@productmap/sdk/license` subpath — kept out of the main barrel so `node:crypto`
+  never enters the web bundle). Verification is public; **signing keys and the
+  key generator are private to the Team edition**. A paid edition's
+  `LicenseKeyProvider` calls `verifyLicense(token, publicKeyPem)` and feeds the
+  result into `createEntitlementProvider`.
 
   ### Entitlement scope: per-process (self-hosted, single-org)
 
