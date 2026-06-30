@@ -24,7 +24,7 @@ export interface License {
 function isLicenseShape(v: unknown): v is License {
   if (typeof v !== 'object' || v === null) return false;
   const o = v as Record<string, unknown>;
-  if (!Array.isArray(o.features)) return false;
+  if (!Array.isArray(o.features) || !o.features.every((f) => typeof f === 'string')) return false;
   if (typeof o.limits !== 'object' || o.limits === null) return false;
   if (!(o.expiresAt === null || typeof o.expiresAt === 'number')) return false;
   const limits = o.limits as Record<string, unknown>;
