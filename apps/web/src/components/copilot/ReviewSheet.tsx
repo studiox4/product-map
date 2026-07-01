@@ -2,14 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { Loader2, Sparkles } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@productmap/ui';
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from '@/components/ui/sheet';
+} from '@productmap/ui';
 import { streamSse, STREAM_TIMEOUT_MS } from './sse';
 import { apiPath } from '@/lib/api';
 import { useProjectId } from '@/lib/project';

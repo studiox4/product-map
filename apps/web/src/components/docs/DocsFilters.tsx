@@ -8,10 +8,10 @@ import {
   type DocStatus,
   type DocType,
 } from '@productmap/shared';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@productmap/ui';
+import { Input } from '@productmap/ui';
 import { STATUS_LABELS } from '@/components/StatusBadge';
-import { cn } from '@/lib/utils';
+import { cn } from '@productmap/ui/lib/utils';
 
 interface DocsFiltersProps {
   typeFilters: DocType[];

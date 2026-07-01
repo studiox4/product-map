@@ -4,7 +4,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@productmap/ui';
 
 interface ShortcutsOverlayProps {
   open: boolean;

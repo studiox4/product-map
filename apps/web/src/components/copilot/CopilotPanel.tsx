@@ -15,16 +15,16 @@ import type { CopilotNudge, DocumentListItem } from '@productmap/shared';
 import { useAllDocuments, useCopilotNudges, apiPath } from '@/lib/api';
 import { useProjectId } from '@/lib/project';
 import { appRoutes } from '@/lib/routes';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@productmap/ui';
+import { Skeleton } from '@productmap/ui';
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from '@/components/ui/sheet';
-import { cn } from '@/lib/utils';
+} from '@productmap/ui';
+import { cn } from '@productmap/ui/lib/utils';
 import { streamSse, STREAM_TIMEOUT_MS } from './sse';
 
 const proseClass =

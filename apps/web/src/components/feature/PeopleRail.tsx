@@ -6,9 +6,9 @@ import { toast } from 'sonner';
 import type { FeatureWithDocs, User } from '@productmap/shared';
 import { apiPath, fetchJson, queryKeys, useCollaborators, useUsers } from '@/lib/api';
 import { useProjectId } from '@/lib/project';
-import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@productmap/ui';
+import { Popover, PopoverContent, PopoverTrigger } from '@productmap/ui';
+import { Skeleton } from '@productmap/ui';
 import { UserAvatar } from '@/components/UserAvatar';
 
 function useFeatureCollaborators(pid: string, featureId: string) {

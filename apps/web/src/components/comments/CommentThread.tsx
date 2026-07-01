@@ -3,13 +3,13 @@ import { formatDistanceToNow } from 'date-fns';
 import { Check, Loader2, MoreHorizontal, Sparkles } from 'lucide-react';
 import type { Comment, CommentThread as Thread } from '@productmap/shared';
 import { UserAvatar } from '@/components/UserAvatar';
-import { Button } from '@/components/ui/button';
+import { Button } from '@productmap/ui';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@productmap/ui';
 import { CommentComposer } from './CommentComposer';
 import { segmentMentions } from '@/lib/mentions';
 

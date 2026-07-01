@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { MyWorkItem } from '@productmap/shared';
 import { appRoutes } from '@/lib/routes';
-import { cn } from '@/lib/utils';
+import { cn } from '@productmap/ui/lib/utils';
 
 const STATUS_DOT: Record<string, string> = {
   idea: 'bg-muted-ink/50',

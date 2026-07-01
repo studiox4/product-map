@@ -10,9 +10,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+} from '@productmap/ui';
+import { Button } from '@productmap/ui';
+import { cn } from '@productmap/ui/lib/utils';
 
 interface PromoteIdeaDialogProps {
   idea: IdeaWithVotes;

@@ -19,19 +19,19 @@ import {
   type EvidenceItem,
 } from '@/lib/api';
 import { useCanEdit } from '@/lib/project';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@productmap/ui';
+import { Input } from '@productmap/ui';
+import { Label } from '@productmap/ui';
+import { Popover, PopoverContent, PopoverTrigger } from '@productmap/ui';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Textarea } from '@/components/ui/textarea';
+} from '@productmap/ui';
+import { Skeleton } from '@productmap/ui';
+import { Textarea } from '@productmap/ui';
 
 export const EVIDENCE_KIND_LABELS: Record<EvidenceKind, string> = {
   quote: 'Quote',

@@ -4,17 +4,17 @@ import { Download, TriangleAlert } from 'lucide-react';
 import type { Project } from '@productmap/shared';
 import { useOverview, useResetDemo, useUpdateProject, apiPath, type ProjectUpdateInput } from '@/lib/api';
 import { useProjectId } from '@/lib/project';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@productmap/ui';
+import { Input } from '@productmap/ui';
+import { Label } from '@productmap/ui';
+import { Skeleton } from '@productmap/ui';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
+} from '@productmap/ui';
 import {
   Dialog,
   DialogContent,
@@ -22,7 +22,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@productmap/ui';
 import { SharingBlock } from '@/components/settings/SharingBlock';
 import { IntakeBlock } from '@/components/settings/IntakeBlock';
 import { demoReady } from '@/demo/demoState';

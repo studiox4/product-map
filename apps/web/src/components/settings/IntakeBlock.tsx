@@ -3,17 +3,17 @@ import { toast } from 'sonner';
 import { Check, Copy, Inbox } from 'lucide-react';
 import { ApiError, useCreateIntake, useRevokeShare } from '@/lib/api';
 import { useProjectId } from '@/lib/project';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@productmap/ui';
+import { Input } from '@productmap/ui';
+import { Label } from '@productmap/ui';
+import { Textarea } from '@productmap/ui';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
+} from '@productmap/ui';
 
 /** Per-project localStorage key so links survive reloads (no list endpoint). */
 export const intakeUrlKey = (projectId: string) => `pmIntakeUrl:${projectId}`;

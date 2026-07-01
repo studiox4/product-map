@@ -1,7 +1,7 @@
 import { formatDistanceToNow } from 'date-fns';
 import type { ActivityItem } from '@productmap/shared';
 import { useActivity } from '@/lib/api';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@productmap/ui';
 import { UserAvatar } from '@/components/UserAvatar';
 import { HORIZON_LABELS } from '@/components/HorizonBadge';
 import { STATUS_LABELS } from '@/components/StatusBadge';

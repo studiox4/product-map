@@ -3,7 +3,7 @@ import { Star, ArrowUpRight } from 'lucide-react';
 import type { DashboardProject } from '@productmap/shared';
 import { appRoutes } from '@/lib/routes';
 import { useToggleFavorite } from '@/lib/api';
-import { cn } from '@/lib/utils';
+import { cn } from '@productmap/ui/lib/utils';
 
 const STATUS_META: { key: keyof DashboardProject['counts']; label: string; dot: string }[] = [
   { key: 'idea', label: 'Ideas', dot: 'bg-muted-ink/50' },

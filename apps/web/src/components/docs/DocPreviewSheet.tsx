@@ -10,16 +10,16 @@ import {
 } from '@productmap/shared';
 import { useDocument } from '@/lib/api';
 import { StatusBadge } from '@/components/StatusBadge';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@productmap/ui';
+import { Skeleton } from '@productmap/ui';
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from '@/components/ui/sheet';
-import { cn } from '@/lib/utils';
+} from '@productmap/ui';
+import { cn } from '@productmap/ui/lib/utils';
 import { navigateWithTransition } from '@/lib/transitions';
 import { appRoutes } from '@/lib/routes';
 

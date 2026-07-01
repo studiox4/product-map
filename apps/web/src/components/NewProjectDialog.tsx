@@ -4,9 +4,9 @@ import { toast } from 'sonner';
 import { useCreateProject, apiErrorMessage } from '@/lib/api';
 import { useActiveProject } from '@/lib/project';
 import { appRoutes } from '@/lib/routes';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button } from '@productmap/ui';
+import { Input } from '@productmap/ui';
+import { Label } from '@productmap/ui';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@productmap/ui';
 
 /**
  * Create-project dialog driven by the `?new=1` search param (the switcher's

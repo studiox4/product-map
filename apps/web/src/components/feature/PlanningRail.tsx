@@ -1,14 +1,14 @@
 import { toast } from 'sonner';
 import type { FeatureWithDocs } from '@productmap/shared';
 import { useObjectives, useReleases, useUpdateFeature } from '@/lib/api';
-import { Label } from '@/components/ui/label';
+import { Label } from '@productmap/ui';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@productmap/ui';
 
 const NONE = '__none__';
 

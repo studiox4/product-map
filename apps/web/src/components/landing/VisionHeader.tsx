@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { Pencil } from 'lucide-react';
 import type { Project } from '@productmap/shared';
 import { useUpdateProject } from '@/lib/api';
-import { Input } from '@/components/ui/input';
+import { Input } from '@productmap/ui';
 
 export function VisionHeader({ product }: { product: Project }) {
   const [editing, setEditing] = useState(false);

@@ -8,7 +8,7 @@ import {
 } from '@productmap/shared';
 import { useArchiveFeature, useFeature, useUpdateFeature } from '@/lib/api';
 import { useCanEdit } from '@/lib/project';
-import { Button } from '@/components/ui/button';
+import { Button } from '@productmap/ui';
 import {
   Dialog,
   DialogContent,
@@ -16,17 +16,17 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@productmap/ui';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
+} from '@productmap/ui';
+import { Input } from '@productmap/ui';
+import { Label } from '@productmap/ui';
+import { Skeleton } from '@productmap/ui';
 import { HorizonBadge, HORIZON_LABELS } from '@/components/HorizonBadge';
 import { STATUS_LABELS } from '@/components/StatusBadge';
 import { DescriptionBlock } from '@/components/feature/DescriptionBlock';

@@ -1,8 +1,8 @@
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useAcceptInvite, useInvitePreview, apiErrorMessage } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@productmap/ui';
+import { Skeleton } from '@productmap/ui';
 import { appRoutes } from '@/lib/routes';
 
 /** Centered card chrome shared by every terminal state of the accept page. */

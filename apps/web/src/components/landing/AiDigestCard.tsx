@@ -4,7 +4,7 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { Sparkles } from 'lucide-react';
 import { useAiStatus } from '@/lib/api';
-import { Button } from '@/components/ui/button';
+import { Button } from '@productmap/ui';
 
 const STREAM_TIMEOUT_MS = 30_000;
 

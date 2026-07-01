@@ -6,14 +6,14 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@productmap/ui';
 import {
   Sheet,
   SheetClose,
   SheetContent,
   SheetTitle,
   SheetTrigger,
-} from '@/components/ui/sheet';
+} from '@productmap/ui';
 import { Toaster } from '@/components/ui/sonner';
 import ThemeToggle from '@/components/ThemeToggle';
 import { BrandMark } from '@/components/BrandMark';
@@ -25,7 +25,7 @@ import { useGlobalShortcuts } from '@/components/command/useGlobalShortcuts';
 import { useTrackRecents } from '@/components/command/recents';
 import { useAiStatus } from '@/lib/api';
 import { useActiveProject } from '@/lib/project';
-import { cn } from '@/lib/utils';
+import { cn } from '@productmap/ui/lib/utils';
 import { appRoutes } from '@/lib/routes';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import DemoBanner from '@/demo/DemoBanner';

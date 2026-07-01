@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { MoreHorizontal, Plus } from 'lucide-react';
 import type { Plan } from '@productmap/shared';
-import { Button } from '@/components/ui/button';
+import { Button } from '@productmap/ui';
 import {
   Dialog,
   DialogContent,
@@ -9,15 +9,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@productmap/ui';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+} from '@productmap/ui';
+import { Input } from '@productmap/ui';
+import { Label } from '@productmap/ui';
 
 export interface PlanSwitcherProps {
   plans: Plan[];

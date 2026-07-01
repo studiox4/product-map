@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Sparkles } from 'lucide-react';
 import { useCreateDecision } from '@/lib/api';
-import { Button } from '@/components/ui/button';
+import { Button } from '@productmap/ui';
 import {
   Dialog,
   DialogContent,
@@ -10,10 +10,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+} from '@productmap/ui';
+import { Input } from '@productmap/ui';
+import { Label } from '@productmap/ui';
+import { Textarea } from '@productmap/ui';
 
 export interface DecisionDraft {
   title: string;

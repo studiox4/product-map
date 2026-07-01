@@ -1,5 +1,5 @@
 import { Github } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@productmap/ui';
 import { BrandMark } from '@/components/BrandMark';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { REPO_URL } from '@/lib/marketing';

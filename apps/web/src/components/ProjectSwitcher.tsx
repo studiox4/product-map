@@ -6,9 +6,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@productmap/ui';
 import { useActiveProject } from '@/lib/project';
-import { cn } from '@/lib/utils';
+import { cn } from '@productmap/ui/lib/utils';
 import { appRoutes } from '@/lib/routes';
 
 /**

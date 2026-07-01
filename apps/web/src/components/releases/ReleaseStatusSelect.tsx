@@ -2,14 +2,14 @@ import { toast } from 'sonner';
 import { RELEASE_STATUSES, type Release, type ReleaseStatus } from '@productmap/shared';
 import { useUpdateRelease } from '@/lib/api';
 import { confettiBurst } from '@/lib/delight';
-import { cn } from '@/lib/utils';
+import { cn } from '@productmap/ui/lib/utils';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@productmap/ui';
 
 const STATUS_LABELS: Record<ReleaseStatus, string> = {
   planned: 'Planned',
