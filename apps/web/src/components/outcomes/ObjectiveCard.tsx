@@ -9,17 +9,10 @@ import {
   type ObjectiveStatus,
 } from '@productmap/shared';
 import { useUpdateObjective } from '@/lib/api';
-import { cn } from '@/lib/utils';
+import { cn, Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@productmap/ui';
 import { HORIZON_LABELS } from '@/components/HorizonBadge';
 import StatusBadge from '@/components/StatusBadge';
 import UserAvatar from '@/components/UserAvatar';
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { OBJECTIVE_STATUS_LABELS } from './ObjectiveDialog';
 import { appRoutes } from '@/lib/routes';
 

@@ -1,8 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Search, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { apiErrorMessage, useDashboard, useArchivedProjects, useRestoreProject, usePurgeProject } from '@/lib/api';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
+import { Skeleton, Button } from '@productmap/ui';
 import MyProjects from '@/components/dashboard/MyProjects';
 import NextActions from '@/components/dashboard/NextActions';
 import MyWork from '@/components/dashboard/MyWork';

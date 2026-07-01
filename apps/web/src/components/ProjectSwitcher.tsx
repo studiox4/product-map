@@ -1,14 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Check, ChevronDown, Plus } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, cn } from '@productmap/ui';
 import { useActiveProject } from '@/lib/project';
-import { cn } from '@/lib/utils';
 import { appRoutes } from '@/lib/routes';
 
 /**

@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useActiveProject } from '@/lib/project';
 import { appRoutes } from '@/lib/routes';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@productmap/ui';
 import Landing from '@/routes/Landing';
 
 /**

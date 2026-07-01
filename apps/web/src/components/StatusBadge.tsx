@@ -3,7 +3,7 @@ import {
   type DocStatus,
   type FeatureStatus,
 } from '@productmap/shared';
-import { cn } from '@/lib/utils';
+import { cn } from '@productmap/ui';
 
 type AnyStatus = FeatureStatus | DocStatus;
 

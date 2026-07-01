@@ -13,7 +13,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 import { marked } from 'marked';
 import { toast } from 'sonner';
 import type { DocType } from '@productmap/shared';
-import { cn } from '@/lib/utils';
+import { cn } from '@productmap/ui';
 import { SlashCommand } from './SlashMenu';
 import { AiDraftCard } from './AiDraftCard';
 import { CalloutNode } from './CalloutNode';

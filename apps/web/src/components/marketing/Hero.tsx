@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button';
+import { Button } from '@productmap/ui';
 import { HERO_HEADLINE, HERO_SUBHEAD, REPO_URL } from '@/lib/marketing';
 import { HeroGraphic } from '@/components/marketing/motion/HeroGraphic';
 

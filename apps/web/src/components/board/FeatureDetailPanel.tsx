@@ -8,18 +8,7 @@ import {
   type FeatureWithDocs,
 } from '@productmap/shared';
 import { useFeature, useUpdateFeature, useUsers } from '@/lib/api';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Button, Input, Label, Skeleton } from '@productmap/ui';
 import { DocTypeChip } from '@/components/DocTypeChip';
 import { HORIZON_LABELS } from '@/components/HorizonBadge';
 import { STATUS_LABELS } from '@/components/StatusBadge';

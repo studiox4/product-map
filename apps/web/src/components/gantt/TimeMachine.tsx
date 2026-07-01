@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { Pause, Play, Undo2 } from 'lucide-react';
 import type { WorkspaceActivityItem } from '@productmap/shared';
 import { prefersReducedMotion } from '@/lib/delight';
-import { Button } from '@/components/ui/button';
+import { Button } from '@productmap/ui';
 import { densityBuckets, monthMarks } from './history-replay';
 
 const SWEEP_MS = 4000; // Play ▸ full sweep duration (Spec 2.1)

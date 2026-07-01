@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Github, Star } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@productmap/ui';
 import { GITHUB_API_URL, REPO_URL, STARS_FALLBACK } from '@/lib/marketing';
 import { CountUp } from '@/components/marketing/motion/CountUp';
 

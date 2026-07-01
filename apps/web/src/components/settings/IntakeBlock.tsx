@@ -3,17 +3,7 @@ import { toast } from 'sonner';
 import { Check, Copy, Inbox } from 'lucide-react';
 import { ApiError, useCreateIntake, useRevokeShare } from '@/lib/api';
 import { useProjectId } from '@/lib/project';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Button, Input, Label, Textarea, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@productmap/ui';
 
 /** Per-project localStorage key so links survive reloads (no list endpoint). */
 export const intakeUrlKey = (projectId: string) => `pmIntakeUrl:${projectId}`;

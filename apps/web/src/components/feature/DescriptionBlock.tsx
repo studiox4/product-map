@@ -4,8 +4,7 @@ import DOMPurify from 'dompurify';
 import { toast } from 'sonner';
 import type { FeatureWithDocs } from '@productmap/shared';
 import { useUpdateFeature } from '@/lib/api';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { Button, Textarea } from '@productmap/ui';
 
 const proseClass =
   'space-y-3 text-sm leading-6 text-body-ink ' +

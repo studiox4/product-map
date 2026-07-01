@@ -7,7 +7,7 @@ import {
   type NodeViewProps,
 } from '@tiptap/react';
 import { ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@productmap/ui';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {

@@ -13,8 +13,7 @@ import {
   useSuggestDecision,
   type CommentTarget,
 } from '@/lib/api';
-import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
+import { Skeleton, cn } from '@productmap/ui';
 import {
   DecisionDialog,
   type DecisionDraft,

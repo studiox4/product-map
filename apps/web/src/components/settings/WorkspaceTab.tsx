@@ -4,25 +4,7 @@ import { Download, TriangleAlert } from 'lucide-react';
 import type { Project } from '@productmap/shared';
 import { useOverview, useResetDemo, useUpdateProject, apiPath, type ProjectUpdateInput } from '@/lib/api';
 import { useProjectId } from '@/lib/project';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Button, Input, Label, Skeleton, Card, CardContent, CardDescription, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@productmap/ui';
 import { SharingBlock } from '@/components/settings/SharingBlock';
 import { IntakeBlock } from '@/components/settings/IntakeBlock';
 import { demoReady } from '@/demo/demoState';

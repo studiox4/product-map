@@ -1,15 +1,7 @@
 import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { Layers, Rocket } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@productmap/ui';
 import type { PlanDiffItem } from './plan-diff';
 
 export interface ScenarioBannerProps {

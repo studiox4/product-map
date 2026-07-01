@@ -7,16 +7,7 @@ import { NewDocDialog } from '@/components/board/NewDocDialog';
 import { DocsFilters } from '@/components/docs/DocsFilters';
 import { DocsTable, type DocsSort, type DocsSortKey } from '@/components/docs/DocsTable';
 import { DocPreviewSheet } from '@/components/docs/DocPreviewSheet';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { cn } from '@/lib/utils';
+import { Button, Skeleton, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, cn } from '@productmap/ui';
 import { navigateWithTransition } from '@/lib/transitions';
 
 function toggle<T>(list: T[], value: T): T[] {

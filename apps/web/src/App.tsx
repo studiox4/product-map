@@ -8,7 +8,7 @@ import Login from '@/routes/Login';
 import Register from '@/routes/Register';
 import { AuthProvider, RequireAuth } from '@/lib/auth';
 import { ActiveProjectProvider, ProjectProvider, useActiveProject } from '@/lib/project';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@productmap/ui';
 import { appRoutes } from '@/lib/routes';
 
 // Lazy routes owned by parallel tasks (3B-D); stubs render "coming soon" until they land.

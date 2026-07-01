@@ -8,11 +8,7 @@ import { appRoutes } from '@/lib/routes';
 import { DocTypeChip } from '@/components/DocTypeChip';
 import { Editor } from '@/components/editor/Editor';
 import { useAutosave, type AutosaveState } from '@/components/editor/useAutosave';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button, Input, Label, Textarea, Skeleton } from '@productmap/ui';
 
 function SaveIndicator({ state }: { state: AutosaveState }) {
   if (state === 'idle') return null;

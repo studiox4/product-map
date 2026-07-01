@@ -1,5 +1,5 @@
 import { DOC_TYPE_COLORS, DOC_TYPE_LABELS, type DocType } from '@productmap/shared';
-import { cn } from '@/lib/utils';
+import { cn } from '@productmap/ui';
 
 export function DocTypeChip({ type, className }: { type: DocType; className?: string }) {
   return (

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Editor as TiptapEditor } from '@tiptap/react';
-import { cn } from '@/lib/utils';
+import { cn } from '@productmap/ui';
 import { prefersReducedMotion } from '@/lib/delight';
 
 export interface TocHeading {

@@ -10,9 +10,7 @@ import {
   useSetDependencies,
 } from '@/lib/api';
 import { useCanEdit } from '@/lib/project';
-import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button, Popover, PopoverContent, PopoverTrigger, Skeleton } from '@productmap/ui';
 import { STATUS_LABELS } from '@/components/StatusBadge';
 import { appRoutes } from '@/lib/routes';
 

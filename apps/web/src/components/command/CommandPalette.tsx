@@ -51,7 +51,7 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from '@/components/ui/command';
+} from '@productmap/ui';
 import { getRecents, recordRecent } from './recents';
 import { TOGGLE_COMMENTS_EVENT } from './useGlobalShortcuts';
 

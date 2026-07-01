@@ -1,19 +1,7 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { ChevronDown, Lightbulb, Menu, Search, Settings, Sparkles } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger, cn } from '@productmap/ui';
 import { Toaster } from '@/components/ui/sonner';
 import ThemeToggle from '@/components/ThemeToggle';
 import { BrandMark } from '@/components/BrandMark';
@@ -25,7 +13,6 @@ import { useGlobalShortcuts } from '@/components/command/useGlobalShortcuts';
 import { useTrackRecents } from '@/components/command/recents';
 import { useAiStatus } from '@/lib/api';
 import { useActiveProject } from '@/lib/project';
-import { cn } from '@/lib/utils';
 import { appRoutes } from '@/lib/routes';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import DemoBanner from '@/demo/DemoBanner';

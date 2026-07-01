@@ -7,9 +7,7 @@ import { IdeaVotePills } from '@/components/inbox/IdeaVotePills';
 import { IdeaByline, IdeaDetailPane } from '@/components/inbox/IdeaDetailPane';
 import { NewIdeaDialog } from '@/components/inbox/NewIdeaDialog';
 import { PromoteIdeaDialog } from '@/components/inbox/PromoteIdeaDialog';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
+import { Button, Skeleton, cn } from '@productmap/ui';
 import { useCanEdit } from '@/lib/project';
 
 const FILTERS: { value: IdeaStatus | undefined; label: string }[] = [

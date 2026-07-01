@@ -2,11 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Map as MapIcon } from 'lucide-react';
 import { useIntakeMeta, useSubmitIntake } from '@/lib/api';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button, Input, Label, Textarea, Skeleton } from '@productmap/ui';
 
 export default function IntakePage() {
   const { token = '' } = useParams<{ token: string }>();

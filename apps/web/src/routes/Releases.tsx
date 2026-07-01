@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useReleases } from '@/lib/api';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button, Skeleton } from '@productmap/ui';
 import { ReleaseCard } from '@/components/releases/ReleaseCard';
 import { NewReleaseDialog } from '@/components/releases/NewReleaseDialog';
 import { useCanEdit } from '@/lib/project';

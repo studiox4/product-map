@@ -9,7 +9,9 @@
       "@productmap/shared": ["../../packages/shared/src/index.ts"],
       "@productmap/shared/*": ["../../packages/shared/src/*"],
       "@productmap/sdk": ["../../packages/sdk/src/index.ts"],
-      "@productmap/sdk/*": ["../../packages/sdk/src/*"]
+      "@productmap/sdk/*": ["../../packages/sdk/src/*"],
+      "@productmap/ui": ["../../packages/ui/src/index.ts"],
+      "@productmap/ui/*": ["../../packages/ui/src/*"]
     }
   },
   "include": ["src", "vite.config.ts"]

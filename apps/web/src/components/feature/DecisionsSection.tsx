@@ -5,7 +5,7 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import type { Decision } from '@productmap/shared';
 import { useDecisions } from '@/lib/api';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@productmap/ui';
 import { UserAvatar } from '@/components/UserAvatar';
 
 const proseClass =

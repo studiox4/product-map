@@ -12,7 +12,7 @@ import {
 } from '@productmap/shared';
 import { useShareData } from '@/lib/api';
 import { StatusBadge } from '@/components/StatusBadge';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@productmap/ui';
 import {
   BAR_HEIGHT,
   GUTTER_WIDTH,

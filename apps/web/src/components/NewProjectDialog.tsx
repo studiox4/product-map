@@ -4,17 +4,7 @@ import { toast } from 'sonner';
 import { useCreateProject, apiErrorMessage } from '@/lib/api';
 import { useActiveProject } from '@/lib/project';
 import { appRoutes } from '@/lib/routes';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Button, Input, Label, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@productmap/ui';
 
 /**
  * Create-project dialog driven by the `?new=1` search param (the switcher's

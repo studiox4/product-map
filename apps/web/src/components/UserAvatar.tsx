@@ -1,5 +1,5 @@
 import type { User } from '@productmap/shared';
-import { cn } from '@/lib/utils';
+import { cn } from '@productmap/ui';
 
 const SIZE_CLASSES = {
   sm: 'h-5 w-5 text-[10px]',

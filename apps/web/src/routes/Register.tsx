@@ -4,9 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { MIN_PASSWORD_LENGTH } from '@productmap/shared';
 import { useRegister, apiErrorMessage, ApiError } from '@/lib/api';
 import { safeNext } from '@/routes/Login';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button, Input, Label } from '@productmap/ui';
 
 export default function Register() {
   const register = useRegister();

@@ -4,7 +4,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Link2 } from 'lucide-react';
 import type { FeatureWithDocs } from '@productmap/shared';
-import { cn } from '@/lib/utils';
+import { cn } from '@productmap/ui';
 import { apiPath, fetchJson, queryKeys, useFeatures } from '@/lib/api';
 import { useCanEdit, useProjectId } from '@/lib/project';
 import { makeHoverPrefetch, prefersReducedMotion, SPRING_EASING } from '@/lib/delight';

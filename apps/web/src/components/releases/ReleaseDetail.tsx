@@ -13,19 +13,8 @@ import {
   useSetReleaseFeatures,
   type ReleaseDetail as ReleaseDetailData,
 } from '@/lib/api';
-import { cn } from '@/lib/utils';
+import { cn, Button, Popover, PopoverContent, PopoverTrigger, Skeleton, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@productmap/ui';
 import { appRoutes } from '@/lib/routes';
-import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import DocTypeChip from '@/components/DocTypeChip';
 import HorizonBadge from '@/components/HorizonBadge';
 import StatusBadge from '@/components/StatusBadge';

@@ -4,18 +4,7 @@ import { Check } from 'lucide-react';
 import { USER_COLORS, MIN_PASSWORD_LENGTH, type User } from '@productmap/shared';
 import { useMe, useUpdateUser, useChangePassword, useLogout, apiErrorMessage } from '@/lib/api';
 import UserAvatar from '@/components/UserAvatar';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { Button, Input, Label, Skeleton, Card, CardContent, CardDescription, CardHeader, CardTitle, cn } from '@productmap/ui';
 
 /**
  * Settings → Profile tab (settings spec): rename yourself and pick an avatar
