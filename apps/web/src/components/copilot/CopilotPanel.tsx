@@ -15,16 +15,7 @@ import type { CopilotNudge, DocumentListItem } from '@productmap/shared';
 import { useAllDocuments, useCopilotNudges, apiPath } from '@/lib/api';
 import { useProjectId } from '@/lib/project';
 import { appRoutes } from '@/lib/routes';
-import { Button } from '@productmap/ui';
-import { Skeleton } from '@productmap/ui';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@productmap/ui';
-import { cn } from '@productmap/ui/lib/utils';
+import { Button, Skeleton, Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, cn } from '@productmap/ui';
 import { streamSse, STREAM_TIMEOUT_MS } from './sse';
 
 const proseClass =

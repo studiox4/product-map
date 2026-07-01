@@ -1,5 +1,5 @@
 import { Boxes, CalendarRange, Check, FileText } from 'lucide-react';
-import { cn } from '@productmap/ui/lib/utils';
+import { cn } from '@productmap/ui';
 import { BoardToRoadmap } from '@/components/marketing/motion/story/BoardToRoadmap';
 import { DocsType } from '@/components/marketing/motion/story/DocsType';
 import { ScenarioFork } from '@/components/marketing/motion/story/ScenarioFork';

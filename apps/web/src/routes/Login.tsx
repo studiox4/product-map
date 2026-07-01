@@ -2,9 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLogin, apiErrorMessage } from '@/lib/api';
-import { Button } from '@productmap/ui';
-import { Input } from '@productmap/ui';
-import { Label } from '@productmap/ui';
+import { Button, Input, Label } from '@productmap/ui';
 import { appRoutes } from '@/lib/routes';
 
 /** Only honor same-origin path redirects (leading single slash) — never an absolute/protocol URL. */

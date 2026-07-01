@@ -12,17 +12,7 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { UserAvatar } from '@/components/UserAvatar';
 import { IdeaVotePills } from '@/components/inbox/IdeaVotePills';
 import { timeAgoShort } from '@/components/inbox/time-ago';
-import { Button } from '@productmap/ui';
-import { Input } from '@productmap/ui';
-import { Label } from '@productmap/ui';
-import { Textarea } from '@productmap/ui';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@productmap/ui';
+import { Button, Input, Label, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@productmap/ui';
 
 const STATUS_LABELS: Record<IdeaStatus, string> = {
   inbox: 'Inbox',

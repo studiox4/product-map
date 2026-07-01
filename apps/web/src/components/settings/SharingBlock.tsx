@@ -3,16 +3,7 @@ import { toast } from 'sonner';
 import { Check, Copy, Link2 } from 'lucide-react';
 import type { ShareSections } from '@productmap/shared';
 import { ApiError, useCreateShare, useRevokeShare } from '@/lib/api';
-import { Button } from '@productmap/ui';
-import { Input } from '@productmap/ui';
-import { Label } from '@productmap/ui';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@productmap/ui';
+import { Button, Input, Label, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@productmap/ui';
 
 /** Local persistence so the link survives reloads (no list endpoint). */
 export const SHARE_URL_KEY = 'pmShareUrl';

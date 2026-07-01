@@ -14,9 +14,7 @@ import { useArchivedFeatures, useFeatures, usePurgeFeature, useRestoreFeature, u
 import { useCanEdit } from '@/lib/project';
 import { BoardColumn } from '@/components/board/BoardColumn';
 import { FeatureDetailPanel } from '@/components/board/FeatureDetailPanel';
-import { Skeleton } from '@productmap/ui';
-import { Button } from '@productmap/ui';
-import { cn } from '@productmap/ui/lib/utils';
+import { Skeleton, Button, cn } from '@productmap/ui';
 import { navigateWithTransition } from '@/lib/transitions';
 import { hasOpenOverlay, isEditableTarget } from '@/components/command/useGlobalShortcuts';
 

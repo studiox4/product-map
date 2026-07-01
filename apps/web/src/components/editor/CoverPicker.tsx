@@ -1,5 +1,5 @@
 import { Check } from 'lucide-react';
-import { cn } from '@productmap/ui/lib/utils';
+import { cn } from '@productmap/ui';
 
 /** 8 curated Soft Studio gradient covers (spec 2.3), keyed by `documents.cover`. */
 export const DOC_COVERS: Record<string, { label: string; css: string }> = {

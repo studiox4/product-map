@@ -2,18 +2,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Sparkles } from 'lucide-react';
 import { useCreateDecision } from '@/lib/api';
-import { Button } from '@productmap/ui';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@productmap/ui';
-import { Input } from '@productmap/ui';
-import { Label } from '@productmap/ui';
-import { Textarea } from '@productmap/ui';
+import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Textarea } from '@productmap/ui';
 
 export interface DecisionDraft {
   title: string;

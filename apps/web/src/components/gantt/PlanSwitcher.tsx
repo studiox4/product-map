@@ -1,23 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { MoreHorizontal, Plus } from 'lucide-react';
 import type { Plan } from '@productmap/shared';
-import { Button } from '@productmap/ui';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@productmap/ui';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@productmap/ui';
-import { Input } from '@productmap/ui';
-import { Label } from '@productmap/ui';
+import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Input, Label } from '@productmap/ui';
 
 export interface PlanSwitcherProps {
   plans: Plan[];

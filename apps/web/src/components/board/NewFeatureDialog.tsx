@@ -2,17 +2,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import type { Horizon } from '@productmap/shared';
 import { useCreateFeature } from '@/lib/api';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@productmap/ui';
-import { Button } from '@productmap/ui';
-import { Input } from '@productmap/ui';
-import { Label } from '@productmap/ui';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Button, Input, Label } from '@productmap/ui';
 
 const HORIZON_LABELS: Record<Horizon, string> = {
   now: 'Now',

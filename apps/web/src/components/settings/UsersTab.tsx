@@ -9,16 +9,7 @@ import {
   apiErrorMessage,
   type AdminUser,
 } from '@/lib/api';
-import { Button } from '@productmap/ui';
-import { Input } from '@productmap/ui';
-import { Label } from '@productmap/ui';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@productmap/ui';
+import { Button, Input, Label, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@productmap/ui';
 
 /**
  * Settings → Users tab (admin-only): list, create, and manage workspace users.

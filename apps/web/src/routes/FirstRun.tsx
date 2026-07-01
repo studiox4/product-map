@@ -2,16 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { Map } from 'lucide-react';
 import { useCreateProject, apiErrorMessage } from '@/lib/api';
-import { Button } from '@productmap/ui';
-import { Input } from '@productmap/ui';
-import { Label } from '@productmap/ui';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@productmap/ui';
+import { Button, Input, Label, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@productmap/ui';
 
 /**
  * First-run gate (shown by AuthedShell when the caller has no memberships).

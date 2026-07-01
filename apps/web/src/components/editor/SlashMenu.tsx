@@ -7,7 +7,7 @@ import {
 import { Extension, type Editor, type Range } from '@tiptap/core';
 import { ReactRenderer } from '@tiptap/react';
 import Suggestion, { type SuggestionProps } from '@tiptap/suggestion';
-import { cn } from '@productmap/ui/lib/utils';
+import { cn } from '@productmap/ui';
 import { filterSlashItems, type SlashItem } from './slash-items';
 
 interface SlashMenuListProps {

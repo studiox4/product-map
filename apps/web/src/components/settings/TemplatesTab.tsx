@@ -14,16 +14,7 @@ import {
 } from '@/lib/api';
 import { appRoutes } from '@/lib/routes';
 import { DocTypeChip } from '@/components/DocTypeChip';
-import { Button } from '@productmap/ui';
-import { Input } from '@productmap/ui';
-import { Skeleton } from '@productmap/ui';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@productmap/ui';
+import { Button, Input, Skeleton, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@productmap/ui';
 
 function DefaultPill() {
   return (

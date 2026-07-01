@@ -1,8 +1,7 @@
 import { Suspense } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Bell, FolderKanban, LayoutTemplate, Settings as SettingsIcon, UserRound, Users, Wrench } from 'lucide-react';
-import { Skeleton } from '@productmap/ui';
-import { cn } from '@productmap/ui/lib/utils';
+import { Skeleton, cn } from '@productmap/ui';
 import { useAuth } from '@/lib/auth';
 import { appRoutes } from '@/lib/routes';
 

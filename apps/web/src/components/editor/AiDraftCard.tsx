@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Sparkles, Square } from 'lucide-react';
 import { toast } from 'sonner';
 import type { DocType } from '@productmap/shared';
-import { Button } from '@productmap/ui';
-import { Textarea } from '@productmap/ui';
+import { Button, Textarea } from '@productmap/ui';
 
 const STREAM_TIMEOUT_MS = 30_000;
 

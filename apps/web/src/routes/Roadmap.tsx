@@ -26,8 +26,7 @@ import { TimeMachine } from '@/components/gantt/TimeMachine';
 import { computePlanDiff } from '@/components/gantt/plan-diff';
 import { reconstructState, timelineRange } from '@/components/gantt/history-replay';
 import { UnscheduledTray } from '@/components/gantt/UnscheduledTray';
-import { Button } from '@productmap/ui';
-import { Skeleton } from '@productmap/ui';
+import { Button, Skeleton } from '@productmap/ui';
 
 function formatRange(start: string | null | undefined, end: string | null | undefined): string {
   if (!start || !end) return '';

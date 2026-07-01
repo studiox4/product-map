@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import type { IdeaWithVotes } from '@productmap/shared';
-import { cn } from '@productmap/ui/lib/utils';
+import { cn } from '@productmap/ui';
 import { useIdeaVote, type VoteInput } from '@/lib/api';
 import { emojiParticleBurst, frostRing } from '@/lib/delight';
 

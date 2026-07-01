@@ -11,19 +11,7 @@ import {
 } from '@productmap/shared';
 import { useCreateDocument, useTemplates } from '@/lib/api';
 import { appRoutes } from '@/lib/routes';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@productmap/ui';
-import { RadioGroup, RadioGroupItem } from '@productmap/ui';
-import { Button } from '@productmap/ui';
-import { Input } from '@productmap/ui';
-import { Label } from '@productmap/ui';
-import { Skeleton } from '@productmap/ui';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, RadioGroup, RadioGroupItem, Button, Input, Label, Skeleton } from '@productmap/ui';
 
 const TYPE_ICONS: Record<DocType, typeof FileText> = {
   prd: FileText,

@@ -2,18 +2,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import type { IdeaWithVotes } from '@productmap/shared';
 import { useCreateIdea } from '@/lib/api';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@productmap/ui';
-import { Button } from '@productmap/ui';
-import { Input } from '@productmap/ui';
-import { Label } from '@productmap/ui';
-import { Textarea } from '@productmap/ui';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Button, Input, Label, Textarea } from '@productmap/ui';
 
 interface NewIdeaDialogProps {
   open: boolean;

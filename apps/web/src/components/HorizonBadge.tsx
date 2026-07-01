@@ -1,5 +1,5 @@
 import { HORIZON_COLORS, type Horizon } from '@productmap/shared';
-import { cn } from '@productmap/ui/lib/utils';
+import { cn } from '@productmap/ui';
 
 const HORIZON_LABELS: Record<Horizon, string> = {
   now: 'Now',

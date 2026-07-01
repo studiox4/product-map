@@ -3,16 +3,7 @@ import { toast } from 'sonner';
 import { HORIZONS, type Horizon, type IdeaWithVotes } from '@productmap/shared';
 import { useAiStatus, usePromoteIdea } from '@/lib/api';
 import { HORIZON_LABELS } from '@/components/HorizonBadge';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@productmap/ui';
-import { Button } from '@productmap/ui';
-import { cn } from '@productmap/ui/lib/utils';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Button, cn } from '@productmap/ui';
 
 interface PromoteIdeaDialogProps {
   idea: IdeaWithVotes;

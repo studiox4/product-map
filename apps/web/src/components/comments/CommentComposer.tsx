@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Button } from '@productmap/ui';
-import { cn } from '@productmap/ui/lib/utils';
+import { Button, cn } from '@productmap/ui';
 import { useProjectId } from '@/lib/project';
 import { useProjectMembers } from '@/lib/api';
 import { activeMentionQuery, insertMentionToken } from '@/lib/mentions';

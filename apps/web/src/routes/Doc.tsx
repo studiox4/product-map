@@ -16,15 +16,7 @@ import { demoReady } from '@/demo/demoState';
 import { appRoutes } from '@/lib/routes';
 import { docBackLink } from './doc-back-link';
 import { DocTypeChip } from '@/components/DocTypeChip';
-import { Button } from '@productmap/ui';
-import { Skeleton } from '@productmap/ui';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@productmap/ui';
+import { Button, Skeleton, Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@productmap/ui';
 import { CommentsSection } from '@/components/comments/CommentsSection';
 import { ReviewSheet } from '@/components/copilot/ReviewSheet';
 import { Editor } from '@/components/editor/Editor';

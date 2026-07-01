@@ -11,7 +11,7 @@ import {
   type DocumentListItem,
 } from '@productmap/shared';
 import { StatusBadge } from '@/components/StatusBadge';
-import { cn } from '@productmap/ui/lib/utils';
+import { cn } from '@productmap/ui';
 import { apiPath, fetchJson, queryKeys } from '@/lib/api';
 import { useProjectId } from '@/lib/project';
 import { appRoutes } from '@/lib/routes';

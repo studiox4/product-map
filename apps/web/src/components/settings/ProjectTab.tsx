@@ -20,16 +20,7 @@ import {
 } from '@/lib/api';
 import type { Invite, MemberRole } from '@productmap/shared';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button } from '@productmap/ui';
-import { Input } from '@productmap/ui';
-import { Label } from '@productmap/ui';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@productmap/ui';
+import { Button, Input, Label, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@productmap/ui';
 
 const ROLE_OPTIONS: MemberRole[] = ['owner', 'editor', 'viewer'];
 

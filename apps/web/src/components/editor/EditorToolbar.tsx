@@ -12,22 +12,7 @@ import {
   TriangleAlert,
 } from 'lucide-react';
 import { DOC_STATUSES, type DocStatus } from '@productmap/shared';
-import { Button } from '@productmap/ui';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@productmap/ui';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@productmap/ui';
+import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@productmap/ui';
 import type { AutosaveState } from './useAutosave';
 import { CoverPicker } from './CoverPicker';
 

@@ -1,7 +1,6 @@
 import { HORIZONS } from '@productmap/shared';
 import { useOverview, useWorkspaceActivity } from '@/lib/api';
-import { Button } from '@productmap/ui';
-import { Skeleton } from '@productmap/ui';
+import { Button, Skeleton } from '@productmap/ui';
 import VisionHeader from '@/components/landing/VisionHeader';
 import GanttHero from '@/components/landing/GanttHero';
 import HorizonPanel from '@/components/landing/HorizonPanel';

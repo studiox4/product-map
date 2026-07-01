@@ -3,8 +3,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { FEATURE_SIZES, type FeatureSize, type FeatureWithDocs } from '@productmap/shared';
 import { useUpdateFeature } from '@/lib/api';
-import { Textarea } from '@productmap/ui';
-import { cn } from '@productmap/ui/lib/utils';
+import { Textarea, cn } from '@productmap/ui';
 
 export const SIZE_LABELS: Record<FeatureSize, string> = { s: 'S', m: 'M', l: 'L' };
 
