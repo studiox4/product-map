@@ -12,13 +12,22 @@ function randomSecretHex(): string {
   return [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
 }
 
-export interface SmtpConfig {
+export interface ResendMailConfig {
+  kind: 'resend';
+  apiKey: string;
+  from: string;
+}
+
+export interface SmtpMailConfig {
+  kind: 'smtp';
   host: string;
   port: number;
   user?: string;
   pass?: string;
   from: string;
 }
+
+export type MailConfig = ResendMailConfig | SmtpMailConfig;
 
 export interface AppConfig {
   isProd: boolean;
@@ -29,8 +38,8 @@ export interface AppConfig {
   refreshTtlSec: number;
   /** App base URL used to build absolute invite links in emails. */
   appUrl: string;
-  /** null when SMTP is not configured → invites are link-only (air-gapped fallback). */
-  smtp: SmtpConfig | null;
+  /** null when no mail backend is configured → invites are link-only (air-gapped fallback). */
+  mail: MailConfig | null;
 }
 
 const bool = (v: string | undefined) => v === 'true' || v === '1';
@@ -52,16 +61,24 @@ export function loadConfig(): AppConfig {
   if (!env('AUTH_SECRET') && !isProd) {
     console.warn('[config] AUTH_SECRET unset — using an ephemeral dev secret (sessions reset on restart).');
   }
+  const resendApiKey = env('RESEND_API_KEY');
   const smtpHost = env('SMTP_HOST');
-  const smtp: SmtpConfig | null = smtpHost
+  const mail: MailConfig | null = resendApiKey
     ? {
-        host: smtpHost,
-        port: Number(env('SMTP_PORT') ?? 587),
-        user: env('SMTP_USER') || undefined,
-        pass: env('SMTP_PASS') || undefined,
-        from: env('SMTP_FROM') ?? 'ProductMap <no-reply@productmap.local>',
+        kind: 'resend',
+        apiKey: resendApiKey,
+        from: env('RESEND_FROM') ?? 'ProductMap <no-reply@productmap.local>',
       }
-    : null;
+    : smtpHost
+      ? {
+          kind: 'smtp',
+          host: smtpHost,
+          port: Number(env('SMTP_PORT') ?? 587),
+          user: env('SMTP_USER') || undefined,
+          pass: env('SMTP_PASS') || undefined,
+          from: env('SMTP_FROM') ?? 'ProductMap <no-reply@productmap.local>',
+        }
+      : null;
 
   return {
     isProd,
@@ -71,7 +88,7 @@ export function loadConfig(): AppConfig {
     accessTtlSec: 15 * 60,
     refreshTtlSec: 30 * 24 * 60 * 60,
     appUrl: env('APP_URL') ?? 'http://localhost:5173',
-    smtp,
+    mail,
   };
 }
 

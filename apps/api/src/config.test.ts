@@ -36,3 +36,53 @@ describe('loadConfig', () => {
     expect(cfg.isProd).toBe(true);
   });
 });
+
+describe('loadConfig — mail', () => {
+  it('RESEND_API_KEY set → mail.kind is resend', () => {
+    vi.stubEnv('RESEND_API_KEY', 're_test_key');
+    vi.stubEnv('RESEND_FROM', 'ProductMap <no-reply@example.com>');
+    vi.stubEnv('SMTP_HOST', 'smtp.example.com');
+    const cfg = loadConfig();
+    expect(cfg.mail).toEqual({
+      kind: 'resend',
+      apiKey: 're_test_key',
+      from: 'ProductMap <no-reply@example.com>',
+    });
+  });
+
+  it('RESEND_FROM unset → falls back to the default from address', () => {
+    vi.stubEnv('RESEND_API_KEY', 're_test_key');
+    vi.stubEnv('RESEND_FROM', undefined);
+    const cfg = loadConfig();
+    expect(cfg.mail).toEqual({
+      kind: 'resend',
+      apiKey: 're_test_key',
+      from: 'ProductMap <no-reply@productmap.local>',
+    });
+  });
+
+  it('no RESEND_API_KEY, SMTP_HOST set → mail.kind is smtp (unchanged shape)', () => {
+    vi.stubEnv('RESEND_API_KEY', undefined);
+    vi.stubEnv('SMTP_HOST', 'smtp.example.com');
+    vi.stubEnv('SMTP_PORT', '465');
+    vi.stubEnv('SMTP_USER', 'user');
+    vi.stubEnv('SMTP_PASS', 'pass');
+    vi.stubEnv('SMTP_FROM', 'ProductMap <no-reply@x>');
+    const cfg = loadConfig();
+    expect(cfg.mail).toEqual({
+      kind: 'smtp',
+      host: 'smtp.example.com',
+      port: 465,
+      user: 'user',
+      pass: 'pass',
+      from: 'ProductMap <no-reply@x>',
+    });
+  });
+
+  it('neither RESEND_API_KEY nor SMTP_HOST set → mail is null', () => {
+    vi.stubEnv('RESEND_API_KEY', undefined);
+    vi.stubEnv('SMTP_HOST', undefined);
+    const cfg = loadConfig();
+    expect(cfg.mail).toBeNull();
+  });
+});
