@@ -11,7 +11,7 @@ import { config } from '../config';
 import { createMailer, inviteEmail } from '../lib/mailer';
 import { fanOutInviteNotification } from '../lib/notifications';
 
-const mailer = createMailer(config.smtp);
+const mailer = createMailer(config.mail);
 
 const bad = (r: { success: boolean; error?: { issues: unknown } }, c: any) =>
   r.success ? undefined : c.json({ error: 'validation', issues: r.error!.issues }, 400);
