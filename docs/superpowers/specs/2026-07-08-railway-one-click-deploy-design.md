@@ -5,7 +5,7 @@ Sub-project 1 of 4 in the "traction" initiative (Railway deploy → discovery po
 
 ## Goal
 
-Get ProductMap into the Railway template gallery as a true one-click deploy: click the button, get a running instance with its own database and working outbound email, no manual env-var wiring beyond claiming two free third-party accounts (Neon, Resend).
+Get ProductMap into the Railway template gallery as a true one-click deploy: click the button, get a running instance with its own database, no required manual env-var wiring. Optional upgrades (Neon DB swap, real outbound email via Resend) are documented, one-line changes for anyone who wants them.
 
 ## Context
 
@@ -16,14 +16,14 @@ Get ProductMap into the Railway template gallery as a true one-click deploy: cli
 
 ## Architecture
 
-### 1. Database: Neon Postgres as a template service
+### 1. Database: Railway-native Postgres by default, Neon as a documented swap
 
-Railway's template composer supports "Claimable Postgres by Neon" (Instagres) as a first-class service type. The published template will have two services:
+Railway templates don't support a deploy-time "choose your DB" toggle — a template's services are fixed at compose time. So the template bundles the safest default and documents the alternative:
 
 - **App** — this repo, built via the existing `railway.json` (Nixpacks, `pnpm --filter @productmap/web build`, `pnpm --filter @productmap/db migrate` pre-deploy, `pnpm --filter @productmap/api exec tsx src/index.ts` start).
-- **Neon Postgres** — Railway-native Neon service. `DATABASE_URL` on the app service is wired via a Railway reference variable pointing at the Neon service's connection string — no manual copy-paste.
+- **Postgres** — Railway's own native Postgres plugin (not Neon). Zero signup, zero claim step, no expiry — the actual bar for "one-click." `DATABASE_URL` on the app service is wired via a Railway reference variable pointing at the Postgres service — no manual copy-paste.
 
-The Neon database is claimable for 72 hours before the deployer needs to claim it into their own Neon account (Railway/Neon's standard Instagres flow) — documented in the template's post-deploy instructions, not something we control from this repo.
+**Neon as an optional swap**, documented in the README/post-deploy notes: anyone who wants Neon's serverless scale-to-zero can create a free Neon project and paste its connection string over `DATABASE_URL` in the Railway Variables tab — a one-line env var edit, no redeploy of the template needed, no code change required since `DATABASE_URL` is already just a Postgres connection string either way. This avoids Neon's claimable-DB 72-hour expiry window being the default experience for every deployer, while still giving power users the option.
 
 ### 2. Email: native Resend HTTP transport (new code)
 
@@ -54,25 +54,32 @@ Defaults to set in the composer:
 
 | Var | Default | Notes |
 |---|---|---|
-| `DATABASE_URL` | Neon service reference variable | auto-wired, not user-entered |
+| `DATABASE_URL` | Railway Postgres reference variable | auto-wired, not user-entered; swappable to a Neon connection string post-deploy for anyone who wants it |
 | `AUTH_SECRET` | `${{secret(32)}}` | Railway's built-in random-value generator |
 | `NODE_ENV` | `production` | hardcoded |
 | `SERVE_WEB` | `1` | hardcoded |
 | `TRUST_PROXY` | `1` | hardcoded — Railway terminates TLS in front of the app |
 | `APP_URL` | `${{RAILWAY_PUBLIC_DOMAIN}}` (with `https://` prefix) | auto-filled |
 | `ALLOW_OPEN_SIGNUP` | `1` | deployer needs to self-register the first (admin) account with no invite step; template's post-deploy notes tell them to flip to `0` afterward |
-| `RESEND_API_KEY` | *(user-entered, required field)* | template UI prompts "Get a free key at resend.com/api-keys" |
-| `RESEND_FROM` | *(user-entered, optional)* | falls back to a `productmap.local` placeholder if left blank — invites/notifications still work in-app either way (mail is best-effort, not blocking) |
+| `RESEND_API_KEY` | *(unset by default — optional field)* | Deploy works with zero fields filled in: no email configured means invites fall back to shareable links (existing air-gapped behavior), so this is a true zero-input one-click deploy. Template UI labels it "Optional: turn on real invite emails later — get a free key at resend.com/api-keys, and note a fresh key can only email your own account until you verify a sending domain in Resend." |
+| `RESEND_FROM` | *(user-entered, optional)* | only relevant if `RESEND_API_KEY` is set; falls back to a `productmap.local` placeholder if left blank |
 
 ### 4. README
 
 Add a Railway deploy button (`https://railway.com/button.svg`) near the top of `README.md`, linking to the published template URL. This slots in right after the existing badges/before the current demo link — will be filled in with the real template URL once it's published (chicken-and-egg: the button can't exist until the template is composed and published, so this is the last file change in the implementation, done after the manual composer step).
 
+## Implementation notes (verify before building)
+
+- **Railway template variable syntax** — `${{secret(32)}}` and `${{RAILWAY_PUBLIC_DOMAIN}}` are the right shape but must be confirmed against current Railway template-variable docs before use in the composer; the exact function tokens have changed over time.
+- **`RAILWAY_PUBLIC_DOMAIN` timing** — confirm this resolves at deploy time (not only after first boot). If it's only available post-boot, `APP_URL` will be wrong on the very first deploy and invite links will be broken until a redeploy — needs a workaround if so (e.g. a documented manual redeploy step, or a boot-time domain lookup).
+- **Deploy button URL/asset** — confirm the current Railway deploy-button image URL and template deploy-link format before wiring the README (has been `railway.app` and `railway.com` at different times).
+- **`config.smtp` → `config.mail` refactor** — grep every reader of `config.smtp` (at least `routes/projects.ts`, per current usage) before renaming, so the discriminated-union refactor doesn't miss a caller.
+
 ## Testing
 
 - New unit tests for the Resend transport path in `mailer.test.ts` (mocked `fetch`, success + non-2xx cases).
 - Existing SMTP-path tests continue to pass unmodified in behavior (only the config shape changes from `smtp` to `mail.kind === 'smtp'`).
-- Manual end-to-end: deploy the actual template from a fresh Railway project once composed, confirm app boots, DB migrates, an invite email round-trips through Resend.
+- Manual end-to-end: deploy the actual template from a fresh Railway project once composed, confirm app boots against the bundled Railway Postgres, DB migrates, invites work as shareable links with no `RESEND_API_KEY` set. Separately verify the Neon-swap path (paste a Neon connection string over `DATABASE_URL`, confirm the app reconnects) and the Resend path (set `RESEND_API_KEY`, confirm an invite email round-trips).
 
 ## Out of scope
 
