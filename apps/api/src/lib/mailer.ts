@@ -13,7 +13,7 @@ export interface MailTransport {
 }
 
 export interface Mailer {
-  /** Sends if mail is configured; returns true when a send was attempted and accepted, false (no-op or failed send) otherwise. */
+  /** Sends if mail is configured; resolves true when a send was attempted and accepted, false otherwise (no-op, rejected recipients, non-2xx response, timeout, or any thrown transport error — send() never rejects). */
   send(msg: MailMessage): Promise<boolean>;
   readonly enabled: boolean;
 }
@@ -34,13 +34,18 @@ async function sendViaSmtp(
   msg: MailMessage,
   transportFactory: (smtp: SmtpMailConfig) => MailTransport | Promise<MailTransport>,
 ): Promise<boolean> {
-  const transport = await transportFactory(smtp);
-  const info = await transport.sendMail({ from: smtp.from, to: msg.to, subject: msg.subject, text: msg.text, html: msg.html });
-  if (info.rejected?.length) {
-    console.error('[mailer] smtp send rejected recipients:', info.rejected);
+  try {
+    const transport = await transportFactory(smtp);
+    const info = await transport.sendMail({ from: smtp.from, to: msg.to, subject: msg.subject, text: msg.text, html: msg.html });
+    if (info.rejected?.length) {
+      console.error('[mailer] smtp send rejected recipients:', info.rejected);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('[mailer] smtp send threw:', err);
     return false;
   }
-  return true;
 }
 
 async function sendViaResend(
@@ -49,19 +54,25 @@ async function sendViaResend(
   msg: MailMessage,
   resendFetch: typeof fetch,
 ): Promise<boolean> {
-  const res = await resendFetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ from, to: msg.to, subject: msg.subject, text: msg.text, html: msg.html }),
-  });
-  if (!res.ok) {
-    console.error('[mailer] resend send failed:', res.status, await res.json().catch(() => undefined));
+  try {
+    const res = await resendFetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ from, to: msg.to, subject: msg.subject, text: msg.text, html: msg.html }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) {
+      console.error('[mailer] resend send failed:', res.status, await res.json().catch(() => undefined));
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('[mailer] resend send threw:', err);
     return false;
   }
-  return true;
 }
 
 /**
@@ -81,10 +92,16 @@ export function createMailer(
   return {
     enabled: true,
     async send(msg) {
-      if (mail.kind === 'resend') {
-        return sendViaResend(mail.apiKey, mail.from, msg, resendFetch);
+      switch (mail.kind) {
+        case 'resend':
+          return sendViaResend(mail.apiKey, mail.from, msg, resendFetch);
+        case 'smtp':
+          return sendViaSmtp(mail, msg, transportFactory);
+        default: {
+          const _exhaustive: never = mail;
+          throw new Error(`Unhandled mail kind: ${(_exhaustive as MailConfig).kind}`);
+        }
       }
-      return sendViaSmtp(mail, msg, transportFactory);
     },
   };
 }

@@ -74,4 +74,49 @@ describe('mailer', () => {
     const sent = await mailer.send({ to: 'a@b.co', subject: 'Invite', text: 'link' });
     expect(sent).toBe(false);
   });
+
+  it('smtp transport throws (e.g. connection error) → send() returns false, does not throw', async () => {
+    const transportFactory = () => { throw new Error('ECONNREFUSED'); };
+    const mailer = createMailer(
+      { kind: 'smtp', host: 'h', port: 587, from: 'ProductMap <no-reply@x>' },
+      transportFactory,
+    );
+    await expect(mailer.send({ to: 'a@b.co', subject: 'Invite', text: 'link' })).resolves.toBe(false);
+  });
+
+  it('resend fetch rejects (network error) → send() returns false, does not throw', async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError('fetch failed'));
+    const mailer = createMailer(
+      { kind: 'resend', apiKey: 're_test', from: 'ProductMap <no-reply@x>' },
+      undefined,
+      fetchMock as unknown as typeof fetch,
+    );
+    await expect(mailer.send({ to: 'a@b.co', subject: 'Invite', text: 'link' })).resolves.toBe(false);
+  });
+
+  it('resend non-2xx response with unparseable JSON body → send() still returns false without throwing', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 502,
+      json: () => Promise.reject(new Error('not json')),
+    });
+    const mailer = createMailer(
+      { kind: 'resend', apiKey: 're_test', from: 'ProductMap <no-reply@x>' },
+      undefined,
+      fetchMock as unknown as typeof fetch,
+    );
+    await expect(mailer.send({ to: 'a@b.co', subject: 'Invite', text: 'link' })).resolves.toBe(false);
+  });
+
+  it('resend call includes a 10s AbortSignal timeout', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ id: 'abc' }) });
+    const mailer = createMailer(
+      { kind: 'resend', apiKey: 're_test', from: 'ProductMap <no-reply@x>' },
+      undefined,
+      fetchMock as unknown as typeof fetch,
+    );
+    await mailer.send({ to: 'a@b.co', subject: 'Invite', text: 'link' });
+    const opts = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(opts.signal).toBeInstanceOf(AbortSignal);
+  });
 });
