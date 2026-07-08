@@ -13,18 +13,18 @@ function randomSecretHex(): string {
 }
 
 export interface ResendMailConfig {
-  kind: 'resend';
-  apiKey: string;
-  from: string;
+  readonly kind: 'resend';
+  readonly apiKey: string;
+  readonly from: string;
 }
 
 export interface SmtpMailConfig {
-  kind: 'smtp';
-  host: string;
-  port: number;
-  user?: string;
-  pass?: string;
-  from: string;
+  readonly kind: 'smtp';
+  readonly host: string;
+  readonly port: number;
+  readonly user?: string;
+  readonly pass?: string;
+  readonly from: string;
 }
 
 export type MailConfig = ResendMailConfig | SmtpMailConfig;
@@ -61,22 +61,24 @@ export function loadConfig(): AppConfig {
   if (!env('AUTH_SECRET') && !isProd) {
     console.warn('[config] AUTH_SECRET unset — using an ephemeral dev secret (sessions reset on restart).');
   }
+  // Resend takes precedence over SMTP when both are configured — Resend's HTTPS API works on
+  // every hosting plan, while SMTP is blocked outbound on Railway's non-Pro tier.
   const resendApiKey = env('RESEND_API_KEY');
   const smtpHost = env('SMTP_HOST');
   const mail: MailConfig | null = resendApiKey
     ? {
         kind: 'resend',
         apiKey: resendApiKey,
-        from: env('RESEND_FROM') ?? 'ProductMap <no-reply@productmap.local>',
+        from: env('RESEND_FROM') || 'ProductMap <no-reply@productmap.local>',
       }
     : smtpHost
       ? {
           kind: 'smtp',
           host: smtpHost,
-          port: Number(env('SMTP_PORT') ?? 587),
+          port: Number(env('SMTP_PORT') || 587),
           user: env('SMTP_USER') || undefined,
           pass: env('SMTP_PASS') || undefined,
-          from: env('SMTP_FROM') ?? 'ProductMap <no-reply@productmap.local>',
+          from: env('SMTP_FROM') || 'ProductMap <no-reply@productmap.local>',
         }
       : null;
 

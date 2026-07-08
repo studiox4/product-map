@@ -85,4 +85,38 @@ describe('loadConfig — mail', () => {
     const cfg = loadConfig();
     expect(cfg.mail).toBeNull();
   });
+
+  it('RESEND_FROM empty string → falls back to the default from address (not empty)', () => {
+    vi.stubEnv('RESEND_API_KEY', 're_test_key');
+    vi.stubEnv('RESEND_FROM', '');
+    const cfg = loadConfig();
+    expect(cfg.mail).toEqual({
+      kind: 'resend',
+      apiKey: 're_test_key',
+      from: 'ProductMap <no-reply@productmap.local>',
+    });
+  });
+
+  it('SMTP_FROM empty string → falls back to the default from address (not empty)', () => {
+    vi.stubEnv('RESEND_API_KEY', undefined);
+    vi.stubEnv('SMTP_HOST', 'smtp.example.com');
+    vi.stubEnv('SMTP_FROM', '');
+    const cfg = loadConfig();
+    expect(cfg.mail).toEqual({
+      kind: 'smtp',
+      host: 'smtp.example.com',
+      port: 587,
+      user: undefined,
+      pass: undefined,
+      from: 'ProductMap <no-reply@productmap.local>',
+    });
+  });
+
+  it('SMTP_PORT empty string → falls back to port 587 (not 0)', () => {
+    vi.stubEnv('RESEND_API_KEY', undefined);
+    vi.stubEnv('SMTP_HOST', 'smtp.example.com');
+    vi.stubEnv('SMTP_PORT', '');
+    const cfg = loadConfig();
+    expect(cfg.mail).toMatchObject({ kind: 'smtp', port: 587 });
+  });
 });
