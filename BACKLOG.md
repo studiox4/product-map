@@ -33,7 +33,7 @@ E2 — Notifications moved to backlog below (channel delivery on hold, see v2 ta
 | 6 | S3 uploads | Swap local `uploads/` write for S3 PUT; `path` column already abstract. Serve via CloudFront or presigned URLs (also fixes uploads living on one container). | S |
 | 7 | ECS + RDS deploy | Dockerfile (api serves built web assets — already designed for single container), task def, RDS Postgres, migrations on deploy. | M |
 | 8 | Workspace export to git | Cron or button: `export.zip` content pushed to a git repo as `.md` tree — the security-friendly escape hatch. | S |
-| 9 | Railway one-click deploy + template listing | `railway.json` already exists (demo deploy). Harden for template use: `template.yaml`/Railway template config, env var docs + sane defaults (DATABASE_URL auto-provision, secrets), README deploy button, submit to Railway template gallery for discoverability. | S |
+| 9 | Railway one-click deploy + template listing | **Code SHIPPED** (#32, 2026-07-08): native Resend mail transport (Railway blocks outbound SMTP on non-Pro plans), `MailConfig` union, zero-required-field deploy design — see `docs/superpowers/specs/2026-07-08-railway-one-click-deploy-design.md`. **Remaining — manual, blocked on Corban's Railway dashboard access:** compose + publish the actual Railway template (bundle Railway-native Postgres, wire env var defaults, document the Neon-swap option) per `docs/railway-template-runbook.md`, then wire the README deploy button once the template URL exists, then submit to the Railway Template Gallery. Tell Claude when the manual dashboard steps are done so the README button + gallery submission can be finished. | S remaining (manual) |
 
 ## v3 — Depth
 
