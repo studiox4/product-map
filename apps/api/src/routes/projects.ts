@@ -249,9 +249,11 @@ export const projectsRoutes = new Hono<MembershipEnv>()
         const body = inviteEmail({ projectName: proj?.name ?? 'a project', role, url });
         emailSent = await mailer.send({ to: email, subject: body.subject, text: body.text });
       } catch (err) {
-        // SMTP throw after row commit — log and fall through; caller still gets the token.
-        // Route-level SMTP send is covered at the mailer unit (mailer.test.ts).
-        console.error('[invites] SMTP send failed after row commit:', err);
+        // Mail send throw after row commit — log and fall through; caller still gets the token.
+        // Route-level send is covered at the mailer unit (mailer.test.ts). Note: after the
+        // mailer.ts fix, send() itself no longer throws (Resend/SMTP transport errors resolve to
+        // false) — this catch is now only a defense-in-depth backstop, not the primary path.
+        console.error('[invites] mail send failed after row commit:', err);
         emailSent = false;
       }
     }
