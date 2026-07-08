@@ -11,3 +11,10 @@ e2e/.auth/
 .pnpm-store/
 .playwright-mcp/
 .playwright-mcp/
+
+# design-sync
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules

@@ -1,0 +1,16 @@
+{
+  "projectId": "1a34976b-f364-4702-869c-ab5e0d43393f",
+  "shape": "package",
+  "pkg": "@productmap/ui",
+  "globalName": "ProductmapUi",
+  "cssEntry": "dist/ui.css",
+  "readmeHeader": ".design-sync/conventions.md",
+  "overrides": {
+    "Dialog": { "cardMode": "single", "viewport": "480x360" },
+    "Sheet": { "cardMode": "single", "viewport": "420x480" },
+    "DropdownMenu": { "cardMode": "single", "viewport": "320x360" },
+    "Popover": { "cardMode": "single", "viewport": "320x220" },
+    "Select": { "cardMode": "single", "viewport": "320x320" },
+    "Command": { "cardMode": "single", "viewport": "420x420" }
+  }
+}
